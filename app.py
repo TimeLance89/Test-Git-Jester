@@ -1666,7 +1666,33 @@ def create_app() -> Flask:
         """Formular für die automatische Schichtenerstellung."""
         from datetime import date
         today = date.today()
-        return render_template("auto_schedule.html", current_month=today.month, current_year=today.year)
+        current_user = get_current_user()
+        department_id = current_user.department_id if current_user and current_user.department_id else None
+
+        filters = []
+        if department_id:
+            filters.append(Employee.department_id == department_id)
+
+        employees = (
+            Employee.query.filter(*filters)
+            .order_by(Employee.name)
+            .all()
+        )
+
+        position_query = Employee.query.filter(*filters)
+        position_query = position_query.filter(
+            Employee.position.isnot(None),
+            Employee.position != ""
+        )
+        positions = [row[0] for row in position_query.with_entities(Employee.position).distinct().order_by(Employee.position.asc()).all()]
+
+        return render_template(
+            "auto_schedule.html",
+            current_month=today.month,
+            current_year=today.year,
+            employees=employees,
+            positions=positions,
+        )
 
     @app.route("/auto-schedule/create", methods=["POST"])
     @admin_required
@@ -1676,42 +1702,58 @@ def create_app() -> Flask:
         month = request.form.get("month", type=int)
         mode = request.form.get("mode", "all")  # "all", "position", "employee"
         dry_run = bool(request.form.get("dry_run"))
-        
+        current_user = get_current_user()
+        department_id = current_user.department_id if current_user and current_user.department_id else None
+
         if not year or not month:
             flash("Bitte geben Sie Jahr und Monat an.", "warning")
             return redirect(url_for("auto_schedule_form"))
-        
+
         try:
             if mode == "position":
                 position = request.form.get("position", "").strip()
                 if not position:
                     flash("Bitte geben Sie eine Position an.", "warning")
                     return redirect(url_for("auto_schedule_form"))
-                
-                result = create_default_shifts_for_employee_position(position, year, month, dry_run)
-                
+
+                position_exists = Employee.query.filter(Employee.position == position)
+                if department_id:
+                    position_exists = position_exists.filter(Employee.department_id == department_id)
+                if not position_exists.first():
+                    flash("Für die ausgewählte Position sind keine Mitarbeiter verfügbar.", "warning")
+                    return redirect(url_for("auto_schedule_form"))
+
+                result = create_default_shifts_for_employee_position(position, year, month, dry_run, department_id=department_id)
+
                 if dry_run:
                     flash(f"Vorschau: {result['total_created']} Schichten würden erstellt, {result['total_skipped']} übersprungen (Position: {position}).", "info")
                 else:
                     flash(f"{result['total_created']} Schichten für Position '{position}' erstellt, {result['total_skipped']} übersprungen.", "success")
-                    
+
             elif mode == "employee":
                 employee_id = request.form.get("employee_id", type=int)
                 if not employee_id:
                     flash("Bitte wählen Sie einen Mitarbeiter aus.", "warning")
                     return redirect(url_for("auto_schedule_form"))
-                
-                result = create_default_shifts_for_month(year, month, employee_id, dry_run)
-                employee = Employee.query.get(employee_id)
-                
+
+                employee_query = Employee.query.filter(Employee.id == employee_id)
+                if department_id:
+                    employee_query = employee_query.filter(Employee.department_id == department_id)
+                employee = employee_query.first()
+                if not employee:
+                    flash("Der ausgewählte Mitarbeiter steht nicht zur Verfügung.", "danger")
+                    return redirect(url_for("auto_schedule_form"))
+
+                result = create_default_shifts_for_month(year, month, employee.id, dry_run, department_id=department_id)
+
                 if dry_run:
                     flash(f"Vorschau: {result['total_created']} Schichten würden für {employee.name} erstellt, {result['total_skipped']} übersprungen.", "info")
                 else:
                     flash(f"{result['total_created']} Schichten für {employee.name} erstellt, {result['total_skipped']} übersprungen.", "success")
-                    
+
             else:  # mode == "all"
-                result = create_default_shifts_for_month(year, month, None, dry_run)
-                
+                result = create_default_shifts_for_month(year, month, None, dry_run, department_id=department_id)
+
                 if dry_run:
                     flash(f"Vorschau: {result['total_created']} Schichten würden erstellt, {result['total_skipped']} übersprungen.", "info")
                 else:
