@@ -1,125 +1,333 @@
 {% extends "layout.html" %}
 {% block title %}Dashboard - Einsatzplaner{% endblock %}
 {% block content %}
-<div style="margin-bottom: 2rem;">
-  <h1 style="background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 0.5rem;">
-    Willkommen zum Dienstplaner
-  </h1>
-  <p style="color: #64748b; font-size: 1.125rem; margin: 0;">Ihre zentrale Anlaufstelle für Mitarbeiterverwaltung und Dienstplanung</p>
-</div>
-
-<div class="row" style="margin-bottom: 3rem;">
-  <div class="col-md-4">
-    <div class="card" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border: none;">
-      <div class="card-body" style="text-align: center;">
-        <div style="font-size: 3rem; margin-bottom: 1rem;">👥</div>
-        <h3 style="color: white; margin-bottom: 0.5rem;">{{ employee_count }}</h3>
-        <h5 style="color: rgba(255,255,255,0.9); margin-bottom: 1.5rem; font-weight: 500;">Mitarbeiter</h5>
-        {% if session.get('is_admin') %}
-        <a href="{{ url_for('employees') }}" class="btn" style="background-color: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3);">
-          Verwalten
+{% set is_admin = session.get('is_admin') %}
+{% set is_system_admin = is_admin and (current_user and not current_user.department_id) %}
+{% set current_user_id = current_user.id if current_user else None %}
+<div class="dashboard-page">
+  <section class="dashboard-hero">
+    <div class="dashboard-hero-main">
+      <p class="hero-eyebrow">
+        {% if is_system_admin %}
+          Systemadministration
+        {% elif is_admin %}
+          Teamleitung & Planung
+        {% else %}
+          Mitarbeiterbereich
+        {% endif %}
+      </p>
+      <h1>Hallo {{ current_user.name if current_user else 'Team' }} 👋</h1>
+      <p class="hero-subtitle">
+        {% if is_admin %}
+          Behalte Ressourcen, offene Anträge und die Produktivität deines Teams im Blick. Von hier aus erreichst du alle wichtigen Tools für eine moderne Einsatzplanung.
+        {% else %}
+          Dein persönliches Cockpit für Schichten, Urlaubsanträge und Team-News. Mit wenigen Klicks bist du vorbereitet auf die kommende Woche.
+        {% endif %}
+      </p>
+      <div class="dashboard-hero-actions">
+        <a class="hero-action primary" href="{{ url_for('schedule') }}">
+          <span class="hero-action-icon">📅</span>
+          Dienstplan öffnen
         </a>
+        {% if is_admin %}
+          <a class="hero-action" href="{{ url_for('leave_requests') }}">
+            <span class="hero-action-icon">📝</span>
+            Anträge prüfen
+          </a>
+        {% else %}
+          <a class="hero-action" href="{{ url_for('leave_form') }}">
+            <span class="hero-action-icon">📝</span>
+            Urlaub beantragen
+          </a>
+        {% endif %}
+        {% if is_admin %}
+          <a class="hero-action" href="{{ url_for('employees') }}">
+            <span class="hero-action-icon">👥</span>
+            Team verwalten
+          </a>
+        {% else %}
+          <a class="hero-action" href="{{ url_for('employee_hours_overview') }}">
+            <span class="hero-action-icon">⏱️</span>
+            Meine Stunden
+          </a>
         {% endif %}
       </div>
     </div>
-  </div>
-  
-  <div class="col-md-4">
-    <div class="card" style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white; border: none;">
-      <div class="card-body" style="text-align: center;">
-        <div style="font-size: 3rem; margin-bottom: 1rem;">🏢</div>
-        <h3 style="color: white; margin-bottom: 0.5rem;">{{ department_count }}</h3>
-        <h5 style="color: rgba(255,255,255,0.9); margin-bottom: 1.5rem; font-weight: 500;">Abteilungen</h5>
-        {% if session.get('is_admin') %}
-        <a href="{{ url_for('departments') }}" class="btn" style="background-color: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3);">
-          Verwalten
-        </a>
+    <div class="dashboard-hero-aside">
+      <div class="hero-highlight">
+        <div class="highlight-icon">⚡</div>
+        <div>
+          <p class="highlight-title">Nächste Schritte</p>
+          <p class="highlight-text">
+            {% if is_admin %}
+              {{ pending_leaves }} offene Abwesenheitsanträge warten auf deine Entscheidung.
+            {% else %}
+              Checke deinen Einsatzplan und sichere dir rechtzeitig freie Tage.
+            {% endif %}
+          </p>
+        </div>
+      </div>
+      {% if current_user and current_user.department %}
+      <div class="hero-meta-card">
+        <p class="meta-label">Meine Abteilung</p>
+        <p class="meta-value">{{ current_user.department.name }}</p>
+        {% if current_user.department.area %}
+        <p class="meta-support">Bereich: {{ current_user.department.area }}</p>
         {% endif %}
       </div>
-    </div>
-  </div>
-  
-  <div class="col-md-4">
-    <div class="card" style="background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%); color: white; border: none;">
-      <div class="card-body" style="text-align: center;">
-        <div style="font-size: 3rem; margin-bottom: 1rem;">📋</div>
-        <h3 style="color: white; margin-bottom: 0.5rem;">{{ pending_leaves }}</h3>
-        <h5 style="color: rgba(255,255,255,0.9); margin-bottom: 1.5rem; font-weight: 500;">Offene Anträge</h5>
-        {% if session.get('is_admin') %}
-        <a href="{{ url_for('leave_requests') }}" class="btn" style="background-color: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3);">
-          Anzeigen
-        </a>
-        {% endif %}
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Schnellzugriff-Bereich -->
-<div class="card" style="margin-bottom: 2rem;">
-  <div class="card-header">
-    <h3 style="margin: 0; display: flex; align-items: center;">
-      <span style="margin-right: 0.75rem;">⚡</span>
-      Schnellzugriff
-    </h3>
-  </div>
-  <div class="card-body">
-    <div class="row">
-      <div class="col-md-3">
-        <a href="{{ url_for('schedule') }}" class="btn btn-secondary" style="width: 100%; margin-bottom: 1rem; display: flex; align-items: center; justify-content: center; padding: 1rem;">
-          <span style="margin-right: 0.5rem; font-size: 1.5rem;">📅</span>
-          <div style="text-align: left;">
-            <div style="font-weight: 600;">Dienstplan</div>
-            <div style="font-size: 0.75rem; opacity: 0.8;">Aktuelle Planung</div>
-          </div>
-        </a>
-      </div>
-      
-      {% if not session.get('is_admin') %}
-      <div class="col-md-3">
-        <a href="{{ url_for('leave_form') }}" class="btn btn-secondary" style="width: 100%; margin-bottom: 1rem; display: flex; align-items: center; justify-content: center; padding: 1rem;">
-          <span style="margin-right: 0.5rem; font-size: 1.5rem;">📝</span>
-          <div style="text-align: left;">
-            <div style="font-weight: 600;">Urlaub beantragen</div>
-            <div style="font-size: 0.75rem; opacity: 0.8;">Neue Abwesenheit</div>
-          </div>
-        </a>
-      </div>
-      {% else %}
-      <div class="col-md-3">
-        <a href="{{ url_for('shift_requests_overview') }}" class="btn btn-secondary" style="width: 100%; margin-bottom: 1rem; display: flex; align-items: center; justify-content: center; padding: 1rem;">
-          <span style="margin-right: 0.5rem; font-size: 1.5rem;">⏰</span>
-          <div style="text-align: left;">
-            <div style="font-weight: 600;">Offene Einsätze</div>
-            <div style="font-size: 0.75rem; opacity: 0.8;">Genehmigungen</div>
-          </div>
-        </a>
-      </div>
-      
-      <div class="col-md-3">
-        <a href="{{ url_for('productivity_settings') }}" class="btn btn-secondary" style="width: 100%; margin-bottom: 1rem; display: flex; align-items: center; justify-content: center; padding: 1rem;">
-          <span style="margin-right: 0.5rem; font-size: 1.5rem;">⚙️</span>
-          <div style="text-align: left;">
-            <div style="font-weight: 600;">Produktivität</div>
-            <div style="font-size: 0.75rem; opacity: 0.8;">Einstellungen</div>
-          </div>
-        </a>
+      {% elif is_system_admin %}
+      <div class="hero-meta-card">
+        <p class="meta-label">Organisation</p>
+        <p class="meta-value">Alle Standorte</p>
+        <p class="meta-support">Vollständige Systemübersicht aktiv</p>
       </div>
       {% endif %}
     </div>
-  </div>
-</div>
+  </section>
 
-<!-- Informationsbereich -->
-<div class="card">
-  <div class="card-body" style="text-align: center; padding: 3rem 2rem;">
-    <div style="font-size: 4rem; margin-bottom: 1rem;">🎯</div>
-    <h3 style="margin-bottom: 1rem; color: #1e293b;">Effiziente Personalplanung</h3>
-    <p style="color: #64748b; font-size: 1.125rem; max-width: 600px; margin: 0 auto;">
-      Nutzen Sie die Navigation oben, um den Dienstplan anzuzeigen, Mitarbeiter und Abteilungen zu verwalten oder Abwesenheiten zu bearbeiten. 
-      Unser modernes System macht Personalplanung einfach und übersichtlich.
-    </p>
-  </div>
+  <section class="dashboard-kpis" aria-label="Kennzahlen">
+    <article class="kpi-card kpi-employees">
+      <div class="kpi-icon">👥</div>
+      <div class="kpi-content">
+        <p class="kpi-label">Aktive Mitarbeitende</p>
+        <p class="kpi-value">{{ employee_count }}</p>
+        <p class="kpi-helper">
+          {% if is_admin %}
+            Verfügbarkeit & Einsatzbereitschaft im Blick behalten
+          {% else %}
+            Kolleginnen und Kollegen im aktuellen Team
+          {% endif %}
+        </p>
+      </div>
+      {% if is_admin %}
+      <a class="kpi-link" href="{{ url_for('employees') }}">Team organisieren →</a>
+      {% endif %}
+    </article>
+
+    <article class="kpi-card kpi-departments">
+      <div class="kpi-icon">🏢</div>
+      <div class="kpi-content">
+        <p class="kpi-label">
+          {% if is_admin %}
+            Abteilungen gesamt
+          {% else %}
+            Einsatzbereich
+          {% endif %}
+        </p>
+        <p class="kpi-value">{{ department_count }}</p>
+        <p class="kpi-helper">
+          {% if is_admin %}
+            Struktur & Verantwortlichkeiten optimal ausbalancieren
+          {% else %}
+            Überblick über deinen Einsatzkontext
+          {% endif %}
+        </p>
+      </div>
+      {% if is_admin %}
+      <a class="kpi-link" href="{{ url_for('departments') }}">Bereiche verwalten →</a>
+      {% else %}
+      <a class="kpi-link" href="{{ url_for('employee_profile', emp_id=current_user_id) }}">Profil ansehen →</a>
+      {% endif %}
+    </article>
+
+    <article class="kpi-card kpi-leaves">
+      <div class="kpi-icon">📋</div>
+      <div class="kpi-content">
+        <p class="kpi-label">
+          {% if is_admin %}
+            Offene Anträge
+          {% else %}
+            Eigene Anträge
+          {% endif %}
+        </p>
+        <p class="kpi-value">{{ pending_leaves }}</p>
+        <p class="kpi-helper">
+          {% if is_admin %}
+            Koordiniere Urlaube & Abwesenheiten ohne Medienbrüche
+          {% else %}
+            Bleibe informiert über den Status deiner Urlaubsplanung
+          {% endif %}
+        </p>
+      </div>
+      {% if is_admin %}
+      <a class="kpi-link" href="{{ url_for('leave_requests') }}">Anträge bearbeiten →</a>
+      {% else %}
+      <a class="kpi-link" href="{{ url_for('leave_form') }}">Neuen Antrag stellen →</a>
+      {% endif %}
+    </article>
+  </section>
+
+  <section class="dashboard-actions" aria-label="Schnellzugriffe">
+    {% if is_admin %}
+    <article class="action-card">
+      <div class="action-icon">🤖</div>
+      <div class="action-content">
+        <h3>Auto-Schichten</h3>
+        <p>Erzeuge Vorschläge für optimale Dienstpläne – abgestimmt auf Kapazitäten und Prioritäten.</p>
+      </div>
+      <a class="action-link" href="{{ url_for('auto_schedule_form') }}">Jetzt planen</a>
+    </article>
+    <article class="action-card">
+      <div class="action-icon">⚙️</div>
+      <div class="action-content">
+        <h3>Produktivität steuern</h3>
+        <p>Lege Kennzahlen pro Abteilung fest und vergleiche Soll- und Ist-Stunden.</p>
+      </div>
+      <a class="action-link" href="{{ url_for('productivity_settings') }}">Einstellungen öffnen</a>
+    </article>
+    <article class="action-card">
+      <div class="action-icon">📈</div>
+      <div class="action-content">
+        <h3>Monatsreport</h3>
+        <p>Auswertungen und Trends für transparente Kommunikation mit Stakeholdern.</p>
+      </div>
+      <a class="action-link" href="{{ url_for('monthly_report') }}">Bericht ansehen</a>
+    </article>
+    {% else %}
+    <article class="action-card">
+      <div class="action-icon">🗓️</div>
+      <div class="action-content">
+        <h3>Meine Schichten</h3>
+        <p>Plane deine Woche und behalte Früh-, Spät- und Sonderdienste im Blick.</p>
+      </div>
+      <a class="action-link" href="{{ url_for('schedule') }}">Zum Dienstplan</a>
+    </article>
+    <article class="action-card">
+      <div class="action-icon">🏖️</div>
+      <div class="action-content">
+        <h3>Abwesenheit melden</h3>
+        <p>Stelle Urlaubsanträge oder informiere dein Team über geplante Abwesenheiten.</p>
+      </div>
+      <a class="action-link" href="{{ url_for('leave_form') }}">Antrag stellen</a>
+    </article>
+    <article class="action-card">
+      <div class="action-icon">💬</div>
+      <div class="action-content">
+        <h3>Profil & Kontakt</h3>
+        <p>Aktualisiere deine Erreichbarkeit und finde die richtigen Ansprechpartner.</p>
+      </div>
+      <a class="action-link" href="{{ url_for('employee_profile', emp_id=current_user_id) }}">Profil öffnen</a>
+    </article>
+    {% endif %}
+  </section>
+
+  <section class="dashboard-panels">
+    <article class="dashboard-panel">
+      <header class="panel-header">
+        <div>
+          <p class="panel-eyebrow">Aktuelles</p>
+          <h2>{% if is_admin %}Prioritäten heute{% else %}Meine nächsten Schritte{% endif %}</h2>
+        </div>
+      </header>
+      <ul class="panel-list">
+        <li>
+          <span class="status-dot {% if pending_leaves > 0 %}status-warning{% else %}status-success{% endif %}"></span>
+          <div>
+            <p class="list-title">
+              {% if is_admin %}
+                Offene Abwesenheiten
+              {% else %}
+                Urlaubsstatus prüfen
+              {% endif %}
+            </p>
+            <p class="list-subtitle">
+              {% if is_admin %}
+                {{ pending_leaves }} Anträge warten auf Rückmeldung
+              {% else %}
+                Bleibe informiert: {{ pending_leaves }} Anträge noch in Bearbeitung
+              {% endif %}
+            </p>
+          </div>
+          <a class="panel-link" href="{{ url_for('leave_requests') if is_admin else url_for('leave_form') }}">
+            {% if is_admin %}Ansehen{% else %}Status anzeigen{% endif %}
+          </a>
+        </li>
+        <li>
+          <span class="status-dot status-info"></span>
+          <div>
+            <p class="list-title">Dienstplan aktualisieren</p>
+            <p class="list-subtitle">
+              {% if is_admin %}
+                Prüfe Engpässe und gleiche Kapazitäten über Abteilungen hinweg aus
+              {% else %}
+                Sichere dir Wunschschichten frühzeitig und bleibe flexibel
+              {% endif %}
+            </p>
+          </div>
+          <a class="panel-link" href="{{ url_for('schedule') }}">Öffnen</a>
+        </li>
+        {% if is_admin %}
+        <li>
+          <span class="status-dot status-neutral"></span>
+          <div>
+            <p class="list-title">Teamkommunikation</p>
+            <p class="list-subtitle">Informiere Kolleg:innen über Änderungen und neue Prioritäten</p>
+          </div>
+          <a class="panel-link" href="{{ url_for('shift_requests_overview') }}">Übersicht</a>
+        </li>
+        {% else %}
+        <li>
+          <span class="status-dot status-neutral"></span>
+          <div>
+            <p class="list-title">Profil aktualisieren</p>
+            <p class="list-subtitle">Halte Telefonnummer und bevorzugte Einsatzzeiten aktuell</p>
+          </div>
+          <a class="panel-link" href="{{ url_for('employee_profile', emp_id=current_user_id) }}">Bearbeiten</a>
+        </li>
+        {% endif %}
+      </ul>
+    </article>
+
+    <article class="dashboard-panel accent">
+      <header class="panel-header">
+        <div>
+          <p class="panel-eyebrow">Insights</p>
+          <h2>{% if is_admin %}Team & Ressourcen{% else %}Wissenswertes{% endif %}</h2>
+        </div>
+      </header>
+      <div class="insight-grid">
+        <div class="insight-card">
+          <p class="insight-label">Auslastung</p>
+          <p class="insight-value">
+            {% if employee_count > 0 %}
+              {{ 'Hoch' if pending_leaves / (employee_count or 1) > 0.2 else 'Stabil' }}
+            {% else %}
+              Keine Daten
+            {% endif %}
+          </p>
+          <p class="insight-text">
+            {% if is_admin %}
+              Nutze Kapazitätsdaten, um Engpässe frühzeitig zu erkennen und gegenzusteuern.
+            {% else %}
+              Plane Urlaub abgestimmt auf Team-Kapazitäten für eine faire Verteilung.
+            {% endif %}
+          </p>
+        </div>
+        <div class="insight-card">
+          <p class="insight-label">Fokus dieser Woche</p>
+          <p class="insight-value">{{ 'Planung optimieren' if is_admin else 'Transparente Kommunikation' }}</p>
+          <p class="insight-text">
+            {% if is_admin %}
+              Stimme dich mit Teamleitungen ab und halte Stakeholder mit Berichten auf dem Laufenden.
+            {% else %}
+              Teile frühzeitig Verfügbarkeiten und tausche dich mit deinem Team zu Schichten aus.
+            {% endif %}
+          </p>
+        </div>
+        <div class="insight-card">
+          <p class="insight-label">Tipps</p>
+          <p class="insight-value">Proaktiv handeln</p>
+          <p class="insight-text">
+            {% if is_admin %}
+              Nutze Auto-Schichten als Ausgangspunkt und individualisiere Einsätze für Spitzenzeiten.
+            {% else %}
+              Prüfe den Dienstplan regelmäßig, um spontane Änderungen nicht zu verpassen.
+            {% endif %}
+          </p>
+        </div>
+      </div>
+    </article>
+  </section>
 </div>
 {% endblock %}
 
