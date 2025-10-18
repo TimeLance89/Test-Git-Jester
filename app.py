@@ -1348,6 +1348,11 @@ def create_app() -> Flask:
         hours_summary = calculate_employee_hours_summary(employee_id, current_year, current_month)
         
         # Hole die Stundenübersicht für die letzten 12 Monate für Diagramme
+        month_names = [
+            "Januar", "Februar", "März", "April", "Mai", "Juni",
+            "Juli", "August", "September", "Oktober", "November", "Dezember"
+        ]
+
         monthly_data = []
         for i in range(12):
             month = current_month - i
@@ -1358,6 +1363,7 @@ def create_app() -> Flask:
             summary = calculate_employee_hours_summary(employee_id, year, month)
             monthly_data.append({
                 'month_year': f"{month}/{year}",
+                'label': f"{month_names[month - 1]} {year}",
                 'worked_hours': summary.get('worked_hours', 0),
                 'target_hours': summary.get('target_hours', 0),
                 'proportional_target': summary.get('proportional_target', 0),
@@ -1377,13 +1383,108 @@ def create_app() -> Flask:
             shift_type = shift.shift_type or "Unbekannt"
             shift_type_hours[shift_type] = shift_type_hours.get(shift_type, 0) + shift.hours
 
+        total_weekday_hours = sum(weekday_hours.values())
+        weekday_labels = [
+            "Montag", "Dienstag", "Mittwoch", "Donnerstag",
+            "Freitag", "Samstag", "Sonntag"
+        ]
+        weekday_breakdown = []
+        for index, label in enumerate(weekday_labels):
+            value = weekday_hours.get(index, 0)
+            percentage = (value / total_weekday_hours * 100) if total_weekday_hours else 0
+            weekday_breakdown.append({
+                'label': label,
+                'hours': value,
+                'percentage': percentage
+            })
+        top_weekday = max(weekday_breakdown, key=lambda item: item['hours']) if total_weekday_hours else None
+        calm_weekday = min(
+            (item for item in weekday_breakdown if item['hours'] > 0),
+            key=lambda item: item['hours'],
+            default=None
+        )
+
+        total_shift_type_hours = sum(shift_type_hours.values())
+        shift_breakdown = []
+        for shift_type, value in sorted(shift_type_hours.items(), key=lambda item: item[1], reverse=True):
+            percentage = (value / total_shift_type_hours * 100) if total_shift_type_hours else 0
+            shift_breakdown.append({
+                'type': shift_type,
+                'hours': value,
+                'percentage': percentage
+            })
+
+        recent_months = monthly_data[-4:] if monthly_data else []
+        monthly_trend = None
+        if len(monthly_data) >= 2:
+            last_month = monthly_data[-1]
+            previous_month = monthly_data[-2]
+            difference = last_month['worked_hours'] - previous_month['worked_hours']
+            monthly_trend = {
+                'current': last_month,
+                'previous': previous_month,
+                'difference': difference,
+                'direction': 'up' if difference >= 0 else 'down'
+            }
+
+        completion_percentage = hours_summary.get('completion_percentage', 0)
+        progress_percentage = max(0, min(completion_percentage, 100))
+
+        remaining_hours = hours_summary.get('remaining_hours', 0)
+        proportional_target = hours_summary.get('proportional_target', 0)
+        worked_hours = hours_summary.get('worked_hours', 0)
+        overtime_hours = hours_summary.get('overtime_hours', 0)
+        shift_count = hours_summary.get('shift_count', 0)
+
+        recommendations = []
+        if remaining_hours > 0:
+            recommendations.append(
+                f"Du liegst {remaining_hours:.1f} Stunden unter dem Monatsziel. Plane zusätzliche Einsätze oder prüfe offene Schichten."
+            )
+        else:
+            recommendations.append(
+                "Du hast dein Monatsziel erreicht – nutze die Zeit für Ausgleich oder Weiterbildung."
+            )
+
+        if proportional_target and worked_hours < proportional_target:
+            deficit = proportional_target - worked_hours
+            recommendations.append(
+                f"Bis heute fehlen {deficit:.1f} Stunden zu den anteiligen Soll-Stunden. Kleine zusätzliche Einsätze gleichen das aus."
+            )
+        elif proportional_target:
+            surplus = worked_hours - proportional_target
+            recommendations.append(
+                f"Du liegst {surplus:.1f} Stunden vor dem anteiligen Soll – behalte deine Erholung im Blick."
+            )
+
+        if overtime_hours > 0:
+            recommendations.append(
+                f"Aktuell stehen {overtime_hours:.1f} Überstunden an. Prüfe Möglichkeiten zum Ausgleich oder zur Freigabe."
+            )
+        elif shift_count == 0:
+            recommendations.append(
+                "Es wurden noch keine genehmigten Schichten erfasst. Bitte reiche deine Zeiten zeitnah ein."
+            )
+
+        if len(recommendations) > 3:
+            recommendations = recommendations[:3]
+
         return render_template(
             "employee_hours_overview.html",
             employee=employee,
             hours_summary=hours_summary,
             monthly_data=monthly_data,
+            recent_months=recent_months,
+            monthly_trend=monthly_trend,
             weekday_hours=weekday_hours,
+            weekday_breakdown=weekday_breakdown,
+            top_weekday=top_weekday,
+            calm_weekday=calm_weekday,
             shift_type_hours=shift_type_hours,
+            shift_breakdown=shift_breakdown,
+            recommendations=recommendations,
+            progress_percentage=progress_percentage,
+            completion_percentage=completion_percentage,
             current_month=current_month,
             current_year=current_year
         )
