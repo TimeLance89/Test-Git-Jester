@@ -1,159 +1,196 @@
 {% extends "layout.html" %}
 {% block title %}Automatische Schichtenerstellung - Dienstplaner{% endblock %}
 {% block content %}
-<div style="margin-bottom: 2rem;">
-  <h1 style="display: flex; align-items: center; margin-bottom: 0.5rem;">
-    <span style="margin-right: 0.75rem; font-size: 2rem;">🤖</span>
-    Automatische Schichtenerstellung
-  </h1>
-  <p style="color: #64748b; font-size: 1.125rem; margin: 0;">Erstelle automatisch Schichten basierend auf Standard-Arbeitszeiten</p>
-</div>
+<div class="auto-schedule-page">
+  <section class="auto-schedule-hero">
+    <div class="auto-schedule-hero-icon" aria-hidden="true">🤖</div>
+    <div class="auto-schedule-hero-text">
+      <h1>Automatische Schichtenerstellung</h1>
+      <p>Erstelle Schichten auf Knopfdruck – basierend auf hinterlegten Standard-Arbeitszeiten und Positionen.</p>
+      {% if is_department_admin %}
+      <div class="auto-schedule-hero-meta">
+        <span class="meta-pill">🔒 Bereichsmodus aktiv – es werden nur Mitarbeiter deiner Abteilung angezeigt.</span>
+      </div>
+      {% endif %}
+    </div>
+  </section>
 
-<div class="card">
-  <div class="card-header">
-    <h3 style="margin: 0; display: flex; align-items: center;">
-      <span style="margin-right: 0.75rem;">⚙️</span>
-      Schichtenerstellung konfigurieren
-    </h3>
-  </div>
-  <div class="card-body">
-    <form method="post" action="{{ url_for('create_auto_schedule') }}">
-      <!-- Zeitraum -->
-      <div style="margin-bottom: 2rem;">
-        <h4 style="color: #374151; margin-bottom: 1rem; display: flex; align-items: center;">
-          <span style="margin-right: 0.5rem;">📅</span>Zeitraum
-        </h4>
-        <div class="row">
-          <div class="col-md-6">
-            <label for="month" class="form-label">
-              <span style="margin-right: 0.5rem;">📅</span>Monat
-            </label>
-            <select class="form-select" id="month" name="month" required>
-              <option value="1" {% if current_month == 1 %}selected{% endif %}>Januar</option>
-              <option value="2" {% if current_month == 2 %}selected{% endif %}>Februar</option>
-              <option value="3" {% if current_month == 3 %}selected{% endif %}>März</option>
-              <option value="4" {% if current_month == 4 %}selected{% endif %}>April</option>
-              <option value="5" {% if current_month == 5 %}selected{% endif %}>Mai</option>
-              <option value="6" {% if current_month == 6 %}selected{% endif %}>Juni</option>
-              <option value="7" {% if current_month == 7 %}selected{% endif %}>Juli</option>
-              <option value="8" {% if current_month == 8 %}selected{% endif %}>August</option>
-              <option value="9" {% if current_month == 9 %}selected{% endif %}>September</option>
-              <option value="10" {% if current_month == 10 %}selected{% endif %}>Oktober</option>
-              <option value="11" {% if current_month == 11 %}selected{% endif %}>November</option>
-              <option value="12" {% if current_month == 12 %}selected{% endif %}>Dezember</option>
-            </select>
+  <form method="post" action="{{ url_for('create_auto_schedule') }}" class="auto-schedule-form">
+    <section class="auto-schedule-card">
+      <header class="auto-schedule-card-header">
+        <div>
+          <h2>Zeitraum auswählen</h2>
+          <p>Bestimme, für welchen Monat Schichten erzeugt werden sollen.</p>
+        </div>
+        <span class="header-icon" aria-hidden="true">📅</span>
+      </header>
+      <div class="auto-schedule-card-body auto-schedule-grid">
+        <div class="form-field">
+          <label for="month">Monat</label>
+          <select id="month" name="month" required>
+            <option value="1" {% if current_month == 1 %}selected{% endif %}>Januar</option>
+            <option value="2" {% if current_month == 2 %}selected{% endif %}>Februar</option>
+            <option value="3" {% if current_month == 3 %}selected{% endif %}>März</option>
+            <option value="4" {% if current_month == 4 %}selected{% endif %}>April</option>
+            <option value="5" {% if current_month == 5 %}selected{% endif %}>Mai</option>
+            <option value="6" {% if current_month == 6 %}selected{% endif %}>Juni</option>
+            <option value="7" {% if current_month == 7 %}selected{% endif %}>Juli</option>
+            <option value="8" {% if current_month == 8 %}selected{% endif %}>August</option>
+            <option value="9" {% if current_month == 9 %}selected{% endif %}>September</option>
+            <option value="10" {% if current_month == 10 %}selected{% endif %}>Oktober</option>
+            <option value="11" {% if current_month == 11 %}selected{% endif %}>November</option>
+            <option value="12" {% if current_month == 12 %}selected{% endif %}>Dezember</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label for="year">Jahr</label>
+          <input type="number" id="year" name="year" value="{{ current_year }}" min="2020" max="2035" required />
+        </div>
+      </div>
+    </section>
+
+    <section class="auto-schedule-card">
+      <header class="auto-schedule-card-header">
+        <div>
+          <h2>Modus wählen</h2>
+          <p>Lege fest, für wen Schichten erstellt werden sollen.</p>
+        </div>
+        <span class="header-icon" aria-hidden="true">🎯</span>
+      </header>
+      <div class="auto-schedule-card-body mode-options">
+        <label class="mode-option">
+          <input type="radio" name="mode" value="all" checked />
+          <div class="mode-option-content">
+            <div class="mode-option-title">Alle Mitarbeitenden mit Standardzeiten</div>
+            <p>Erstellt automatisch Schichten für alle verfügbaren Mitarbeitenden.</p>
           </div>
-          <div class="col-md-6">
-            <label for="year" class="form-label">
-              <span style="margin-right: 0.5rem;">📅</span>Jahr
-            </label>
-            <input type="number" class="form-control" id="year" name="year" value="{{ current_year }}" min="2020" max="2030" required />
+        </label>
+
+        <label class="mode-option" data-mode="position">
+          <input type="radio" name="mode" value="position" />
+          <div class="mode-option-content">
+            <div class="mode-option-title">Nach Position</div>
+            <p>Plane gezielt alle Mitarbeitenden einer Position.</p>
+            <div class="mode-extra" data-target="position" hidden>
+              {% if positions %}
+              <select name="position" aria-label="Position auswählen">
+                <option value="">– Position auswählen –</option>
+                {% for position in positions %}
+                <option value="{{ position }}">{{ position }}</option>
+                {% endfor %}
+              </select>
+              {% else %}
+              <div class="empty-hint">Keine Positionen vorhanden.</div>
+              {% endif %}
+            </div>
           </div>
-        </div>
-      </div>
+        </label>
 
-      <!-- Modus -->
-      <div style="margin-bottom: 2rem;">
-        <h4 style="color: #374151; margin-bottom: 1rem; display: flex; align-items: center;">
-          <span style="margin-right: 0.5rem;">🎯</span>Erstellungsmodus
-        </h4>
-        <div style="display: flex; flex-direction: column; gap: 1rem;">
-          <label style="display: flex; align-items: center; padding: 1rem; border: 2px solid #e5e7eb; border-radius: 0.5rem; cursor: pointer; transition: all 0.2s;">
-            <input type="radio" name="mode" value="all" checked style="margin-right: 1rem; transform: scale(1.2);">
-            <div>
-              <div style="font-weight: 600; color: #374151;">Alle Mitarbeiter mit Standard-Arbeitszeiten</div>
-              <div style="color: #6b7280; font-size: 0.875rem;">Erstellt Schichten für alle Mitarbeiter, die Standard-Arbeitszeiten hinterlegt haben</div>
+        <label class="mode-option" data-mode="employee">
+          <input type="radio" name="mode" value="employee" />
+          <div class="mode-option-content">
+            <div class="mode-option-title">Einzelner Mitarbeitender</div>
+            <p>Erstelle Schichten für eine gezielte Person.</p>
+            <div class="mode-extra" data-target="employee" hidden>
+              {% if employees %}
+              <select name="employee_id" aria-label="Mitarbeiter auswählen">
+                <option value="">– Mitarbeitenden auswählen –</option>
+                {% for employee in employees %}
+                <option value="{{ employee.id }}">{{ employee.name }}{% if employee.position %} · {{ employee.position }}{% endif %}</option>
+                {% endfor %}
+              </select>
+              {% else %}
+              <div class="empty-hint">Keine Mitarbeitenden verfügbar.</div>
+              {% endif %}
             </div>
-          </label>
-          
-          <label style="display: flex; align-items: center; padding: 1rem; border: 2px solid #e5e7eb; border-radius: 0.5rem; cursor: pointer; transition: all 0.2s;">
-            <input type="radio" name="mode" value="position" style="margin-right: 1rem; transform: scale(1.2);">
-            <div style="flex: 1;">
-              <div style="font-weight: 600; color: #374151;">Nach Position</div>
-              <div style="color: #6b7280; font-size: 0.875rem;">Erstellt Schichten für alle Mitarbeiter einer bestimmten Position</div>
-              <div style="margin-top: 0.5rem;">
-                <input type="text" class="form-control" name="position" placeholder="z.B. Vollzeit" style="font-size: 0.875rem;" />
-              </div>
-            </div>
-          </label>
-          
-          <label style="display: flex; align-items: center; padding: 1rem; border: 2px solid #e5e7eb; border-radius: 0.5rem; cursor: pointer; transition: all 0.2s;">
-            <input type="radio" name="mode" value="employee" style="margin-right: 1rem; transform: scale(1.2);">
-            <div style="flex: 1;">
-              <div style="font-weight: 600; color: #374151;">Einzelner Mitarbeiter</div>
-              <div style="color: #6b7280; font-size: 0.875rem;">Erstellt Schichten nur für einen ausgewählten Mitarbeiter</div>
-              <div style="margin-top: 0.5rem;">
-                <select class="form-select" name="employee_id" style="font-size: 0.875rem;">
-                  <option value="">– Mitarbeiter auswählen –</option>
-                  <!-- Diese würden dynamisch aus der Datenbank geladen -->
-                </select>
-              </div>
-            </div>
-          </label>
-        </div>
+          </div>
+        </label>
       </div>
+    </section>
 
-      <!-- Optionen -->
-      <div style="margin-bottom: 2rem;">
-        <h4 style="color: #374151; margin-bottom: 1rem; display: flex; align-items: center;">
-          <span style="margin-right: 0.5rem;">⚙️</span>Optionen
-        </h4>
-        <div style="padding: 1rem; background-color: #f8fafc; border-radius: 0.5rem;">
-          <label style="display: flex; align-items: center; cursor: pointer;">
-            <input type="checkbox" name="dry_run" value="1" style="margin-right: 0.75rem; transform: scale(1.2);">
-            <div>
-              <div style="font-weight: 600; color: #374151;">Nur Vorschau (Dry Run)</div>
-              <div style="color: #6b7280; font-size: 0.875rem;">Zeigt nur an, welche Schichten erstellt würden, ohne sie tatsächlich zu speichern</div>
-            </div>
-          </label>
+    <section class="auto-schedule-card">
+      <header class="auto-schedule-card-header">
+        <div>
+          <h2>Optionen</h2>
+          <p>Steuere, ob Schichten direkt erstellt oder nur als Vorschau angezeigt werden.</p>
         </div>
+        <span class="header-icon" aria-hidden="true">⚙️</span>
+      </header>
+      <div class="auto-schedule-card-body">
+        <label class="checkbox-option">
+          <input type="checkbox" name="dry_run" value="1" />
+          <span>
+            <span class="checkbox-title">Nur Vorschau (Dry Run)</span>
+            <span class="checkbox-description">Zeigt das Ergebnis an, ohne Schichten in der Datenbank zu speichern.</span>
+          </span>
+        </label>
       </div>
+    </section>
 
-      <!-- Hinweise -->
-      <div style="margin-bottom: 2rem; padding: 1rem; background-color: #eff6ff; border-left: 4px solid #3b82f6; border-radius: 0.5rem;">
-        <h5 style="margin: 0 0 0.5rem 0; color: #1e40af; display: flex; align-items: center;">
-          <span style="margin-right: 0.5rem;">💡</span>Hinweise
-        </h5>
-        <ul style="margin: 0; padding-left: 1.5rem; color: #1e40af;">
-          <li>Bereits vorhandene Schichten werden nicht überschrieben</li>
-          <li>Automatisch erstellte Schichten werden sofort genehmigt</li>
-          <li>Vollzeit-Mitarbeiter erhalten automatisch 8 Stunden Mo-Fr, auch ohne hinterlegte Standard-Arbeitszeiten</li>
-          <li>Verwenden Sie die Vorschau-Option, um das Ergebnis vor der Erstellung zu prüfen</li>
+    <section class="auto-schedule-card info-card">
+      <header class="auto-schedule-card-header">
+        <div>
+          <h2>Hinweise</h2>
+          <p>So arbeitet die automatische Planung.</p>
+        </div>
+        <span class="header-icon" aria-hidden="true">💡</span>
+      </header>
+      <div class="auto-schedule-card-body">
+        <ul class="info-list">
+          <li>Bereits vorhandene Schichten bleiben unverändert.</li>
+          <li>Automatisch erzeugte Schichten werden sofort als genehmigt markiert.</li>
+          <li>Vollzeit-Positionen erhalten automatisch 8 Stunden von Montag bis Freitag.</li>
+          <li>Nutze die Vorschau, um vorab den Umfang der Planung zu prüfen.</li>
         </ul>
       </div>
+    </section>
 
-      <!-- Submit Button -->
-      <div style="text-align: center; padding-top: 1rem; border-top: 1px solid #e2e8f0; display: flex; gap: 1rem; justify-content: center;">
-        <button type="submit" class="btn btn-success" style="padding: 1rem 2rem; font-size: 1.1rem; font-weight: 600;">
-          <span style="margin-right: 0.5rem;">🤖</span>Schichten erstellen
-        </button>
-        <a href="{{ url_for('schedule') }}" class="btn btn-secondary" style="padding: 1rem 2rem; font-size: 1.1rem; font-weight: 600;">
-          <span style="margin-right: 0.5rem;">❌</span>Abbrechen
-        </a>
-      </div>
-    </form>
-  </div>
+    <footer class="auto-schedule-actions">
+      <button type="submit" class="btn-primary">
+        <span aria-hidden="true">🤖</span>
+        <span>Schichten erstellen</span>
+      </button>
+      <a href="{{ url_for('schedule') }}" class="btn-secondary">
+        <span aria-hidden="true">↩️</span>
+        <span>Zurück zum Dienstplan</span>
+      </a>
+    </footer>
+  </form>
 </div>
 
 <script>
-// Radio button styling
-document.querySelectorAll('input[type="radio"]').forEach(radio => {
-  radio.addEventListener('change', function() {
-    // Reset all labels
-    document.querySelectorAll('label').forEach(label => {
-      if (label.querySelector('input[type="radio"]')) {
-        label.style.borderColor = '#e5e7eb';
-        label.style.backgroundColor = 'white';
+  const modeRadios = document.querySelectorAll('input[name="mode"]');
+  const modeLabels = document.querySelectorAll('.mode-option');
+
+  const updateModeState = () => {
+    const checkedRadio = document.querySelector('input[name="mode"]:checked');
+    const selectedMode = checkedRadio ? checkedRadio.value : null;
+
+    modeLabels.forEach((label) => {
+      const radio = label.querySelector('input[type="radio"]');
+      const target = label.dataset.mode;
+      const extra = label.querySelector('.mode-extra');
+
+      if (radio.checked) {
+        label.classList.add('is-active');
+      } else {
+        label.classList.remove('is-active');
+      }
+
+      if (extra) {
+        const shouldEnable = target === selectedMode;
+        extra.hidden = !shouldEnable;
+        extra.querySelectorAll('select, input').forEach((field) => {
+          field.disabled = !shouldEnable;
+        });
       }
     });
-    
-    // Highlight selected label
-    const label = this.closest('label');
-    if (label) {
-      label.style.borderColor = '#3b82f6';
-      label.style.backgroundColor = '#eff6ff';
-    }
+  };
+
+  modeRadios.forEach((radio) => {
+    radio.addEventListener('change', updateModeState);
   });
-});
+
+  updateModeState();
 </script>
 {% endblock %}
