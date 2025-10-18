@@ -1377,82 +1377,6 @@ def create_app() -> Flask:
             shift_type = shift.shift_type or "Unbekannt"
             shift_type_hours[shift_type] = shift_type_hours.get(shift_type, 0) + shift.hours
 
-        # Erweiterte Insights für ein umfangreicheres Dashboard
-        shifts_detail = hours_summary.get('shifts_detail', []) or []
-        leaves_detail = hours_summary.get('leaves_detail', []) or []
-
-        worked_days = sorted({shift.date for shift in shifts_detail})
-        worked_days_count = len(worked_days)
-        average_daily_hours = (
-            hours_summary.get('worked_hours', 0) / worked_days_count
-            if worked_days_count
-            else 0
-        )
-
-        total_leave_days = sum((leave.end_date - leave.start_date).days + 1 for leave in leaves_detail)
-        vacation_days = sum(
-            (leave.end_date - leave.start_date).days + 1
-            for leave in leaves_detail
-            if leave.leave_type == 'Urlaub'
-        )
-
-        weekday_names = [
-            "Montag",
-            "Dienstag",
-            "Mittwoch",
-            "Donnerstag",
-            "Freitag",
-            "Samstag",
-            "Sonntag",
-        ]
-        weekday_breakdown = [
-            {
-                'name': weekday_names[index],
-                'hours': round(hours, 1),
-            }
-            for index, hours in weekday_hours.items()
-        ]
-        weekday_breakdown.sort(key=lambda entry: entry['hours'], reverse=True)
-        busiest_weekday = weekday_breakdown[0] if weekday_breakdown and weekday_breakdown[0]['hours'] > 0 else None
-        quietest_weekday = next(
-            (entry for entry in reversed(weekday_breakdown) if entry['hours'] > 0),
-            None,
-        )
-
-        shift_type_breakdown = [
-            {
-                'name': label,
-                'hours': round(value, 1),
-            }
-            for label, value in shift_type_hours.items()
-        ]
-        shift_type_breakdown.sort(key=lambda entry: entry['hours'], reverse=True)
-        dominant_shift_type = shift_type_breakdown[0] if shift_type_breakdown else None
-
-        hours_delta = None
-        hours_delta_percentage = None
-        previous_month_label = None
-        current_month_label = None
-        if monthly_data:
-            current_month_label = monthly_data[-1]['month_year']
-        if len(monthly_data) >= 2:
-            previous_month_label = monthly_data[-2]['month_year']
-            current_hours = monthly_data[-1].get('worked_hours', 0)
-            previous_hours = monthly_data[-2].get('worked_hours', 0)
-            hours_delta = round(current_hours - previous_hours, 1)
-            if previous_hours > 0:
-                hours_delta_percentage = round((hours_delta / previous_hours) * 100, 1)
-
-        completion_to_target = (
-            (hours_summary.get('worked_hours', 0) / hours_summary.get('target_hours', 0)) * 100
-            if hours_summary.get('target_hours')
-            else 0
-        )
-        remaining_workdays = max(
-            (hours_summary.get('total_workdays', 0) or 0) - (hours_summary.get('workdays_passed', 0) or 0),
-            0,
-        )
-
         return render_template(
             "employee_hours_overview.html",
             employee=employee,
@@ -1460,21 +1384,6 @@ def create_app() -> Flask:
             monthly_data=monthly_data,
             weekday_hours=weekday_hours,
             shift_type_hours=shift_type_hours,
-            weekday_breakdown=weekday_breakdown,
-            shift_type_breakdown=shift_type_breakdown,
-            busiest_weekday=busiest_weekday,
-            quietest_weekday=quietest_weekday,
-            dominant_shift_type=dominant_shift_type,
-            worked_days_count=worked_days_count,
-            average_daily_hours=average_daily_hours,
-            total_leave_days=total_leave_days,
-            vacation_days=vacation_days,
-            hours_delta=hours_delta,
-            hours_delta_percentage=hours_delta_percentage,
-            previous_month_label=previous_month_label,
-            current_month_label=current_month_label,
-            completion_to_target=completion_to_target,
-            remaining_workdays=remaining_workdays,
             current_month=current_month,
             current_year=current_year
         )
