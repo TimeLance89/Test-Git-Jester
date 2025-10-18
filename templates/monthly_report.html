@@ -1,0 +1,182 @@
+{% extends "layout.html" %}
+{% block title %}Monatsbericht · Einsatzplaner{% endblock %}
+{% block content %}
+<div class="report-header">
+  <div>
+    <h1 class="report-title">Monatsbericht</h1>
+    <p class="report-subtitle">
+      Überblick über geleistete Stunden, Überstunden und Abwesenheiten für {{ month_label }}.
+    </p>
+  </div>
+  <div class="report-navigation">
+    <a class="btn btn-secondary" href="{{ url_for('monthly_report', **prev_params) }}">
+      <span>⬅️</span>
+      <span>Vormonat</span>
+    </a>
+    <a class="btn btn-secondary" href="{{ url_for('monthly_report', **next_params) }}">
+      <span>Nächster Monat</span>
+      <span>➡️</span>
+    </a>
+  </div>
+</div>
+
+<form class="report-filter" method="get">
+  <div class="report-filter-group">
+    <label for="month" class="form-label">Monat</label>
+    <select id="month" name="month" class="form-select">
+      {% for value, label in month_choices %}
+      <option value="{{ value }}" {% if value == month %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="report-filter-group">
+    <label for="year" class="form-label">Jahr</label>
+    <select id="year" name="year" class="form-select">
+      {% for y in year_choices %}
+      <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  {% if is_super_admin %}
+  <div class="report-filter-group">
+    <label for="department_id" class="form-label">Abteilung</label>
+    <select id="department_id" name="department_id" class="form-select">
+      <option value="" {% if not selected_department_id %}selected{% endif %}>Alle Abteilungen</option>
+      {% for department in available_departments %}
+      <option value="{{ department.id }}" {% if department.id == selected_department_id %}selected{% endif %}>{{ department.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  {% endif %}
+  <div class="report-filter-action">
+    <button type="submit" class="btn btn-primary">
+      <span>🔍</span>
+      Bericht anzeigen
+    </button>
+  </div>
+</form>
+
+{% if employee_count == 0 %}
+<div class="empty-state">
+  <div class="empty-state-icon">🗂️</div>
+  <h2 class="empty-state-title">Keine Daten für diesen Zeitraum</h2>
+  <p class="empty-state-text">
+    Für die aktuelle Auswahl sind keine Mitarbeiter oder Einträge vorhanden. Bitte passen Sie die Filter an.
+  </p>
+</div>
+{% else %}
+<div class="report-summary-grid">
+  <div class="report-card">
+    <div class="report-card-icon report-card-icon-hours">⏱️</div>
+    <div class="report-card-content">
+      <span class="report-card-label">Geleistete Stunden</span>
+      <span class="report-card-value">{{ '%.1f'|format(totals.total_hours) }} h</span>
+      <span class="report-card-sub">Ø {{ '%.1f'|format(totals.average_hours) }} h pro Mitarbeiter</span>
+    </div>
+  </div>
+  <div class="report-card">
+    <div class="report-card-icon report-card-icon-overtime">⚡</div>
+    <div class="report-card-content">
+      <span class="report-card-label">Überstunden</span>
+      <span class="report-card-value">{{ '%.1f'|format(totals.total_overtime) }} h</span>
+      <span class="report-card-sub">Ø {{ '%.1f'|format(totals.average_overtime) }} h pro Mitarbeiter</span>
+    </div>
+  </div>
+  <div class="report-card">
+    <div class="report-card-icon report-card-icon-sick">🤒</div>
+    <div class="report-card-content">
+      <span class="report-card-label">Krankheitstage</span>
+      <span class="report-card-value">{{ totals.total_sick_days }} Tage</span>
+      <span class="report-card-sub">Ø {{ '%.1f'|format(totals.average_sick_days) }} Tage pro Mitarbeiter</span>
+    </div>
+  </div>
+  <div class="report-card">
+    <div class="report-card-icon report-card-icon-usa">🕒</div>
+    <div class="report-card-content">
+      <span class="report-card-label">ÜSA (Abbau)</span>
+      <span class="report-card-value">{{ totals.total_usa_days }} Tage</span>
+      <span class="report-card-sub">Ø {{ '%.1f'|format(totals.average_usa_days) }} Tage pro Mitarbeiter</span>
+    </div>
+  </div>
+</div>
+
+<div class="report-section">
+  <div class="report-section-header">
+    <h2>Mitarbeiterübersicht</h2>
+    <span class="report-section-meta">{{ employee_count }} Mitarbeitende</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-striped report-table">
+      <thead>
+        <tr>
+          <th>Mitarbeiter</th>
+          <th>Abteilung</th>
+          <th class="text-right">Zielstunden</th>
+          <th class="text-right">Soll (bis heute)</th>
+          <th class="text-right">Geleistet</th>
+          <th class="text-right">Reststunden</th>
+          <th class="text-right">Überstunden</th>
+          <th class="text-right">Krank</th>
+          <th class="text-right">ÜSA</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in report_rows %}
+        <tr>
+          <td data-label="Mitarbeiter">
+            <div class="report-employee-name">{{ row.employee.name }}</div>
+            {% if row.employee.position %}
+            <div class="report-employee-position">{{ row.employee.position }}</div>
+            {% endif %}
+          </td>
+          <td data-label="Abteilung">{{ row.department_name }}</td>
+          <td data-label="Zielstunden" class="text-right">{{ '%.1f'|format(row.target_hours) }}</td>
+          <td data-label="Soll (bis heute)" class="text-right">{{ '%.1f'|format(row.proportional_target) }}</td>
+          <td data-label="Geleistet" class="text-right">{{ '%.1f'|format(row.worked_hours) }}</td>
+          <td data-label="Reststunden" class="text-right">{{ '%.1f'|format(row.remaining_hours) }}</td>
+          <td data-label="Überstunden" class="text-right {{ 'text-danger' if row.overtime_hours > 0 else 'text-muted' }}">{{ '%.1f'|format(row.overtime_hours) }}</td>
+          <td data-label="Krank" class="text-right">{{ row.sick_days }}</td>
+          <td data-label="ÜSA" class="text-right">{{ row.usa_days }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if department_overview %}
+<div class="report-section">
+  <div class="report-section-header">
+    <h2>Abteilungsübersicht</h2>
+    <span class="report-section-meta">Zusammenfassung aller Bereiche</span>
+  </div>
+  <div class="report-department-grid">
+    {% for department in department_overview %}
+    <div class="report-department-card">
+      <div class="report-department-title">{{ department.name }}</div>
+      <div class="report-department-meta">{{ department.employees }} Mitarbeitende</div>
+      <div class="report-department-stats">
+        <div>
+          <span class="label">Stunden</span>
+          <span class="value">{{ '%.1f'|format(department.hours) }}</span>
+        </div>
+        <div>
+          <span class="label">Überstunden</span>
+          <span class="value">{{ '%.1f'|format(department.overtime) }}</span>
+        </div>
+        <div>
+          <span class="label">Krank</span>
+          <span class="value">{{ department.sick_days }}</span>
+        </div>
+        <div>
+          <span class="label">ÜSA</span>
+          <span class="value">{{ department.usa_days }}</span>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}

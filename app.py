@@ -611,7 +611,7 @@ def create_app() -> Flask:
     def employees() -> str:
         """Liste der Mitarbeiter mit Formular zum Hinzufügen neuer Mitarbeiter."""
         from datetime import date
-        
+
         # Hole aktuelle Monat/Jahr Parameter oder verwende aktuelle Werte
         today = date.today()
         month = request.args.get('month', type=int) or today.month
@@ -645,6 +645,174 @@ def create_app() -> Flask:
             planning_insights=planning_insights,
             current_month=month,
             current_year=year,
+        )
+
+    @app.route("/berichte/monat")
+    @admin_required
+    def monthly_report() -> str:
+        """Zeigt einen monatlichen Bericht über Stunden und Abwesenheiten."""
+        today = date.today()
+        month = request.args.get("month", type=int) or today.month
+        year = request.args.get("year", type=int) or today.year
+
+        if month < 1 or month > 12:
+            month = today.month
+
+        start_date = date(year, month, 1)
+        last_day = calendar.monthrange(year, month)[1]
+        end_date = date(year, month, last_day)
+
+        current_user = get_current_user()
+        is_super_admin = bool(current_user and current_user.is_admin and not current_user.department_id)
+
+        selected_department_id = None
+        available_departments: List[Department] = []
+
+        if current_user and current_user.department_id:
+            selected_department_id = current_user.department_id
+        else:
+            selected_department_id = request.args.get("department_id", type=int)
+            available_departments = Department.query.order_by(Department.name).all()
+            if selected_department_id and not any(d.id == selected_department_id for d in available_departments):
+                selected_department_id = None
+
+        employee_query = Employee.query
+        if selected_department_id:
+            employee_query = employee_query.filter_by(department_id=selected_department_id)
+        employees = employee_query.order_by(Employee.name).all()
+
+        summary_department = selected_department_id if selected_department_id else None
+        hours_summary = get_all_employees_hours_summary(year, month, summary_department)
+
+        leaves_query = Leave.query.join(Employee).filter(
+            Leave.approved == True,
+            Leave.start_date <= end_date,
+            Leave.end_date >= start_date,
+        )
+        if selected_department_id:
+            leaves_query = leaves_query.filter(Employee.department_id == selected_department_id)
+
+        leaves = leaves_query.all()
+
+        sick_days_by_employee: Dict[int, int] = {}
+        usa_days_by_employee: Dict[int, int] = {}
+
+        for leave in leaves:
+            overlap_start = max(leave.start_date, start_date)
+            overlap_end = min(leave.end_date, end_date)
+            if overlap_start > overlap_end:
+                continue
+            leave_days = (overlap_end - overlap_start).days + 1
+
+            if leave.leave_type == "Krank":
+                sick_days_by_employee[leave.employee_id] = sick_days_by_employee.get(leave.employee_id, 0) + leave_days
+            elif leave.leave_type == "ÜSA":
+                usa_days_by_employee[leave.employee_id] = usa_days_by_employee.get(leave.employee_id, 0) + leave_days
+
+        report_rows = []
+        totals = {
+            "total_hours": 0.0,
+            "total_overtime": 0.0,
+            "total_sick_days": 0,
+            "total_usa_days": 0,
+        }
+
+        for employee in employees:
+            summary = hours_summary.get(employee.id, {})
+            worked_hours = float(summary.get("worked_hours", 0))
+            overtime_hours = float(summary.get("overtime_hours", 0))
+            target_hours = float(summary.get("target_hours", 0) or 0)
+            proportional_target = float(summary.get("proportional_target", target_hours))
+            remaining_hours = float(summary.get("remaining_hours", 0))
+            sick_days = sick_days_by_employee.get(employee.id, 0)
+            usa_days = usa_days_by_employee.get(employee.id, 0)
+
+            totals["total_hours"] += worked_hours
+            totals["total_overtime"] += overtime_hours
+            totals["total_sick_days"] += sick_days
+            totals["total_usa_days"] += usa_days
+
+            report_rows.append(
+                {
+                    "employee": employee,
+                    "department_name": employee.department.name if employee.department else "Keine Abteilung",
+                    "worked_hours": worked_hours,
+                    "overtime_hours": overtime_hours,
+                    "target_hours": target_hours,
+                    "proportional_target": proportional_target,
+                    "remaining_hours": remaining_hours,
+                    "sick_days": sick_days,
+                    "usa_days": usa_days,
+                    "is_current_month": bool(summary.get("is_current_month")),
+                }
+            )
+
+        employee_count = len(report_rows)
+        totals["average_hours"] = totals["total_hours"] / employee_count if employee_count else 0
+        totals["average_overtime"] = totals["total_overtime"] / employee_count if employee_count else 0
+        totals["average_sick_days"] = totals["total_sick_days"] / employee_count if employee_count else 0
+        totals["average_usa_days"] = totals["total_usa_days"] / employee_count if employee_count else 0
+
+        department_overview = []
+        if is_super_admin and not selected_department_id:
+            department_totals: Dict[str, Dict[str, float]] = {}
+            for row in report_rows:
+                dept_name = row["department_name"]
+                if dept_name not in department_totals:
+                    department_totals[dept_name] = {
+                        "hours": 0.0,
+                        "overtime": 0.0,
+                        "sick_days": 0,
+                        "usa_days": 0,
+                        "employees": 0,
+                    }
+                department_totals[dept_name]["hours"] += row["worked_hours"]
+                department_totals[dept_name]["overtime"] += row["overtime_hours"]
+                department_totals[dept_name]["sick_days"] += row["sick_days"]
+                department_totals[dept_name]["usa_days"] += row["usa_days"]
+                department_totals[dept_name]["employees"] += 1
+
+            department_overview = [
+                {
+                    "name": name,
+                    "hours": data["hours"],
+                    "overtime": data["overtime"],
+                    "sick_days": data["sick_days"],
+                    "usa_days": data["usa_days"],
+                    "employees": data["employees"],
+                }
+                for name, data in sorted(department_totals.items(), key=lambda item: item[0].lower())
+            ]
+
+        month_label = f"{calendar.month_name[month]} {year}"
+        prev_month_date = start_date - timedelta(days=1)
+        next_month_date = end_date + timedelta(days=1)
+
+        prev_params = {"month": prev_month_date.month, "year": prev_month_date.year}
+        next_params = {"month": next_month_date.month, "year": next_month_date.year}
+        if selected_department_id:
+            prev_params["department_id"] = selected_department_id
+            next_params["department_id"] = selected_department_id
+
+        month_choices = [(i, calendar.month_name[i]) for i in range(1, 13)]
+        year_choices = list(range(today.year - 2, today.year + 3))
+
+        return render_template(
+            "monthly_report.html",
+            month=month,
+            year=year,
+            month_label=month_label,
+            month_choices=month_choices,
+            year_choices=year_choices,
+            selected_department_id=selected_department_id,
+            available_departments=available_departments,
+            is_super_admin=is_super_admin,
+            report_rows=report_rows,
+            totals=totals,
+            employee_count=employee_count,
+            department_overview=department_overview,
+            prev_params=prev_params,
+            next_params=next_params,
         )
 
     @app.route("/mitarbeiter/hinzufuegen", methods=["POST"])
