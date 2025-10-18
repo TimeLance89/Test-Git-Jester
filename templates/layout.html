@@ -24,66 +24,121 @@
   </head>
   <body class="{{ 'schedule-page' if request.endpoint == 'schedule' else '' }}">
     <nav class="navbar">
-      <a class="navbar-brand" href="{{ url_for('index') }}">
-        <span style="font-size: 1.2em;">📋</span> Dienstplaner
-      </a>
+      <div class="navbar-left">
+        <a class="navbar-brand" href="{{ url_for('index') }}">
+          <span aria-hidden="true">📋</span>
+          <span class="navbar-brand-text">Dienstplaner</span>
+        </a>
+        {% if session.get('user_id') %}
+        <button class="nav-toggle" type="button" aria-expanded="false" aria-label="Menü öffnen">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+        {% endif %}
+      </div>
       {% if session.get('user_id') %}
       <div class="nav-links">
-        <a href="{{ url_for('schedule') }}">
-          <span style="margin-right: 0.5rem;">📅</span>Dienstplan
-        </a>
+        <div class="nav-group">
+          <span class="nav-group-title">Planung</span>
+          <div class="nav-group-items">
+            <a href="{{ url_for('schedule') }}">
+              <span class="nav-icon" aria-hidden="true">📅</span>
+              <span>Dienstplan</span>
+            </a>
+            <a href="{{ url_for('auto_schedule_form') }}">
+              <span class="nav-icon" aria-hidden="true">🤖</span>
+              <span>Auto-Schichten</span>
+            </a>
+            <a href="{{ url_for('blocked_days') }}">
+              <span class="nav-icon" aria-hidden="true">🚫</span>
+              <span>Gesperrte Tage</span>
+            </a>
+          </div>
+        </div>
         {% if session.get('is_admin') %}
-        <a href="{{ url_for('employees') }}">
-          <span style="margin-right: 0.5rem;">👥</span>Mitarbeiter
-        </a>
-        <a href="{{ url_for('departments') }}">
-          <span style="margin-right: 0.5rem;">🏢</span>Abteilungen
-        </a>
-        <a href="{{ url_for('leave_requests') }}">
-          <span style="margin-right: 0.5rem;">🏖️</span>Abwesenheiten
-          {% if pending_leaves_count > 0 %}
-            <span class="badge bg-danger rounded-pill ms-1">{{ pending_leaves_count }}</span>
-          {% endif %}
-        </a>
-        <a href="{{ url_for('shift_requests_overview') }}">
-          <span style="margin-right: 0.5rem;">⏰</span>Offene Einsätze
-          {% if pending_shifts_count > 0 %}
-            <span class="badge bg-danger rounded-pill ms-1">{{ pending_shifts_count }}</span>
-          {% endif %}
-        </a>
-        <a href="{{ url_for('productivity_settings') }}">
-          <span style="margin-right: 0.5rem;">⚙️</span>Produktivität
-        </a>
-        <a href="{{ url_for('monthly_report') }}">
-          <span style="margin-right: 0.5rem;">📈</span>Monatsbericht
-        </a>
-        <a href="{{ url_for('auto_schedule_form') }}">
-          <span style="margin-right: 0.5rem;">🤖</span>Auto-Schichten
-        </a>
-        <a href="{{ url_for('blocked_days') }}">
-          <span style="margin-right: 0.5rem;">🚫</span>Gesperrte Tage
-        </a>
-        {% if not session.get('department_id') %}
-        <a href="{{ url_for('user_management') }}">
-          <span style="margin-right: 0.5rem;">👥</span>Benutzerverwaltung
-        </a>
+        <div class="nav-group">
+          <span class="nav-group-title">Anträge</span>
+          <div class="nav-group-items">
+            <a href="{{ url_for('leave_requests') }}">
+              <span class="nav-icon" aria-hidden="true">🏖️</span>
+              <span>Abwesenheiten</span>
+              {% if pending_leaves_count > 0 %}
+                <span class="nav-badge">{{ pending_leaves_count }}</span>
+              {% endif %}
+            </a>
+            <a href="{{ url_for('shift_requests_overview') }}">
+              <span class="nav-icon" aria-hidden="true">⏰</span>
+              <span>Offene Einsätze</span>
+              {% if pending_shifts_count > 0 %}
+                <span class="nav-badge">{{ pending_shifts_count }}</span>
+              {% endif %}
+            </a>
+          </div>
+        </div>
+        <div class="nav-group">
+          <span class="nav-group-title">Verwaltung</span>
+          <div class="nav-group-items">
+            <a href="{{ url_for('employees') }}">
+              <span class="nav-icon" aria-hidden="true">👥</span>
+              <span>Mitarbeiter</span>
+            </a>
+            <a href="{{ url_for('departments') }}">
+              <span class="nav-icon" aria-hidden="true">🏢</span>
+              <span>Abteilungen</span>
+            </a>
+            {% if not session.get('department_id') %}
+            <a href="{{ url_for('user_management') }}">
+              <span class="nav-icon" aria-hidden="true">🛠️</span>
+              <span>Benutzerverwaltung</span>
+            </a>
+            {% endif %}
+            <a href="{{ url_for('productivity_settings') }}">
+              <span class="nav-icon" aria-hidden="true">⚙️</span>
+              <span>Produktivität</span>
+            </a>
+          </div>
+        </div>
+        <div class="nav-group">
+          <span class="nav-group-title">Auswertungen</span>
+          <div class="nav-group-items">
+            <a href="{{ url_for('monthly_report') }}">
+              <span class="nav-icon" aria-hidden="true">📈</span>
+              <span>Monatsbericht</span>
+            </a>
+          </div>
+        </div>
+        {% else %}
+        <div class="nav-group">
+          <span class="nav-group-title">Übersicht</span>
+          <div class="nav-group-items">
+            <a href="{{ url_for('schedule') }}">
+              <span class="nav-icon" aria-hidden="true">📅</span>
+              <span>Dienstplan</span>
+            </a>
+            <a href="{{ url_for('employee_hours_overview') }}">
+              <span class="nav-icon" aria-hidden="true">📊</span>
+              <span>Meine Stunden</span>
+            </a>
+            <a href="{{ url_for('leave_form') }}">
+              <span class="nav-icon" aria-hidden="true">📝</span>
+              <span>Abwesenheit beantragen</span>
+            </a>
+          </div>
+        </div>
         {% endif %}
-{% else %}
-        <a href="{{ url_for("employee_hours_overview") }}">
-          <span style="margin-right: 0.5rem;">📊</span>Meine Stunden
-        </a>
-        <a href="{{ url_for("leave_form") }}">
-          <span style="margin-right: 0.5rem;">📝</span>Abwesenheit beantragen
-        </a>
-        {% endif %}
-        <a href="{{ url_for('logout') }}" style="background-color: rgba(255,255,255,0.1); border-radius: 0.5rem;">
-          <span style="margin-right: 0.5rem;">🚪</span>Logout
-        </a>
+        <div class="nav-actions">
+          <a href="{{ url_for('logout') }}">
+            <span class="nav-icon" aria-hidden="true">🚪</span>
+            <span>Logout</span>
+          </a>
+        </div>
       </div>
       {% else %}
-      <div class="nav-links">
+      <div class="nav-links nav-links-guest">
         <a href="{{ url_for('login') }}">
-          <span style="margin-right: 0.5rem;">🔐</span>Login
+          <span class="nav-icon" aria-hidden="true">🔐</span>
+          <span>Login</span>
         </a>
       </div>
       {% endif %}
@@ -136,6 +191,44 @@
     
     <!-- Moderne JavaScript-Verbesserungen -->
     <script>
+      const navToggle = document.querySelector('.nav-toggle');
+      const navLinks = document.querySelector('.nav-links');
+
+      if (navToggle && navLinks) {
+        const closeMenu = () => {
+          navToggle.setAttribute('aria-expanded', 'false');
+          navLinks.removeAttribute('data-nav-open');
+        };
+
+        navToggle.addEventListener('click', () => {
+          const isExpanded = navToggle.getAttribute('aria-expanded') === 'true';
+          if (isExpanded) {
+            closeMenu();
+          } else {
+            navLinks.setAttribute('data-nav-open', '');
+            navToggle.setAttribute('aria-expanded', 'true');
+          }
+        });
+
+        navLinks.querySelectorAll('a').forEach(link => {
+          link.addEventListener('click', () => {
+            if (window.innerWidth <= 1200) {
+              closeMenu();
+            }
+          });
+        });
+
+        const handleResize = () => {
+          if (window.innerWidth > 1200) {
+            navLinks.removeAttribute('data-nav-open');
+            navToggle.setAttribute('aria-expanded', 'false');
+          }
+        };
+
+        handleResize();
+        window.addEventListener('resize', handleResize);
+      }
+
       // Smooth scrolling für interne Links
       document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         anchor.addEventListener('click', function (e) {
