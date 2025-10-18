@@ -46,6 +46,7 @@
               <span class="nav-icon" aria-hidden="true">📅</span>
               <span>Dienstplan</span>
             </a>
+            {% if session.get('is_admin') %}
             <a href="{{ url_for('auto_schedule_form') }}">
               <span class="nav-icon" aria-hidden="true">🤖</span>
               <span>Auto-Schichten</span>
@@ -54,6 +55,7 @@
               <span class="nav-icon" aria-hidden="true">🚫</span>
               <span>Gesperrte Tage</span>
             </a>
+            {% endif %}
           </div>
         </div>
         {% if session.get('is_admin') %}
