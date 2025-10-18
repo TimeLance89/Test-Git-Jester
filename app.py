@@ -1377,6 +1377,137 @@ def create_app() -> Flask:
             shift_type = shift.shift_type or "Unbekannt"
             shift_type_hours[shift_type] = shift_type_hours.get(shift_type, 0) + shift.hours
 
+        # Erweiterte Insights für ein umfassenderes Dashboard
+        previous_month = monthly_data[-2] if len(monthly_data) > 1 else None
+        hours_delta = None
+        trend_direction = "steady"
+        if previous_month:
+            hours_delta = hours_summary.get('worked_hours', 0) - previous_month.get('worked_hours', 0)
+            if hours_delta > 0.5:
+                trend_direction = "up"
+            elif hours_delta < -0.5:
+                trend_direction = "down"
+
+        proportional_target = hours_summary.get('proportional_target', 0) or 0
+        delta_vs_expected = hours_summary.get('worked_hours', 0) - proportional_target
+
+        pace_state = "balanced"
+        if proportional_target > 0:
+            if delta_vs_expected >= 2:
+                pace_state = "ahead"
+            elif delta_vs_expected <= -2:
+                pace_state = "behind"
+
+        weekday_names = [
+            "Montag",
+            "Dienstag",
+            "Mittwoch",
+            "Donnerstag",
+            "Freitag",
+            "Samstag",
+            "Sonntag",
+        ]
+        busiest_weekday_index = max(weekday_hours, key=weekday_hours.get) if weekday_hours else None
+        weekday_insight = None
+        if busiest_weekday_index is not None and weekday_hours[busiest_weekday_index] > 0:
+            weekday_insight = {
+                "name": weekday_names[busiest_weekday_index],
+                "hours": weekday_hours[busiest_weekday_index],
+                "share": (weekday_hours[busiest_weekday_index] / max(hours_summary.get('worked_hours', 0), 1)) * 100,
+            }
+
+        shift_type_highlights = []
+        total_shift_hours = sum(shift_type_hours.values()) or 0
+        if shift_type_hours:
+            for label, value in sorted(shift_type_hours.items(), key=lambda item: item[1], reverse=True):
+                shift_type_highlights.append({
+                    "label": label,
+                    "hours": value,
+                    "share": (value / max(total_shift_hours, 1)) * 100,
+                })
+
+        goal_history = []
+        for data_point in monthly_data:
+            target = data_point.get('target_hours', 0) or 0
+            worked = data_point.get('worked_hours', 0) or 0
+            reached = target > 0 and worked >= target
+            goal_history.append({
+                "label": data_point.get('month_year'),
+                "target": target,
+                "worked": worked,
+                "reached": reached,
+            })
+
+        consecutive_goal_months = 0
+        for entry in reversed(goal_history):
+            if entry["reached"]:
+                consecutive_goal_months += 1
+            else:
+                break
+
+        goal_history_recent = goal_history[-6:]
+
+        average_hours_per_shift = hours_summary.get('worked_hours', 0) / max(hours_summary.get('shift_count', 0), 1)
+        average_hours_per_workday = None
+        if hours_summary.get('is_current_month'):
+            workdays_passed = hours_summary.get('workdays_passed', 0) or 0
+            if workdays_passed > 0:
+                average_hours_per_workday = hours_summary.get('worked_hours', 0) / workdays_passed
+
+        from math import ceil
+        import calendar
+
+        projected_completion_label = None
+        projection_confidence = None
+        if hours_summary.get('is_current_month') and hours_summary.get('target_hours', 0) > 0 and average_hours_per_workday:
+            target_hours = hours_summary['target_hours']
+            required_hours = max(target_hours - hours_summary.get('worked_hours', 0), 0)
+            if required_hours == 0:
+                projected_completion_label = "Ziel bereits erreicht"
+                projection_confidence = "hoch"
+            else:
+                estimated_additional_workdays = ceil(required_hours / max(average_hours_per_workday, 0.01))
+                target_workday_index = hours_summary.get('workdays_passed', 0) + estimated_additional_workdays
+                total_workdays = hours_summary.get('total_workdays', 0) or 0
+                leaves_detail = hours_summary.get('leaves_detail', [])
+
+                def is_on_leave(check_date):
+                    return any(leave.start_date <= check_date <= leave.end_date for leave in leaves_detail)
+
+                if total_workdays:
+                    target_workday_index = min(target_workday_index, total_workdays)
+                    workday_counter = 0
+                    month_range = calendar.monthrange(current_year, current_month)[1]
+                    projected_date = None
+                    for day in range(1, month_range + 1):
+                        check_date = date(current_year, current_month, day)
+                        if check_date.weekday() < 5 and not is_on_leave(check_date):
+                            workday_counter += 1
+                            if workday_counter == target_workday_index:
+                                projected_date = check_date
+                                break
+                    if projected_date:
+                        projected_completion_label = projected_date.strftime('%d.%m.%Y')
+                        projection_confidence = "mittel" if projected_date == date.today() else "hoch"
+                if projected_completion_label is None:
+                    projected_completion_label = "Benötigt Aktualisierung"
+                    projection_confidence = "niedrig"
+
+        upcoming_shifts = (
+            Shift.query.filter(
+                Shift.employee_id == employee_id,
+                Shift.date >= date.today()
+            )
+            .order_by(Shift.date.asc())
+            .limit(5)
+            .all()
+        )
+
+        recent_leaves = [
+            leave for leave in hours_summary.get('leaves_detail', [])
+            if leave.start_date.month == current_month and leave.start_date.year == current_year
+        ]
+
         return render_template(
             "employee_hours_overview.html",
             employee=employee,
@@ -1384,6 +1515,21 @@ def create_app() -> Flask:
             monthly_data=monthly_data,
             weekday_hours=weekday_hours,
             shift_type_hours=shift_type_hours,
+            trend_direction=trend_direction,
+            hours_delta=hours_delta,
+            pace_state=pace_state,
+            delta_vs_expected=delta_vs_expected,
+            weekday_insight=weekday_insight,
+            shift_type_highlights=shift_type_highlights,
+            goal_history=goal_history,
+            goal_history_recent=goal_history_recent,
+            consecutive_goal_months=consecutive_goal_months,
+            average_hours_per_shift=average_hours_per_shift,
+            average_hours_per_workday=average_hours_per_workday,
+            projected_completion_label=projected_completion_label,
+            projection_confidence=projection_confidence,
+            upcoming_shifts=upcoming_shifts,
+            recent_leaves=recent_leaves,
             current_month=current_month,
             current_year=current_year
         )
