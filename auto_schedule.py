@@ -5,12 +5,20 @@ für Mitarbeiter basierend auf ihren hinterlegten Standard-Arbeitszeiten
 zu erstellen.
 """
 
-from datetime import date, timedelta
-from models import db, Employee, Shift
 import calendar
+from datetime import date, timedelta
+from typing import Optional
+
+from models import db, Employee, Shift
 
 
-def create_default_shifts_for_month(year: int, month: int, employee_id: int = None, dry_run: bool = False):
+def create_default_shifts_for_month(
+    year: int,
+    month: int,
+    employee_id: Optional[int] = None,
+    dry_run: bool = False,
+    department_id: Optional[int] = None,
+):
     """Erstellt Standard-Schichten für einen Monat basierend auf den Mitarbeiter-Einstellungen.
     
     Args:
@@ -28,13 +36,20 @@ def create_default_shifts_for_month(year: int, month: int, employee_id: int = No
     month_end = date(year, month, num_days)
     
     # Hole Mitarbeiter
+    employee_query = Employee.query
+
     if employee_id:
-        employees = Employee.query.filter_by(id=employee_id).all()
+        employee_query = employee_query.filter(Employee.id == employee_id)
     else:
-        employees = Employee.query.filter(
+        employee_query = employee_query.filter(
             Employee.default_daily_hours.isnot(None),
             Employee.default_work_days.isnot(None)
-        ).all()
+        )
+
+    if department_id:
+        employee_query = employee_query.filter(Employee.department_id == department_id)
+
+    employees = employee_query.all()
     
     created_shifts = []
     skipped_shifts = []
@@ -99,7 +114,13 @@ def create_default_shifts_for_month(year: int, month: int, employee_id: int = No
     }
 
 
-def create_default_shifts_for_employee_position(position: str, year: int, month: int, dry_run: bool = False):
+def create_default_shifts_for_employee_position(
+    position: str,
+    year: int,
+    month: int,
+    dry_run: bool = False,
+    department_id: Optional[int] = None,
+):
     """Erstellt Standard-Schichten für alle Mitarbeiter einer bestimmten Position.
     
     Args:
@@ -117,7 +138,12 @@ def create_default_shifts_for_employee_position(position: str, year: int, month:
     month_end = date(year, month, num_days)
     
     # Hole Mitarbeiter mit der angegebenen Position
-    employees = Employee.query.filter_by(position=position).all()
+    employees_query = Employee.query.filter_by(position=position)
+
+    if department_id:
+        employees_query = employees_query.filter(Employee.department_id == department_id)
+
+    employees = employees_query.all()
     
     created_shifts = []
     skipped_shifts = []
