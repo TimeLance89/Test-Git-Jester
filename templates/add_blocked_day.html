@@ -1,0 +1,168 @@
+{% extends "layout.html" %}
+{% block title %}Gesperrten Tag hinzufügen - Dienstplaner{% endblock %}
+{% block content %}
+
+<div style="margin-bottom: 2rem;">
+  <h1 style="display: flex; align-items: center; margin-bottom: 0.5rem;">
+    <span style="margin-right: 0.75rem; font-size: 2rem;">➕</span>
+    Gesperrten Tag hinzufügen
+  </h1>
+  <p style="color: #64748b; font-size: 1.125rem; margin: 0;">Neuen Feiertag, Betriebsferien oder anderen Sperrtag eintragen</p>
+</div>
+
+<!-- Zurück-Button -->
+<div style="margin-bottom: 2rem;">
+  <a href="{{ url_for('blocked_days') }}" class="btn btn-outline-secondary">
+    <span style="margin-right: 0.5rem;">←</span>Zurück zur Übersicht
+  </a>
+</div>
+
+<!-- Formular -->
+<div class="card" style="border: none; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); max-width: 600px;">
+  <div class="card-header" style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color: white; border: none; padding: 2rem;">
+    <h3 style="margin: 0; display: flex; align-items: center; font-size: 1.5rem; font-weight: 600;">
+      <span style="margin-right: 0.75rem; font-size: 2rem;">🚫</span>
+      Neuer gesperrter Tag
+    </h3>
+    <p style="margin: 0.5rem 0 0 0; opacity: 0.9; font-size: 1rem;">Füllen Sie die folgenden Felder aus</p>
+  </div>
+  <div class="card-body" style="padding: 2rem;">
+    <form method="post" class="row g-3">
+      
+      <!-- Datum -->
+      <div class="col-12">
+        <label class="form-label" for="date" style="font-weight: 600; color: #374151; display: flex; align-items: center;">
+          <span style="margin-right: 0.5rem;">📅</span>Datum *
+        </label>
+        <input type="date" 
+               class="form-control" 
+               id="date" 
+               name="date" 
+               required 
+               style="padding: 0.75rem; border: 2px solid #e5e7eb; border-radius: 0.5rem; font-size: 1rem;"
+               min="{{ today }}">
+        <small style="color: #64748b; margin-top: 0.5rem; display: block;">Wählen Sie das Datum des gesperrten Tages</small>
+      </div>
+      
+      <!-- Name -->
+      <div class="col-12">
+        <label class="form-label" for="name" style="font-weight: 600; color: #374151; display: flex; align-items: center;">
+          <span style="margin-right: 0.5rem;">🏷️</span>Name *
+        </label>
+        <input type="text" 
+               class="form-control" 
+               id="name" 
+               name="name" 
+               required 
+               placeholder="z.B. Weihnachten, Neujahr, Betriebsferien"
+               style="padding: 0.75rem; border: 2px solid #e5e7eb; border-radius: 0.5rem; font-size: 1rem;">
+        <small style="color: #64748b; margin-top: 0.5rem; display: block;">Kurze Bezeichnung für den gesperrten Tag</small>
+      </div>
+      
+      <!-- Typ -->
+      <div class="col-12">
+        <label class="form-label" for="block_type" style="font-weight: 600; color: #374151; display: flex; align-items: center;">
+          <span style="margin-right: 0.5rem;">📋</span>Typ
+        </label>
+        <select class="form-select" 
+                id="block_type" 
+                name="block_type"
+                style="padding: 0.75rem; border: 2px solid #e5e7eb; border-radius: 0.5rem; font-size: 1rem;">
+          <option value="Feiertag">🎉 Feiertag</option>
+          <option value="Betriebsferien">🏖️ Betriebsferien</option>
+          <option value="Wartung">🔧 Wartung/Instandhaltung</option>
+          <option value="Schulung">📚 Schulung/Fortbildung</option>
+          <option value="Sonstiges">📋 Sonstiges</option>
+        </select>
+        <small style="color: #64748b; margin-top: 0.5rem; display: block;">Kategorie des gesperrten Tages</small>
+      </div>
+      
+      <!-- Beschreibung -->
+      <div class="col-12">
+        <label class="form-label" for="description" style="font-weight: 600; color: #374151; display: flex; align-items: center;">
+          <span style="margin-right: 0.5rem;">📝</span>Beschreibung (optional)
+        </label>
+        <textarea class="form-control" 
+                  id="description" 
+                  name="description" 
+                  rows="3"
+                  placeholder="Zusätzliche Informationen oder Hinweise..."
+                  style="padding: 0.75rem; border: 2px solid #e5e7eb; border-radius: 0.5rem; font-size: 1rem; resize: vertical;"></textarea>
+        <small style="color: #64748b; margin-top: 0.5rem; display: block;">Optionale zusätzliche Informationen</small>
+      </div>
+      
+      <!-- Buttons -->
+      <div class="col-12" style="margin-top: 2rem;">
+        <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+          <a href="{{ url_for('blocked_days') }}" 
+             class="btn btn-outline-secondary"
+             style="padding: 0.75rem 1.5rem;">
+            Abbrechen
+          </a>
+          <button type="submit" 
+                  class="btn btn-success"
+                  style="padding: 0.75rem 1.5rem;">
+            <span style="margin-right: 0.5rem;">💾</span>Speichern
+          </button>
+        </div>
+      </div>
+      
+    </form>
+  </div>
+</div>
+
+<!-- Hinweise -->
+<div style="margin-top: 2rem; padding: 1.5rem; background-color: #f0f9ff; border: 1px solid #bae6fd; border-radius: 0.75rem; max-width: 600px;">
+  <h4 style="color: #0369a1; margin-bottom: 1rem; display: flex; align-items: center;">
+    <span style="margin-right: 0.5rem;">💡</span>Hinweise
+  </h4>
+  <ul style="color: #0369a1; margin: 0; padding-left: 1.5rem;">
+    <li><strong>Datum:</strong> Kann nicht in der Vergangenheit liegen</li>
+    <li><strong>Eindeutigkeit:</strong> Jedes Datum kann nur einmal gesperrt werden</li>
+    <li><strong>Dienstplan:</strong> Gesperrte Tage werden automatisch im Dienstplan markiert</li>
+    <li><strong>Schichten:</strong> Bestehende Schichten bleiben erhalten, neue können nicht hinzugefügt werden</li>
+  </ul>
+</div>
+
+<script>
+// Heute als Mindestdatum setzen
+document.addEventListener('DOMContentLoaded', function() {
+    const dateInput = document.getElementById('date');
+    const today = new Date().toISOString().split('T')[0];
+    dateInput.min = today;
+    
+    // Vorschläge für häufige Feiertage
+    const nameInput = document.getElementById('name');
+    const typeSelect = document.getElementById('block_type');
+    
+    const suggestions = {
+        'Neujahr': 'Feiertag',
+        'Heilige Drei Könige': 'Feiertag',
+        'Karfreitag': 'Feiertag',
+        'Ostermontag': 'Feiertag',
+        'Tag der Arbeit': 'Feiertag',
+        'Christi Himmelfahrt': 'Feiertag',
+        'Pfingstmontag': 'Feiertag',
+        'Fronleichnam': 'Feiertag',
+        'Tag der Deutschen Einheit': 'Feiertag',
+        'Allerheiligen': 'Feiertag',
+        '1. Weihnachtsfeiertag': 'Feiertag',
+        '2. Weihnachtsfeiertag': 'Feiertag',
+        'Silvester': 'Feiertag',
+        'Betriebsferien Sommer': 'Betriebsferien',
+        'Betriebsferien Winter': 'Betriebsferien'
+    };
+    
+    nameInput.addEventListener('input', function() {
+        const value = this.value;
+        for (const [name, type] of Object.entries(suggestions)) {
+            if (name.toLowerCase().includes(value.toLowerCase()) && value.length > 2) {
+                typeSelect.value = type;
+                break;
+            }
+        }
+    });
+});
+</script>
+
+{% endblock %}

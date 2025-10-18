@@ -1,0 +1,122 @@
+{% extends "layout.html" %}
+{% block title %}Produktivitätseinstellungen{% endblock %}
+{% block content %}
+<h2>Produktivitätseinstellungen</h2>
+
+<div class="alert alert-info">
+  <strong>Hinweis:</strong> Die Produktivität bestimmt, wie viele Teile pro Stunde bearbeitet werden können. 
+  <br><strong>Formel:</strong> Teile = Gesamt Stunden × Produktivität
+</div>
+
+<form method="post" action="{{ url_for('save_productivity_settings') }}">
+  <div class="card">
+    <div class="card-header">
+      <h4>Globale Produktivitätseinstellung</h4>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-6">
+          <label for="global_productivity" class="form-label">Globale Produktivität</label>
+          <input 
+            type="number" 
+            step="0.1" 
+            class="form-control" 
+            id="global_productivity" 
+            name="global_productivity" 
+            value="{{ settings_dict.get('global', {}).productivity_value or 40.0 }}"
+            placeholder="z.B. 40.0"
+          />
+          <small class="form-text text-muted">
+            Diese Einstellung gilt für alle Abteilungen, die keine spezifische Einstellung haben.
+          </small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% if departments %}
+  <div class="card mt-4">
+    <div class="card-header">
+      <h4>Abteilungsspezifische Einstellungen</h4>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        {% for department in departments %}
+        <div class="col-md-6 mb-3">
+          <label for="dept_{{ department.id }}_productivity" class="form-label">
+            {{ department.name }}
+          </label>
+          <input 
+            type="number" 
+            step="0.1" 
+            class="form-control" 
+            id="dept_{{ department.id }}_productivity" 
+            name="dept_{{ department.id }}_productivity" 
+            value="{{ settings_dict.get(department.id, {}).productivity_value or '' }}"
+            placeholder="z.B. 42.0 (leer = globale Einstellung)"
+          />
+          <small class="form-text text-muted">
+            {% if settings_dict.get(department.id) %}
+              Aktuell: {{ settings_dict.get(department.id).productivity_value }}
+            {% else %}
+              Verwendet globale Einstellung
+            {% endif %}
+          </small>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="mt-4">
+    <button type="submit" class="btn btn-success">Einstellungen speichern</button>
+    <a href="{{ url_for('schedule') }}" class="btn btn-secondary">Zurück zum Dienstplan</a>
+  </div>
+</form>
+
+<div class="card mt-5">
+  <div class="card-header">
+    <h4>Aktuelle Einstellungen</h4>
+  </div>
+  <div class="card-body">
+    <div class="table-responsive">
+      <table class="table table-striped">
+        <thead>
+          <tr>
+            <th>Bereich</th>
+            <th>Produktivität</th>
+            <th>Erstellt am</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for key, setting in settings_dict.items() %}
+          <tr>
+            <td>
+              {% if key == 'global' %}
+                <strong>Global (Standard)</strong>
+              {% else %}
+                {% for dept in departments %}
+                  {% if dept.id == key %}{{ dept.name }}{% endif %}
+                {% endfor %}
+              {% endif %}
+            </td>
+            <td><strong>{{ setting.productivity_value }}</strong></td>
+            <td>{{ setting.created_date.strftime('%d.%m.%Y') if setting.created_date else '-' }}</td>
+          </tr>
+          {% endfor %}
+          {% if not settings_dict %}
+          <tr>
+            <td colspan="3" class="text-center text-muted">
+              Keine Einstellungen vorhanden. Standardwert 40.0 wird verwendet.
+            </td>
+          </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+

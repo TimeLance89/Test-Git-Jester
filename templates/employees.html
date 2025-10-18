@@ -1,0 +1,331 @@
+{% extends "layout.html" %}
+{% block title %}Mitarbeiter verwalten - Dienstplaner{% endblock %}
+{% block content %}
+
+<!-- Header mit Button -->
+<div style="margin-bottom: 2rem;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+    <h1 style="display: flex; align-items: center; margin: 0;">
+      <span style="margin-right: 0.75rem; font-size: 2rem;">👥</span>
+      Mitarbeiter verwalten
+    </h1>
+    <button type="button" class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#addEmployeeModal" style="padding: 0.75rem 1.5rem;">
+      <span style="margin-right: 0.5rem;">➕</span>
+      Neuen Mitarbeiter anlegen
+    </button>
+  </div>
+  <p style="color: #64748b; font-size: 1.125rem; margin: 0;">Übersicht und Verwaltung aller Mitarbeiter im System</p>
+</div>
+
+<!-- Smarte Planungshilfen (nur Aushilfen) -->
+{% if planning_insights %}
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+  
+  <!-- Übersicht-Karte -->
+  <div class="card" style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white;">
+    <div class="card-body">
+      <h4 style="margin: 0 0 1rem 0; display: flex; align-items: center;">
+        <span style="margin-right: 0.5rem;">📊</span>Aushilfen-Übersicht
+      </h4>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div style="text-align: center;">
+          <div style="font-size: 2rem; font-weight: bold;">{{ planning_insights.total_remaining_hours|round(1) }}h</div>
+          <div style="font-size: 0.875rem; opacity: 0.9;">Verfügbare Stunden</div>
+        </div>
+        <div style="text-align: center;">
+          <div style="font-size: 2rem; font-weight: bold;">{{ planning_insights.total_overtime_hours|round(1) }}h</div>
+          <div style="font-size: 0.875rem; opacity: 0.9;">Überstunden</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Kritische Aushilfen -->
+  {% if planning_insights.overutilized %}
+  <div class="card" style="border-left: 4px solid #dc2626;">
+    <div class="card-body">
+      <h4 style="margin: 0 0 1rem 0; display: flex; align-items: center; color: #dc2626;">
+        <span style="margin-right: 0.5rem;">⚠️</span>Überstunden-Alarm
+      </h4>
+      <p style="margin: 0 0 1rem 0; color: #6b7280; font-size: 0.875rem;">
+        {{ planning_insights.overutilized|length }} Aushilfen mit kritischen Überstunden
+      </p>
+      {% for emp in planning_insights.overutilized[:3] %}
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid #f3f4f6;">
+        <div>
+          <div style="font-weight: 500;">{{ emp.employee_name }}</div>
+          <div style="font-size: 0.75rem; color: #6b7280;">{{ emp.department }}</div>
+        </div>
+        <div style="text-align: right;">
+          <div style="font-weight: bold; color: #dc2626;">+{{ emp.overtime_hours }}h</div>
+        </div>
+      </div>
+      {% endfor %}
+      {% if planning_insights.overutilized|length > 3 %}
+      <div style="text-align: center; margin-top: 0.5rem;">
+        <small style="color: #6b7280;">... und {{ planning_insights.overutilized|length - 3 }} weitere</small>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Verfügbare Kapazitäten -->
+  {% if planning_insights.underutilized %}
+  <div class="card" style="border-left: 4px solid #f59e0b;">
+    <div class="card-body">
+      <h4 style="margin: 0 0 1rem 0; display: flex; align-items: center; color: #f59e0b;">
+        <span style="margin-right: 0.5rem;">💡</span>Verfügbare Kapazitäten
+      </h4>
+      <p style="margin: 0 0 1rem 0; color: #6b7280; font-size: 0.875rem;">
+        {{ planning_insights.underutilized|length }} Aushilfen mit freien Kapazitäten
+      </p>
+      {% for emp in planning_insights.underutilized[:3] %}
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid #f3f4f6;">
+        <div>
+          <div style="font-weight: 500;">{{ emp.employee_name }}</div>
+          <div style="font-size: 0.75rem; color: #6b7280;">{{ emp.department }}</div>
+        </div>
+        <div style="text-align: right;">
+          <div style="font-weight: bold; color: #f59e0b;">{{ emp.remaining_hours }}h</div>
+          <div style="font-size: 0.75rem; color: #6b7280;">verfügbar</div>
+        </div>
+      </div>
+      {% endfor %}
+      {% if planning_insights.underutilized|length > 3 %}
+      <div style="text-align: center; margin-top: 0.5rem;">
+        <small style="color: #6b7280;">... und {{ planning_insights.underutilized|length - 3 }} weitere</small>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endif %}
+
+<!-- Mitarbeiter-Liste -->
+<div class="card">
+  <div class="card-header" style="background-color: #f8fafc; border-bottom: 2px solid #e2e8f0;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+      <h3 style="margin: 0; display: flex; align-items: center;">
+        <span style="margin-right: 0.75rem;">📋</span>
+        Alle Mitarbeiter ({{ employees|length }})
+      </h3>
+      <!-- Monat/Jahr Filter -->
+      <form method="get" style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <label for="month" style="font-weight: 500; color: #374151; white-space: nowrap;">Monat:</label>
+          <select name="month" id="month" class="form-select form-select-sm" style="width: auto;">
+            {% for m in range(1, 13) %}
+            <option value="{{ m }}" {% if m == current_month %}selected{% endif %}>{{ m }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <label for="year" style="font-weight: 500; color: #374151; white-space: nowrap;">Jahr:</label>
+          <select name="year" id="year" class="form-select form-select-sm" style="width: auto;">
+            {% for y in range(2020, 2030) %}
+            <option value="{{ y }}" {% if y == current_year %}selected{% endif %}>{{ y }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm">
+          Aktualisieren
+        </button>
+      </form>
+    </div>
+  </div>
+  <div class="card-body" style="padding: 0;">
+    {% if employees %}
+    <div class="list-group list-group-flush">
+      {% for emp in employees %}
+      {% set emp_hours = hours_summary.get(emp.id, {}) %}
+      <div class="list-group-item" style="padding: 1.25rem 1.5rem; border-left: 4px solid {% if emp.position == 'Vollzeit' %}#3b82f6{% elif emp.position == 'Teilzeit' %}#10b981{% elif emp.position == 'Aushilfe' %}#f59e0b{% else %}#6b7280{% endif %};">
+        <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 1.5rem; align-items: center;">
+          
+          <!-- Name und Info -->
+          <div>
+            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+              <h5 style="margin: 0; font-weight: 600; font-size: 1.125rem;">{{ emp.name }}</h5>
+              {% if emp.short_code %}
+              <span class="badge" style="background-color: #6b7280; font-size: 0.75rem;">{{ emp.short_code }}</span>
+              {% endif %}
+              {% if emp.position %}
+              <span class="badge" style="background-color: {% if emp.position == 'Vollzeit' %}#3b82f6{% elif emp.position == 'Teilzeit' %}#10b981{% elif emp.position == 'Aushilfe' %}#f59e0b{% else %}#6b7280{% endif %}; font-size: 0.75rem;">
+                {{ emp.position }}
+              </span>
+              {% endif %}
+            </div>
+            <div style="display: flex; gap: 1.5rem; font-size: 0.875rem; color: #6b7280;">
+              <span>
+                <strong>🏢 Abteilung:</strong> 
+                {% if emp.department %}{{ emp.department.name }}{% else %}<em>Keine</em>{% endif %}
+              </span>
+              <span>
+                <strong>🎯 Soll:</strong> 
+                {% if emp.monthly_hours and emp.monthly_hours >= 160 %}
+                  Vollzeit
+                {% elif emp.monthly_hours %}
+                  {{ emp.monthly_hours }}h/Monat
+                {% else %}
+                  <em>Nicht festgelegt</em>
+                {% endif %}
+              </span>
+            </div>
+          </div>
+
+          <!-- Geleistete Stunden -->
+          <div style="text-align: center;">
+            <div style="font-size: 0.75rem; color: #6b7280; margin-bottom: 0.25rem; text-transform: uppercase; font-weight: 600;">Geleistet</div>
+            <div style="font-size: 1.5rem; font-weight: bold; color: #059669;">{{ emp_hours.get('worked_hours', 0) }}h</div>
+            {% if emp_hours.get('shift_count', 0) > 0 %}
+            <div style="font-size: 0.75rem; color: #6b7280;">{{ emp_hours.get('shift_count', 0) }} Einsätze</div>
+            {% endif %}
+          </div>
+
+          <!-- Reststunden -->
+          <div style="text-align: center;">
+            <div style="font-size: 0.75rem; color: #6b7280; margin-bottom: 0.25rem; text-transform: uppercase; font-weight: 600;">Reststunden</div>
+            {% if emp.monthly_hours and emp.monthly_hours >= 160 %}
+              <div style="font-size: 1rem; color: #9ca3af;">–</div>
+            {% else %}
+              {% set remaining = emp_hours.get('remaining_hours', 0) %}
+              <div style="font-size: 1.5rem; font-weight: bold; color: {% if remaining > 20 %}#dc2626{% elif remaining > 0 %}#f59e0b{% else %}#9ca3af{% endif %};">
+                {{ remaining }}h
+              </div>
+              {% if remaining > 20 %}
+              <div style="font-size: 0.75rem; color: #dc2626; font-weight: 600;">⚠️ Viel verfügbar</div>
+              {% endif %}
+            {% endif %}
+          </div>
+
+          <!-- Überstunden -->
+          {% if emp.position != 'Vollzeit' %}
+          <div style="text-align: center;">
+            <div style="font-size: 0.75rem; color: #6b7280; margin-bottom: 0.25rem; text-transform: uppercase; font-weight: 600;">Überstunden</div>
+            {% set overtime = emp_hours.get('overtime_hours', 0) %}
+            <div style="font-size: 1.5rem; font-weight: bold; color: {% if overtime > 10 %}#dc2626{% elif overtime > 0 %}#f59e0b{% else %}#9ca3af{% endif %};">
+              {% if overtime > 0 %}+{{ overtime }}h{% else %}0h{% endif %}
+            </div>
+            {% if overtime > 10 %}
+            <div style="font-size: 0.75rem; color: #dc2626; font-weight: 600;">⚠️ Kritisch</div>
+            {% endif %}
+          </div>
+          {% endif %}
+
+          <!-- Aktionen -->
+          <div style="display: flex; gap: 0.5rem;">
+            <a href="{{ url_for('employee_profile', emp_id=emp.id) }}" 
+               class="btn btn-sm btn-primary" 
+               title="Profil anzeigen">
+              👁️ Profil
+            </a>
+            <a href="{{ url_for('delete_employee', emp_id=emp.id) }}" 
+               class="btn btn-sm btn-outline-danger" 
+               title="Mitarbeiter löschen"
+               onclick="return confirm('Mitarbeiter {{ emp.name }} wirklich löschen?')">
+              🗑️
+            </a>
+          </div>
+
+        </div>
+
+        <!-- Fortschrittsbalken -->
+        {% if emp.monthly_hours and emp.monthly_hours < 160 %}
+        <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #f3f4f6;">
+          {% set percentage = emp_hours.get('completion_percentage', 0) %}
+          <div style="display: flex; align-items: center; gap: 1rem;">
+            <div style="flex: 1;">
+              <div style="height: 8px; background-color: #e5e7eb; border-radius: 4px; overflow: hidden;">
+                <div style="height: 100%; background-color: {% if percentage >= 100 %}#dc2626{% elif percentage >= 80 %}#059669{% else %}#f59e0b{% endif %}; width: {% if percentage > 100 %}100{% else %}{{ percentage }}{% endif %}%; transition: width 0.3s ease;"></div>
+              </div>
+            </div>
+            <div style="font-size: 0.875rem; font-weight: 600; color: {% if percentage >= 100 %}#dc2626{% elif percentage >= 80 %}#059669{% else %}#f59e0b{% endif %}; min-width: 50px; text-align: right;">
+              {{ "%.0f"|format(percentage) }}%
+            </div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div style="padding: 3rem; text-align: center; color: #9ca3af;">
+      <div style="font-size: 3rem; margin-bottom: 1rem;">👥</div>
+      <p style="font-size: 1.125rem; margin: 0;">Noch keine Mitarbeiter angelegt</p>
+      <p style="font-size: 0.875rem; margin-top: 0.5rem;">Klicken Sie auf "Neuen Mitarbeiter anlegen" um zu beginnen.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Modal: Mitarbeiter hinzufügen -->
+<div class="modal fade" id="addEmployeeModal" tabindex="-1" aria-labelledby="addEmployeeModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addEmployeeModalLabel">
+          <span style="margin-right: 0.5rem;">➕</span>Neuen Mitarbeiter anlegen
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form method="post" action="{{ url_for('add_employee') }}">
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label for="name" class="form-label">Name*</label>
+              <input type="text" class="form-control" id="name" name="name" required>
+            </div>
+            <div class="col-md-6">
+              <label for="short_code" class="form-label">Kürzel</label>
+              <input type="text" class="form-control" id="short_code" name="short_code" maxlength="20" placeholder="z.B. JD">
+            </div>
+            <div class="col-md-6">
+              <label for="employee_number" class="form-label">Personalnummer</label>
+              <input type="text" class="form-control" id="employee_number" name="employee_number">
+            </div>
+            <div class="col-md-6">
+              <label for="department_id" class="form-label">Abteilung*</label>
+              <select class="form-select" id="department_id" name="department_id" required>
+                <option value="">Abteilung wählen</option>
+                {% for dept in departments %}
+                <option value="{{ dept.id }}">{{ dept.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label for="position" class="form-label">Position*</label>
+              <select class="form-select" id="position" name="position" required>
+                <option value="">Position wählen</option>
+                <option value="Vollzeit">Vollzeit</option>
+                <option value="Teilzeit">Teilzeit</option>
+                <option value="Aushilfe">Aushilfe</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label for="monthly_hours" class="form-label">Monatliche Stunden</label>
+              <input type="number" step="0.5" class="form-control" id="monthly_hours" name="monthly_hours" placeholder="z.B. 160">
+              <small class="form-text text-muted">Vollzeit: ≥160h, Teilzeit/Aushilfe: individuell</small>
+            </div>
+            <div class="col-md-6">
+              <label for="email" class="form-label">E-Mail</label>
+              <input type="email" class="form-control" id="email" name="email">
+            </div>
+            <div class="col-md-6">
+              <label for="phone" class="form-label">Telefon</label>
+              <input type="tel" class="form-control" id="phone" name="phone">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+          <button type="submit" class="btn btn-primary">Mitarbeiter anlegen</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+

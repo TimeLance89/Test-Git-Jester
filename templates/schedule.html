@@ -1,0 +1,448 @@
+{% extends "layout.html" %}
+{% block title %}Dienstplan{% endblock %}
+{% block content %}
+
+<div class="container-fluid px-3">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+    <h2 style="margin: 0;">Dienstplan für {{ month }}.{{ year }}</h2>
+    <button type="button" class="btn btn-success btn-lg" data-bs-toggle="modal" data-bs-target="#addShiftModal">
+      ➕ Einsatz hinzufügen
+    </button>
+  </div>
+
+  <form method="get" class="row g-3 mb-4">
+    <div class="col-auto">
+      <label class="form-label" for="month">Monat</label>
+      <select class="form-select" id="month" name="month">
+        {% for m in range(1, 13) %}
+        <option value="{{ m }}" {% if m == month %}selected{% endif %}>{{ m }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-auto">
+      <label class="form-label" for="year">Jahr</label>
+      <select class="form-select" id="year" name="year">
+        {% for y in range(2020, 2030) %}
+        <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-auto">
+      <label class="form-label" for="department">Abteilung</label>
+      <select class="form-select" id="department" name="department">
+        <option value="">Alle</option>
+        {% for dept in departments %}
+        <option value="{{ dept.id }}" {% if dept.id == selected_department %}selected{% endif %}>{{ dept.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-auto d-flex align-items-end">
+      <button type="submit" class="btn btn-primary">Aktualisieren</button>
+    </div>
+    {% if current_user and current_user.is_admin and not current_user.department_id %}
+    <div class="col-auto d-flex align-items-end">
+      <button type="button" class="btn btn-secondary" id="reorderGroupsBtn">
+        <span>⇅</span> Gruppen sortieren
+      </button>
+    </div>
+    {% endif %}
+  </form>
+
+  <!-- Desktop Layout: Normale Tabelle (≥1200px) -->
+  <div class="desktop-schedule d-none d-xl-block">
+    <div class="table-responsive">
+      <table class="table table-bordered table-sm">
+        <thead class="table-primary">
+          <tr>
+            <th rowspan="2" class="text-center align-middle" style="min-width: 120px;">MITARBEITER</th>
+            {% for day in month_days %}
+            <th class="text-center" style="min-width: 35px; font-size: 0.75rem;">
+              {{ day.day }}
+              {% set day_data = productivity_data.get(day, {}) %}
+              {% if day_data.get("teile", 0) > 0 %}
+              <br><small class="productivity-info" 
+                       title="Berechnung für {{ day.strftime('%d.%m.%Y') }}:&#10;Std Aushilfen + ZA: {{ day_data.get('aushilfen_za_std', 0) }}h&#10;Std Feste: {{ day_data.get('feste_std', 0) }}h&#10;Gesamt: {{ day_data.get('gesamt_std', 0) }}h&#10;Produktivität: {{ day_data.get('produktivitaet', 0) }}&#10;Teile: {{ day_data.get('gesamt_std', 0) }} × {{ day_data.get('produktivitaet', 0) }} = {{ day_data.get('teile', 0) }}"
+                       style="color: #dc2626; font-weight: bold; cursor: help;">
+                ({{ day_data.get("teile", 0)|int }})
+              </small>
+              {% endif %}
+            </th>
+            {% endfor %}
+            <th rowspan="2" class="text-center align-middle" style="min-width: 60px;">Σ</th>
+          </tr>
+          <tr>
+            {% for day in month_days %}
+            <th class="text-center" style="font-size: 0.6rem;">{{ ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'][day.weekday()] }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody id="employeeGroupsContainer">
+          {% set group_icons = {'Vollzeit': '👔', 'Teilzeit': '⏰', 'Aushilfe': '🤝'} %}
+          {% set group_colors = {'Vollzeit': '#3b82f6', 'Teilzeit': '#10b981', 'Aushilfe': '#f59e0b'} %}
+          {% set group_bg_colors = {'Vollzeit': '#eff6ff', 'Teilzeit': '#ecfdf5', 'Aushilfe': '#fffbeb'} %}
+          {% set group_total_bg = {'Vollzeit': '#dbeafe', 'Teilzeit': '#d1fae5', 'Aushilfe': '#fef3c7'} %}
+          
+          {% for group_name in ordered_group_names %}
+            {% set group_employees = employee_groups.get(group_name, []) %}
+            {% if group_employees %}
+          <tr>
+            <td colspan="{{ month_days|length + 1 }}" class="text-center fw-bold" style="background-color: {{ group_colors[group_name] }}; color: white; padding: 0.5rem;">
+              {{ group_icons[group_name] }} {{ group_name|upper }} MITARBEITER ({{ group_employees|length }})
+            </td>
+          </tr>
+              {% for emp in group_employees %}
+          <tr>
+            <td class="fw-bold" style="background-color: {{ group_bg_colors[group_name] }};">
+              <a href="{{ url_for('employee_profile', emp_id=emp.id) }}" class="text-decoration-none">{{ emp.name }}</a>
+            </td>
+            {% for day in month_days %}
+            {% set leave = leaves.get((emp.id, day)) %}
+            {% set shift = shifts.get((emp.id, day)) %}
+            {% set blocked_day = blocked_days.get(day) %}
+            <td class="text-center p-1" style="font-size: 0.7rem; {% if blocked_day %}background-color: #fee2e2;{% endif %}">
+              {% if blocked_day %}
+                <div class="badge" style="background-color: #dc2626; color: white; font-size: 0.6rem;" 
+                     title="{{ blocked_day.name }}{% if blocked_day.description %} - {{ blocked_day.description }}{% endif %}">
+                  🚫
+                </div>
+              {% elif leave %}
+                {% if leave.leave_type == 'Urlaub' %}
+                  <div class="badge position-relative" style="background-color: orange; color: green;">
+                    {{ leave.leave_type[:2] }}
+                    <button type="button" class="btn-close btn-close-sm position-absolute top-0 start-100 translate-middle" 
+                            onclick="deleteLeave({{ leave.id }})" style="font-size: 0.5rem;"></button>
+                  </div>
+                {% elif leave.leave_type == 'Krank' %}
+                  <div class="badge position-relative" style="background-color: red; color: white;">
+                    {{ leave.leave_type[:2] }}
+                    <button type="button" class="btn-close btn-close-sm position-absolute top-0 start-100 translate-middle" 
+                            onclick="deleteLeave({{ leave.id }})" style="font-size: 0.5rem;"></button>
+                  </div>
+                {% else %}
+                  <div class="badge bg-warning text-dark position-relative">
+                    {{ leave.leave_type[:2] }}
+                    <button type="button" class="btn-close btn-close-sm position-absolute top-0 start-100 translate-middle" 
+                            onclick="deleteLeave({{ leave.id }})" style="font-size: 0.5rem;"></button>
+                  </div>
+                {% endif %}
+              {% elif shift %}
+                <div class="badge bg-success position-relative" style="color: #000 !important;">
+                  {% if shift.approved %}{{ shift.hours }}h{% else %}"{{ shift.hours }}h"{% endif %}
+                  {% if shift.shift_type and not shift.shift_type.startswith('Standard') %}<br><small style="color: #000 !important;">{{ shift.shift_type[:3] }}</small>{% endif %}
+                  <button type="button" class="btn-close btn-close-sm position-absolute top-0 start-100 translate-middle" 
+                          onclick="deleteShift({{ shift.id }})" style="font-size: 0.5rem;"></button>
+                </div>
+              {% endif %}
+            </td>
+            {% endfor %}
+            <td class="text-center fw-bold" style="background-color: {{ group_total_bg[group_name] }};">
+              {% if group_name == 'Vollzeit' and emp.monthly_hours and emp.monthly_hours >= 160 %}
+                {{ employee_totals.get(emp.id, 0) }}h (Vollzeit)
+              {% else %}
+                {{ employee_totals.get(emp.id, 0) }} / {{ emp.monthly_hours or 0 }}
+              {% endif %}
+            </td>
+          </tr>
+              {% endfor %}
+            {% endif %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Mobile Layout: Wochenweise Ansicht (<1200px) -->
+  <div class="mobile-schedule d-xl-none">
+    {% set weeks = [] %}
+    {% set current_week = [] %}
+    {% for day in month_days %}
+      {% if day.weekday() == 0 and current_week %}
+        {% set _ = weeks.append(current_week) %}
+        {% set current_week = [day] %}
+      {% else %}
+        {% set _ = current_week.append(day) %}
+      {% endif %}
+    {% endfor %}
+    {% if current_week %}
+      {% set _ = weeks.append(current_week) %}
+    {% endif %}
+
+    {% for week in weeks %}
+      <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0">
+            Woche {{ week[0].day }} - {{ week[-1].day }} {{ calendar.month_name[month] }} {{ year }}
+          </h5>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-bordered table-sm mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th style="min-width: 100px;">Mitarbeiter</th>
+                  {% for day in week %}
+                  <th class="text-center" style="min-width: 50px;">
+                    {{ day.day }}<br>
+                    <small>{{ ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'][day.weekday()] }}</small>
+                  </th>
+                  {% endfor %}
+                </tr>
+              </thead>
+              <tbody>
+                {% for group_name in ordered_group_names %}
+                  {% set group_employees = employee_groups.get(group_name, []) %}
+                  {% if group_employees %}
+                <tr>
+                  <td colspan="{{ week|length + 1 }}" class="text-center fw-bold" style="background-color: {{ group_colors[group_name] }}; color: white; padding: 0.5rem;">
+                    {{ group_icons[group_name] }} {{ group_name|upper }} MITARBEITER ({{ group_employees|length }})
+                  </td>
+                </tr>
+                    {% for emp in group_employees %}
+                <tr>
+                  <td class="fw-bold" style="background-color: {{ group_bg_colors[group_name] }};">
+                    <a href="{{ url_for('employee_profile', emp_id=emp.id) }}" class="text-decoration-none">{{ emp.name }}</a>
+                  </td>
+                  {% for day in week %}
+                  {% set leave = leaves.get((emp.id, day)) %}
+                  {% set shift = shifts.get((emp.id, day)) %}
+                  {% set blocked_day = blocked_days.get(day) %}
+                  <td class="text-center p-1" style="font-size: 0.7rem; {% if blocked_day %}background-color: #fee2e2;{% endif %}">
+                    {% if blocked_day %}
+                      <div class="badge" style="background-color: #dc2626; color: white; font-size: 0.6rem;" 
+                           title="{{ blocked_day.name }}{% if blocked_day.description %} - {{ blocked_day.description }}{% endif %}">
+                        🚫
+                      </div>
+                    {% elif leave %}
+                      {% if leave.leave_type == 'Urlaub' %}
+                        <div class="badge mt-1 position-relative" style="background-color: orange; color: green;">
+                          {{ leave.leave_type[:2] }}
+                        </div>
+                      {% elif leave.leave_type == 'Krank' %}
+                        <div class="badge mt-1 position-relative" style="background-color: red; color: white;">
+                          {{ leave.leave_type[:2] }}
+                        </div>
+                      {% else %}
+                        <div class="badge bg-warning text-dark mt-1 position-relative">
+                          {{ leave.leave_type[:2] }}
+                        </div>
+                      {% endif %}
+                    {% elif shift %}
+                      <div class="badge bg-success position-relative" style="color: #000 !important;">
+                        {% if shift.approved %}{{ shift.hours }}h{% else %}"{{ shift.hours }}h"{% endif %}
+                      </div>
+                    {% endif %}
+                  </td>
+                  {% endfor %}
+                </tr>
+                    {% endfor %}
+                  {% endif %}
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Modal für Einsatz hinzufügen -->
+<div class="modal fade" id="addShiftModal" tabindex="-1" aria-labelledby="addShiftModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addShiftModalLabel">Einsatz hinzufügen</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form method="post" action="{{ url_for('add_shift') }}" id="addShiftForm">
+          <div class="mb-3">
+            <label class="form-label" for="employee_id">Mitarbeiter*</label>
+            <select class="form-select" id="employee_id" name="employee_id" required>
+              <option value="">Mitarbeiter auswählen</option>
+              {% if session.get('is_admin') %}
+                {% for emp in employees %}
+                <option value="{{ emp.id }}">{{ emp.name }}</option>
+                {% endfor %}
+              {% else %}
+                {% for emp in employees %}
+                  {% if emp.id == session.get('user_id') %}
+                  <option value="{{ emp.id }}">{{ emp.name }}</option>
+                  {% endif %}
+                {% endfor %}
+              {% endif %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="date">Datum*</label>
+            <input type="date" class="form-control" id="date" name="date" required />
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="hours">Stunden*</label>
+            <input type="number" step="0.5" class="form-control" id="hours" name="hours" required />
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="shift_type">Schichttyp (optional)</label>
+            <input type="text" class="form-control" id="shift_type" name="shift_type" placeholder="z.B. Früh, Spät" />
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+        <button type="submit" form="addShiftForm" class="btn btn-success">Hinzufügen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal für Gruppen-Sortierung -->
+<div class="modal fade" id="reorderGroupsModal" tabindex="-1" aria-labelledby="reorderGroupsModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="reorderGroupsModalLabel">Benutzergruppen sortieren</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>Ziehen Sie die Gruppen, um die Reihenfolge zu ändern:</p>
+        <ul id="sortableGroups" class="list-group">
+          {% for group_name in ordered_group_names %}
+          <li class="list-group-item" data-group="{{ group_name }}" style="cursor: move;">
+            <span class="handle">☰</span> {{ group_icons.get(group_name, '') }} {{ group_name }}
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+        <button type="button" class="btn btn-primary" id="saveGroupOrder">Speichern</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Drag & Drop Funktionalität für Gruppen-Sortierung
+document.addEventListener('DOMContentLoaded', function() {
+  const reorderBtn = document.getElementById('reorderGroupsBtn');
+  const modal = new bootstrap.Modal(document.getElementById('reorderGroupsModal'));
+  const sortableList = document.getElementById('sortableGroups');
+  const saveBtn = document.getElementById('saveGroupOrder');
+  
+  if (reorderBtn) {
+    reorderBtn.addEventListener('click', function() {
+      modal.show();
+    });
+  }
+  
+  // Drag & Drop Implementation
+  let draggedItem = null;
+  
+  if (sortableList) {
+    const items = sortableList.querySelectorAll('.list-group-item');
+    
+    items.forEach(item => {
+      item.setAttribute('draggable', 'true');
+      
+      item.addEventListener('dragstart', function(e) {
+        draggedItem = this;
+        this.style.opacity = '0.5';
+      });
+      
+      item.addEventListener('dragend', function(e) {
+        this.style.opacity = '1';
+      });
+      
+      item.addEventListener('dragover', function(e) {
+        e.preventDefault();
+      });
+      
+      item.addEventListener('drop', function(e) {
+        e.preventDefault();
+        if (draggedItem !== this) {
+          const allItems = Array.from(sortableList.children);
+          const draggedIndex = allItems.indexOf(draggedItem);
+          const targetIndex = allItems.indexOf(this);
+          
+          if (draggedIndex < targetIndex) {
+            this.parentNode.insertBefore(draggedItem, this.nextSibling);
+          } else {
+            this.parentNode.insertBefore(draggedItem, this);
+          }
+        }
+      });
+    });
+  }
+  
+  // Speichern der neuen Reihenfolge
+  if (saveBtn) {
+    saveBtn.addEventListener('click', function() {
+      const items = sortableList.querySelectorAll('.list-group-item');
+      const groups = [];
+      
+      items.forEach((item, index) => {
+        groups.push({
+          name: item.getAttribute('data-group'),
+          position: index
+        });
+      });
+      
+      // API-Aufruf zum Speichern
+      fetch('/api/employee-group-order', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ groups: groups })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          alert('Reihenfolge erfolgreich gespeichert!');
+          modal.hide();
+          location.reload();
+        } else {
+          alert('Fehler: ' + data.error);
+        }
+      })
+      .catch(error => {
+        alert('Fehler beim Speichern: ' + error);
+      });
+    });
+  }
+});
+
+// Bestehende Funktionen für Schichten und Abwesenheiten
+function deleteShift(shiftId) {
+  if (confirm('Möchten Sie diese Schicht wirklich löschen?')) {
+    fetch(`/einsatz/loeschen/${shiftId}`, {
+      method: 'POST',
+    })
+    .then(response => {
+      if (response.ok) {
+        location.reload();
+      } else {
+        alert('Fehler beim Löschen der Schicht');
+      }
+    });
+  }
+}
+
+function deleteLeave(leaveId) {
+  if (confirm('Möchten Sie diese Abwesenheit wirklich löschen?')) {
+    fetch(`/abwesenheit/loeschen/${leaveId}`, {
+      method: 'POST',
+    })
+    .then(response => {
+      if (response.ok) {
+        location.reload();
+      } else {
+        alert('Fehler beim Löschen der Abwesenheit');
+      }
+    });
+  }
+}
+</script>
+
+{% endblock %}
+

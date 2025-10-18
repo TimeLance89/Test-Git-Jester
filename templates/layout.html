@@ -1,0 +1,174 @@
+{#
+    Modernes Basislayout für alle Seiten.
+    Dieses Template definiert das Grundgerüst der HTML‑Seiten mit
+    zeitgemäßem Design und modernen Schriften.
+#}
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% block title %}Einsatzplaner{% endblock %}</title>
+    
+    <!-- Google Fonts für moderne Typografie -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Eigene CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+    
+    <!-- Meta Tags für bessere SEO -->
+    <meta name="description" content="Moderner Dienstplaner für effiziente Mitarbeiterverwaltung">
+    <meta name="theme-color" content="#2563eb">
+  </head>
+  <body class="{{ 'schedule-page' if request.endpoint == 'schedule' else '' }}">
+    <nav class="navbar">
+      <a class="navbar-brand" href="{{ url_for('index') }}">
+        <span style="font-size: 1.2em;">📋</span> Dienstplaner
+      </a>
+      {% if session.get('user_id') %}
+      <div class="nav-links">
+        <a href="{{ url_for('schedule') }}">
+          <span style="margin-right: 0.5rem;">📅</span>Dienstplan
+        </a>
+        {% if session.get('is_admin') %}
+        <a href="{{ url_for('employees') }}">
+          <span style="margin-right: 0.5rem;">👥</span>Mitarbeiter
+        </a>
+        <a href="{{ url_for('departments') }}">
+          <span style="margin-right: 0.5rem;">🏢</span>Abteilungen
+        </a>
+        <a href="{{ url_for('leave_requests') }}">
+          <span style="margin-right: 0.5rem;">🏖️</span>Abwesenheiten
+          {% if pending_leaves_count > 0 %}
+            <span class="badge bg-danger rounded-pill ms-1">{{ pending_leaves_count }}</span>
+          {% endif %}
+        </a>
+        <a href="{{ url_for('shift_requests_overview') }}">
+          <span style="margin-right: 0.5rem;">⏰</span>Offene Einsätze
+          {% if pending_shifts_count > 0 %}
+            <span class="badge bg-danger rounded-pill ms-1">{{ pending_shifts_count }}</span>
+          {% endif %}
+        </a>
+        <a href="{{ url_for('productivity_settings') }}">
+          <span style="margin-right: 0.5rem;">⚙️</span>Produktivität
+        </a>
+        <a href="{{ url_for('auto_schedule_form') }}">
+          <span style="margin-right: 0.5rem;">🤖</span>Auto-Schichten
+        </a>
+        <a href="{{ url_for('blocked_days') }}">
+          <span style="margin-right: 0.5rem;">🚫</span>Gesperrte Tage
+        </a>
+        {% if not session.get('department_id') %}
+        <a href="{{ url_for('user_management') }}">
+          <span style="margin-right: 0.5rem;">👥</span>Benutzerverwaltung
+        </a>
+        {% endif %}
+{% else %}
+        <a href="{{ url_for("employee_hours_overview") }}">
+          <span style="margin-right: 0.5rem;">📊</span>Meine Stunden
+        </a>
+        <a href="{{ url_for("leave_form") }}">
+          <span style="margin-right: 0.5rem;">📝</span>Abwesenheit beantragen
+        </a>
+        {% endif %}
+        <a href="{{ url_for('logout') }}" style="background-color: rgba(255,255,255,0.1); border-radius: 0.5rem;">
+          <span style="margin-right: 0.5rem;">🚪</span>Logout
+        </a>
+      </div>
+      {% else %}
+      <div class="nav-links">
+        <a href="{{ url_for('login') }}">
+          <span style="margin-right: 0.5rem;">🔐</span>Login
+        </a>
+      </div>
+      {% endif %}
+    </nav>
+    
+    <div class="{{ 'container-fluid' if request.endpoint == 'schedule' else 'container' }}">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-messages-container">
+          {% for category, message in messages %}
+          <div class="flash-message flash-{{ category }}" role="alert">
+            <div class="flash-icon">
+              {% if category == 'success' %}
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              {% elif category == 'warning' %}
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 9V13M12 17H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              {% elif category == 'danger' %}
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 8V12M12 16H12.01M22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              {% elif category == 'info' %}
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M13 16H12V12H11M12 8H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              {% endif %}
+            </div>
+            <div class="flash-content">
+              <div class="flash-message-text">{{ message }}</div>
+            </div>
+            <button class="flash-close" onclick="this.parentElement.remove()">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+      {% endwith %}
+      
+      {% block content %}{% endblock %}
+    </div>
+    
+    <!-- Bootstrap JavaScript für Modal-Funktionalität -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Moderne JavaScript-Verbesserungen -->
+    <script>
+      // Smooth scrolling für interne Links
+      document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+          e.preventDefault();
+          const target = document.querySelector(this.getAttribute('href'));
+          if (target) {
+            target.scrollIntoView({
+              behavior: 'smooth',
+              block: 'start'
+            });
+          }
+        });
+      });
+      
+      // Auto-hide flash messages nach 6 Sekunden
+      setTimeout(() => {
+        document.querySelectorAll('.flash-message').forEach(message => {
+          message.classList.add('fade-out');
+          setTimeout(() => {
+            if (message.parentNode) {
+              message.parentNode.removeChild(message);
+            }
+          }, 500);
+        });
+      }, 6000);
+      
+      // Hover-Effekte für Tabellen-Zeilen
+      document.querySelectorAll('.table tbody tr').forEach(row => {
+        row.addEventListener('mouseenter', function() {
+          this.style.transform = 'translateY(-2px)';
+        });
+        row.addEventListener('mouseleave', function() {
+          this.style.transform = 'translateY(0)';
+        });
+      });
+    </script>
+  </body>
+</html>
+

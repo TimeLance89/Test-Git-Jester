@@ -1,0 +1,157 @@
+{% extends "layout.html" %}
+{% block title %}Abwesenheit beantragen - Dienstplaner{% endblock %}
+{% block content %}
+<div style="margin-bottom: 2rem;">
+  <h1 style="display: flex; align-items: center; margin-bottom: 0.5rem;">
+    <span style="margin-right: 0.75rem; font-size: 2rem;">📝</span>
+    Abwesenheit beantragen
+  </h1>
+  <p style="color: #64748b; font-size: 1.125rem; margin: 0;">Neuen Urlaubs- oder Abwesenheitsantrag erstellen</p>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h3 style="margin: 0; display: flex; align-items: center;">
+      <span style="margin-right: 0.75rem;">🏖️</span>
+      Antrag auf Abwesenheit
+    </h3>
+  </div>
+  <div class="card-body">
+    <form method="post">
+      <!-- Mitarbeiter-Auswahl -->
+      {% if session.get('is_admin') %}
+      <div style="margin-bottom: 2rem;">
+        <h4 style="color: #374151; margin-bottom: 1rem; display: flex; align-items: center;">
+          <span style="margin-right: 0.5rem;">👤</span>Mitarbeiter
+        </h4>
+        <div class="row">
+          <div class="col-md-6">
+            <label for="employee_id" class="form-label">
+              <span style="margin-right: 0.5rem;">👥</span>Für wen soll der Antrag gestellt werden? *
+            </label>
+            <select class="form-select" id="employee_id" name="employee_id" required>
+              {% for emp in employees %}
+              <option value="{{ emp.id }}">{{ emp.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+      </div>
+      {% else %}
+      {% set current_emp = current_employee %}
+      <div style="margin-bottom: 2rem;">
+        <h4 style="color: #374151; margin-bottom: 1rem; display: flex; align-items: center;">
+          <span style="margin-right: 0.5rem;">👤</span>Mitarbeiter
+        </h4>
+        <div class="row">
+          <div class="col-md-6">
+            <label class="form-label">
+              <span style="margin-right: 0.5rem;">👥</span>Antrag für
+            </label>
+            <div style="padding: 0.75rem 1rem; background-color: #f8fafc; border: 2px solid #e2e8f0; border-radius: 0.5rem; font-weight: 600; color: #1e293b;">
+              {{ current_emp.name }}
+            </div>
+            <input type="hidden" name="employee_id" value="{{ current_emp.id }}" />
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Zeitraum -->
+      <div style="margin-bottom: 2rem;">
+        <h4 style="color: #374151; margin-bottom: 1rem; display: flex; align-items: center;">
+          <span style="margin-right: 0.5rem;">📅</span>Zeitraum
+        </h4>
+        <div class="row">
+          <div class="col-md-6">
+            <label for="start_date" class="form-label">
+              <span style="margin-right: 0.5rem;">🗓️</span>Startdatum *
+            </label>
+            <input type="date" class="form-control" id="start_date" name="start_date" required />
+          </div>
+          <div class="col-md-6">
+            <label for="end_date" class="form-label">
+              <span style="margin-right: 0.5rem;">🗓️</span>Enddatum *
+            </label>
+            <input type="date" class="form-control" id="end_date" name="end_date" required />
+          </div>
+        </div>
+      </div>
+
+      <!-- Art der Abwesenheit -->
+      <div style="margin-bottom: 2rem;">
+        <h4 style="color: #374151; margin-bottom: 1rem; display: flex; align-items: center;">
+          <span style="margin-right: 0.5rem;">🏷️</span>Art der Abwesenheit
+        </h4>
+        <div class="row">
+          <div class="col-md-6">
+            <label for="leave_type" class="form-label">
+              <span style="margin-right: 0.5rem;">📋</span>Typ *
+            </label>
+            <select class="form-select" id="leave_type" name="leave_type" required>
+              <option value="Urlaub">🏖️ Urlaub</option>
+              <option value="Krank">🤒 Krank</option>
+              <option value="ÜSA">⏰ ÜSA (Überstundenabbau)</option>
+              <option value="VL">📚 VL</option>
+              <option value="ECOM">💼 ECOM</option>
+              <option value="Fac">🏭 Fac</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notizen -->
+      <div style="margin-bottom: 2rem;">
+        <h4 style="color: #374151; margin-bottom: 1rem; display: flex; align-items: center;">
+          <span style="margin-right: 0.5rem;">📝</span>Zusätzliche Informationen
+        </h4>
+        <div class="row">
+          <div class="col-12">
+            <label for="notes" class="form-label">
+              <span style="margin-right: 0.5rem;">💬</span>Bemerkung (optional)
+            </label>
+            <textarea 
+              class="form-control" 
+              id="notes" 
+              name="notes" 
+              rows="4" 
+              placeholder="Zusätzliche Informationen zum Antrag..."
+              style="resize: vertical;"
+            ></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Aktionen -->
+      <div style="text-align: center; padding-top: 2rem; border-top: 1px solid #e2e8f0; display: flex; gap: 1rem; justify-content: center;">
+        <button type="submit" class="btn btn-success" style="padding: 1rem 2rem; font-size: 1.1rem; font-weight: 600;">
+          <span style="margin-right: 0.5rem;">📤</span>Antrag einreichen
+        </button>
+        <a href="{{ url_for('leave_requests') if session.get('is_admin') else url_for('schedule') }}" class="btn btn-secondary" style="padding: 1rem 2rem; font-size: 1.1rem; font-weight: 600;">
+          <span style="margin-right: 0.5rem;">❌</span>Abbrechen
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- JavaScript für bessere UX -->
+<script>
+  // Automatisches Setzen des Enddatums wenn Startdatum gewählt wird
+  document.getElementById('start_date').addEventListener('change', function() {
+    const endDate = document.getElementById('end_date');
+    if (!endDate.value) {
+      endDate.value = this.value;
+    }
+  });
+  
+  // Validierung: Enddatum muss nach Startdatum liegen
+  document.getElementById('end_date').addEventListener('change', function() {
+    const startDate = document.getElementById('start_date').value;
+    if (startDate && this.value < startDate) {
+      alert('Das Enddatum muss nach dem Startdatum liegen.');
+      this.value = startDate;
+    }
+  });
+</script>
+{% endblock %}

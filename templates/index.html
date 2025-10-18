@@ -1,0 +1,125 @@
+{% extends "layout.html" %}
+{% block title %}Dashboard - Einsatzplaner{% endblock %}
+{% block content %}
+<div style="margin-bottom: 2rem;">
+  <h1 style="background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 0.5rem;">
+    Willkommen zum Dienstplaner
+  </h1>
+  <p style="color: #64748b; font-size: 1.125rem; margin: 0;">Ihre zentrale Anlaufstelle für Mitarbeiterverwaltung und Dienstplanung</p>
+</div>
+
+<div class="row" style="margin-bottom: 3rem;">
+  <div class="col-md-4">
+    <div class="card" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border: none;">
+      <div class="card-body" style="text-align: center;">
+        <div style="font-size: 3rem; margin-bottom: 1rem;">👥</div>
+        <h3 style="color: white; margin-bottom: 0.5rem;">{{ employee_count }}</h3>
+        <h5 style="color: rgba(255,255,255,0.9); margin-bottom: 1.5rem; font-weight: 500;">Mitarbeiter</h5>
+        {% if session.get('is_admin') %}
+        <a href="{{ url_for('employees') }}" class="btn" style="background-color: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3);">
+          Verwalten
+        </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-4">
+    <div class="card" style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white; border: none;">
+      <div class="card-body" style="text-align: center;">
+        <div style="font-size: 3rem; margin-bottom: 1rem;">🏢</div>
+        <h3 style="color: white; margin-bottom: 0.5rem;">{{ department_count }}</h3>
+        <h5 style="color: rgba(255,255,255,0.9); margin-bottom: 1.5rem; font-weight: 500;">Abteilungen</h5>
+        {% if session.get('is_admin') %}
+        <a href="{{ url_for('departments') }}" class="btn" style="background-color: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3);">
+          Verwalten
+        </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-4">
+    <div class="card" style="background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%); color: white; border: none;">
+      <div class="card-body" style="text-align: center;">
+        <div style="font-size: 3rem; margin-bottom: 1rem;">📋</div>
+        <h3 style="color: white; margin-bottom: 0.5rem;">{{ pending_leaves }}</h3>
+        <h5 style="color: rgba(255,255,255,0.9); margin-bottom: 1.5rem; font-weight: 500;">Offene Anträge</h5>
+        {% if session.get('is_admin') %}
+        <a href="{{ url_for('leave_requests') }}" class="btn" style="background-color: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3);">
+          Anzeigen
+        </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Schnellzugriff-Bereich -->
+<div class="card" style="margin-bottom: 2rem;">
+  <div class="card-header">
+    <h3 style="margin: 0; display: flex; align-items: center;">
+      <span style="margin-right: 0.75rem;">⚡</span>
+      Schnellzugriff
+    </h3>
+  </div>
+  <div class="card-body">
+    <div class="row">
+      <div class="col-md-3">
+        <a href="{{ url_for('schedule') }}" class="btn btn-secondary" style="width: 100%; margin-bottom: 1rem; display: flex; align-items: center; justify-content: center; padding: 1rem;">
+          <span style="margin-right: 0.5rem; font-size: 1.5rem;">📅</span>
+          <div style="text-align: left;">
+            <div style="font-weight: 600;">Dienstplan</div>
+            <div style="font-size: 0.75rem; opacity: 0.8;">Aktuelle Planung</div>
+          </div>
+        </a>
+      </div>
+      
+      {% if not session.get('is_admin') %}
+      <div class="col-md-3">
+        <a href="{{ url_for('leave_form') }}" class="btn btn-secondary" style="width: 100%; margin-bottom: 1rem; display: flex; align-items: center; justify-content: center; padding: 1rem;">
+          <span style="margin-right: 0.5rem; font-size: 1.5rem;">📝</span>
+          <div style="text-align: left;">
+            <div style="font-weight: 600;">Urlaub beantragen</div>
+            <div style="font-size: 0.75rem; opacity: 0.8;">Neue Abwesenheit</div>
+          </div>
+        </a>
+      </div>
+      {% else %}
+      <div class="col-md-3">
+        <a href="{{ url_for('shift_requests_overview') }}" class="btn btn-secondary" style="width: 100%; margin-bottom: 1rem; display: flex; align-items: center; justify-content: center; padding: 1rem;">
+          <span style="margin-right: 0.5rem; font-size: 1.5rem;">⏰</span>
+          <div style="text-align: left;">
+            <div style="font-weight: 600;">Offene Einsätze</div>
+            <div style="font-size: 0.75rem; opacity: 0.8;">Genehmigungen</div>
+          </div>
+        </a>
+      </div>
+      
+      <div class="col-md-3">
+        <a href="{{ url_for('productivity_settings') }}" class="btn btn-secondary" style="width: 100%; margin-bottom: 1rem; display: flex; align-items: center; justify-content: center; padding: 1rem;">
+          <span style="margin-right: 0.5rem; font-size: 1.5rem;">⚙️</span>
+          <div style="text-align: left;">
+            <div style="font-weight: 600;">Produktivität</div>
+            <div style="font-size: 0.75rem; opacity: 0.8;">Einstellungen</div>
+          </div>
+        </a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Informationsbereich -->
+<div class="card">
+  <div class="card-body" style="text-align: center; padding: 3rem 2rem;">
+    <div style="font-size: 4rem; margin-bottom: 1rem;">🎯</div>
+    <h3 style="margin-bottom: 1rem; color: #1e293b;">Effiziente Personalplanung</h3>
+    <p style="color: #64748b; font-size: 1.125rem; max-width: 600px; margin: 0 auto;">
+      Nutzen Sie die Navigation oben, um den Dienstplan anzuzeigen, Mitarbeiter und Abteilungen zu verwalten oder Abwesenheiten zu bearbeiten. 
+      Unser modernes System macht Personalplanung einfach und übersichtlich.
+    </p>
+  </div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,266 @@
+{% extends "layout.html" %}
+{% block title %}Profil: {{ emp.name }} - Dienstplaner{% endblock %}
+{% block content %}
+<div class="profile-wrapper">
+  <section class="profile-hero animate-fade-up">
+    <div class="profile-hero-content">
+      <div class="profile-avatar" aria-hidden="true">
+        <span>{{ (emp.name or '?')[:1] | upper }}</span>
+      </div>
+      <div>
+        <p class="profile-breadcrumb">Mitarbeiter · Profil</p>
+        <h1 class="profile-title">{{ emp.name }}</h1>
+        <div class="profile-meta">
+          <span class="profile-meta-item">
+            <span class="profile-meta-icon">💼</span>
+            {{ emp.position or 'Position unbekannt' }}
+          </span>
+          <span class="profile-meta-divider" aria-hidden="true">•</span>
+          <span class="profile-meta-item">
+            <span class="profile-meta-icon">🏢</span>
+            {% if emp.department %}
+              {{ emp.department.name }}
+            {% else %}
+              Keine Abteilung
+            {% endif %}
+          </span>
+        </div>
+      </div>
+    </div>
+    <div class="profile-hero-stats">
+      <div class="profile-stat animate-fade-up delay-1">
+        <div class="profile-stat-icon profile-stat-icon-primary">⏱️</div>
+        <div class="profile-stat-value">{{ emp.monthly_hours or '—' }}</div>
+        <div class="profile-stat-label">Monatliche Stunden</div>
+      </div>
+      <div class="profile-stat animate-fade-up delay-2">
+        <div class="profile-stat-icon profile-stat-icon-success">📅</div>
+        <div class="profile-stat-value">{{ shifts|length }}</div>
+        <div class="profile-stat-label">Schichten diese Woche</div>
+      </div>
+      <div class="profile-stat animate-fade-up delay-3">
+        <div class="profile-stat-icon profile-stat-icon-warning">🏖️</div>
+        <div class="profile-stat-value">{{ leaves|length }}</div>
+        <div class="profile-stat-label">Abwesenheiten</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="profile-section animate-fade-up delay-1">
+    <div class="profile-section-header">
+      <div>
+        <p class="profile-section-eyebrow">Übersicht</p>
+        <h2 class="profile-section-title">Persönliche Informationen</h2>
+      </div>
+      {% if session.get('is_admin') or session.get('user_id') == emp.id %}
+      <div class="profile-actions">
+        <a href="{{ url_for('edit_employee', emp_id=emp.id) }}" class="btn btn-primary profile-edit-btn">
+          <span aria-hidden="true">✏️</span>
+          Daten bearbeiten
+        </a>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="profile-info-grid">
+      <article class="profile-card">
+        <h3 class="profile-card-title">
+          <span class="profile-card-icon">📝</span>
+          Grunddaten
+        </h3>
+        <dl class="profile-data-list">
+          <div class="profile-data-item">
+            <dt>Name</dt>
+            <dd>{{ emp.name }}</dd>
+          </div>
+          <div class="profile-data-item">
+            <dt>Personalnummer</dt>
+            <dd>
+              {% if emp.employee_number %}
+                <span class="profile-pill">{{ emp.employee_number }}</span>
+              {% else %}
+                <span class="profile-placeholder">Nicht angegeben</span>
+              {% endif %}
+            </dd>
+          </div>
+          <div class="profile-data-item">
+            <dt>Kürzel</dt>
+            <dd>
+              {% if emp.short_code %}
+                <span class="profile-pill profile-pill-blue">{{ emp.short_code }}</span>
+              {% else %}
+                <span class="profile-placeholder">Nicht angegeben</span>
+              {% endif %}
+            </dd>
+          </div>
+        </dl>
+      </article>
+
+      <article class="profile-card">
+        <h3 class="profile-card-title">
+          <span class="profile-card-icon">🏢</span>
+          Organisation
+        </h3>
+        <dl class="profile-data-list">
+          <div class="profile-data-item">
+            <dt>Abteilung</dt>
+            <dd>
+              {% if emp.department %}
+                <span class="profile-highlight">{{ emp.department.name }}</span>
+              {% else %}
+                <span class="profile-placeholder">Keine Abteilung zugeordnet</span>
+              {% endif %}
+            </dd>
+          </div>
+          <div class="profile-data-item">
+            <dt>Position</dt>
+            <dd>{{ emp.position or 'Nicht angegeben' }}</dd>
+          </div>
+          <div class="profile-data-item">
+            <dt>Monatliche Stunden</dt>
+            <dd>
+              {% if emp.monthly_hours %}
+                <span class="profile-highlight">{{ emp.monthly_hours }} h</span>
+                <span class="profile-subtext">Durchschnitt pro Monat</span>
+              {% else %}
+                <span class="profile-placeholder">Nicht angegeben</span>
+              {% endif %}
+            </dd>
+          </div>
+        </dl>
+      </article>
+
+      <article class="profile-card">
+        <h3 class="profile-card-title">
+          <span class="profile-card-icon">📞</span>
+          Kontaktdaten
+        </h3>
+        <dl class="profile-data-list">
+          <div class="profile-data-item">
+            <dt>E‑Mail</dt>
+            <dd>
+              {% if emp.email %}
+                <a href="mailto:{{ emp.email }}" class="profile-link">{{ emp.email }}</a>
+              {% else %}
+                <span class="profile-placeholder">Nicht angegeben</span>
+              {% endif %}
+            </dd>
+          </div>
+          <div class="profile-data-item">
+            <dt>Telefon</dt>
+            <dd>
+              {% if emp.phone %}
+                <a href="tel:{{ emp.phone }}" class="profile-link">{{ emp.phone }}</a>
+              {% else %}
+                <span class="profile-placeholder">Nicht angegeben</span>
+              {% endif %}
+            </dd>
+          </div>
+        </dl>
+      </article>
+    </div>
+  </section>
+
+  <section class="profile-section animate-fade-up delay-2">
+    <div class="profile-section-header">
+      <div>
+        <p class="profile-section-eyebrow">Aktuelle Woche</p>
+        <h2 class="profile-section-title">Schichten</h2>
+      </div>
+    </div>
+    {% if shifts %}
+      <div class="profile-table-wrapper">
+        <table class="table profile-table">
+          <thead>
+            <tr>
+              <th><span aria-hidden="true">📅</span> Datum</th>
+              <th><span aria-hidden="true">⏰</span> Stunden</th>
+              <th><span aria-hidden="true">🏷️</span> Typ</th>
+              <th><span aria-hidden="true">✅</span> Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for s in shifts %}
+            <tr>
+              <td data-label="Datum">{{ s.date.strftime('%d.%m.%Y') }}</td>
+              <td data-label="Stunden"><span class="profile-highlight">{{ '%.1f'|format(s.hours) }} h</span></td>
+              <td data-label="Typ">
+                {% if s.shift_type %}
+                  <span class="profile-pill">{{ s.shift_type }}</span>
+                {% else %}
+                  <span class="profile-placeholder">–</span>
+                {% endif %}
+              </td>
+              <td data-label="Status">
+                {% if s.approved %}
+                  <span class="profile-status profile-status-success">✅ Genehmigt</span>
+                {% else %}
+                  <span class="profile-status profile-status-warning">⏳ Ausstehend</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="profile-empty-state">
+        <div class="profile-empty-icon" aria-hidden="true">⏰</div>
+        <h3>Keine Schichten in dieser Woche</h3>
+        <p>Für die aktuelle Woche sind noch keine Schichten eingetragen.</p>
+      </div>
+    {% endif %}
+  </section>
+
+  <section class="profile-section animate-fade-up delay-3">
+    <div class="profile-section-header">
+      <div>
+        <p class="profile-section-eyebrow">Planung</p>
+        <h2 class="profile-section-title">Abwesenheiten</h2>
+      </div>
+    </div>
+    {% if leaves %}
+      <div class="profile-table-wrapper">
+        <table class="table profile-table">
+          <thead>
+            <tr>
+              <th><span aria-hidden="true">📅</span> Zeitraum</th>
+              <th><span aria-hidden="true">🏷️</span> Typ</th>
+              <th><span aria-hidden="true">✅</span> Status</th>
+              <th><span aria-hidden="true">📝</span> Notizen</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for l in leaves %}
+            <tr>
+              <td data-label="Zeitraum">{{ l.start_date.strftime('%d.%m.%Y') }} – {{ l.end_date.strftime('%d.%m.%Y') }}</td>
+              <td data-label="Typ"><span class="profile-pill profile-pill-blue">{{ l.leave_type }}</span></td>
+              <td data-label="Status">
+                {% if l.approved %}
+                  <span class="profile-status profile-status-success">✅ Genehmigt</span>
+                {% else %}
+                  <span class="profile-status profile-status-warning">⏳ Ausstehend</span>
+                {% endif %}
+              </td>
+              <td data-label="Notizen">
+                {% if l.notes %}
+                  <span class="profile-notes">{{ l.notes }}</span>
+                {% else %}
+                  <span class="profile-placeholder">–</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="profile-empty-state">
+        <div class="profile-empty-icon" aria-hidden="true">🏖️</div>
+        <h3>Keine Abwesenheiten</h3>
+        <p>Für diesen Mitarbeiter sind noch keine Abwesenheiten eingetragen.</p>
+      </div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}
