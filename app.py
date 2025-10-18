@@ -570,12 +570,13 @@ def create_app() -> Flask:
             employee_count = Employee.query.count()
             department_count = Department.query.count()
             pending_leaves = Leave.query.filter_by(approved=False).count()
-            
+
         return render_template(
             "index.html",
             employee_count=employee_count,
             department_count=department_count,
             pending_leaves=pending_leaves,
+            current_user=current_user,
         )
 
     @app.route("/login", methods=["GET", "POST"])
