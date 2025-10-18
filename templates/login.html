@@ -1,379 +1,493 @@
 {% extends "layout.html" %}
 {% block title %}Anmelden - Dienstplaner{% endblock %}
 {% block content %}
-<div class="login-container">
-  <div class="login-card">
-    <!-- Animated Background Elements -->
-    <div class="bg-decoration">
-      <div class="circle circle-1"></div>
-      <div class="circle circle-2"></div>
-      <div class="circle circle-3"></div>
-    </div>
-    
-    <!-- Login Content -->
-    <div class="login-content">
-      <!-- Header Section -->
-      <div class="login-header">
-        <div class="login-icon">
-          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2ZM21 9V7L15 4L13 5V11C13 12.1 12.1 13 11 13S9 12.1 9 13V7.5L7 8.5C6.4 8.8 6 9.4 6 10V16H4V10C4 8.9 4.4 7.8 5.2 7L9 4.4C9.6 4 10.3 3.9 11 4.2L15 6.2C15.6 6.5 16 7.1 16 7.8V9H21Z" fill="url(#gradient)"/>
-            <defs>
-              <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" style="stop-color:#2563eb"/>
-                <stop offset="100%" style="stop-color:#3b82f6"/>
-              </linearGradient>
-            </defs>
-          </svg>
-        </div>
-        <h1 class="login-title">Willkommen zurück</h1>
-        <p class="login-subtitle">Melden Sie sich in Ihrem Dienstplaner-Konto an</p>
-      </div>
+<div class="auth-page">
+  <div class="auth-backdrop" aria-hidden="true">
+    <div class="backdrop-gradient"></div>
+    <div class="backdrop-glow glow-1"></div>
+    <div class="backdrop-glow glow-2"></div>
+    <div class="backdrop-grid"></div>
+  </div>
 
-      <!-- Login Form -->
-      <form method="post" action="{{ url_for('login', next=request.args.get('next')) }}" class="login-form">
-        <div class="form-group">
-          <label for="username" class="form-label">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12ZM12 14C9.33 14 4 15.34 4 18V20H20V18C20 15.34 14.67 14 12 14Z" fill="currentColor"/>
-            </svg>
-            Benutzername
-          </label>
-          <input 
-            type="text" 
-            class="form-input" 
-            id="username" 
-            name="username" 
-            required 
-            placeholder="Geben Sie Ihren Benutzernamen ein"
-            autocomplete="username"
-          />
+  <section class="auth-card" aria-labelledby="auth-heading">
+    <div class="auth-showcase">
+      <div class="brand-chip" aria-hidden="true">
+        <span class="brand-dot"></span>
+        Dienstplaner
+      </div>
+      <h1 class="showcase-title" id="auth-heading">Willkommen zurück</h1>
+      <p class="showcase-subtitle">
+        Planen Sie Teams, koordinieren Sie Schichten und behalten Sie Ihre wichtigsten Kennzahlen jederzeit im Blick.
+      </p>
+      <ul class="showcase-features">
+        <li>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17L4 12"/></svg>
+          Sicheres &amp; DSGVO-konformes Login
+        </li>
+        <li>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17L4 12"/></svg>
+          Modernes Dashboard für Ihr Team
+        </li>
+        <li>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17L4 12"/></svg>
+          Schneller Zugriff auf alle Funktionen
+        </li>
+      </ul>
+    </div>
+
+    <div class="auth-panel" role="presentation">
+      <header class="panel-header">
+        <div class="panel-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2ZM21 9V7L15 4L13 5V11C13 12.1 12.1 13 11 13S9 12.1 9 13V7.5L7 8.5C6.4 8.8 6 9.4 6 10V16H4V10C4 8.9 4.4 7.8 5.2 7L9 4.4C9.6 4 10.3 3.9 11 4.2L15 6.2C15.6 6.5 16 7.1 16 7.8V9H21Z"/></svg>
         </div>
-        
-        <div class="form-group">
-          <label for="password" class="form-label">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M18 8H17V6C17 3.24 14.76 1 12 1S7 3.24 7 6V8H6C4.9 8 4 8.9 4 10V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V10C20 8.9 19.1 8 18 8ZM12 17C10.9 17 10 16.1 10 15S10.9 13 12 13S14 13.9 14 15S13.1 17 12 17ZM15.1 8H8.9V6C8.9 4.29 10.29 2.9 12 2.9S15.1 4.29 15.1 6V8Z" fill="currentColor"/>
-            </svg>
-            Passwort
-          </label>
-          <input 
-            type="password" 
-            class="form-input" 
-            id="password" 
-            name="password" 
-            required 
-            placeholder="Geben Sie Ihr Passwort ein"
-            autocomplete="current-password"
-          />
+        <div>
+          <h2 class="panel-title">Anmeldung</h2>
+          <p class="panel-description">Melden Sie sich mit Ihren Zugangsdaten an.</p>
         </div>
-        
-        <button type="submit" class="login-button">
-          <span class="button-text">Anmelden</span>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M4 12L20 12M20 12L14 6M20 12L14 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
+      </header>
+
+      <form method="post" action="{{ url_for('login', next=request.args.get('next')) }}" class="auth-form">
+        <label class="input-field">
+          <span class="input-label">Benutzername</span>
+          <span class="input-wrapper">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12ZM12 14C9.33 14 4 15.34 4 18V20H20V18C20 15.34 14.67 14 12 14Z"/></svg>
+            <input
+              type="text"
+              id="username"
+              name="username"
+              autocomplete="username"
+              placeholder="z.B. m.mueller"
+              required
+            />
+          </span>
+        </label>
+
+        <label class="input-field">
+          <span class="input-label">Passwort</span>
+          <span class="input-wrapper">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8H17V6C17 3.24 14.76 1 12 1S7 3.24 7 6V8H6C4.9 8 4 8.9 4 10V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V10C20 8.9 19.1 8 18 8ZM12 17C10.9 17 10 16.1 10 15S10.9 13 12 13S14 13.9 14 15S13.1 17 12 17ZM15.1 8H8.9V6C8.9 4.29 10.29 2.9 12 2.9S15.1 4.29 15.1 6V8Z"/></svg>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              autocomplete="current-password"
+              placeholder="Ihr Passwort"
+              required
+            />
+          </span>
+        </label>
+
+        <button type="submit" class="auth-button">
+          <span>Anmelden</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12H20M20 12L14 6M20 12L14 18"/></svg>
         </button>
       </form>
-      
-      <!-- Professional Login Footer -->
-      <div class="login-footer">
-        <p class="footer-text">
-          Sicherer Zugang zu Ihrem Employee Planner System
-        </p>
-      </div>
+
+      <footer class="panel-footer">
+        <p>Sicherer Zugang zu Ihrem Employee Planner System.</p>
+      </footer>
     </div>
-  </div>
+  </section>
 </div>
 
 <style>
-/* Login Container */
-.login-container {
-  min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+.auth-page {
+  position: relative;
+  min-height: calc(100vh - 96px);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 2rem 1rem;
-  position: relative;
-  overflow: hidden;
+  padding: 3rem 1.5rem;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  color: #0f172a;
 }
 
-.login-container::before {
-  content: '';
+.auth-backdrop {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: url('data:image/svg+xml,<svg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"><g fill="none" fill-rule="evenodd"><g fill="%23ffffff" fill-opacity="0.05"><circle cx="30" cy="30" r="4"/></g></svg>') repeat;
-  animation: float 20s ease-in-out infinite;
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-20px); }
-}
-
-/* Login Card */
-.login-card {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(20px);
-  border-radius: 24px;
-  box-shadow: 
-    0 25px 50px -12px rgba(0, 0, 0, 0.25),
-    0 0 0 1px rgba(255, 255, 255, 0.2);
-  width: 100%;
-  max-width: 440px;
-  position: relative;
+  inset: 0;
   overflow: hidden;
-  animation: slideInUp 0.8s ease-out;
+  background: radial-gradient(circle at top left, rgba(59, 130, 246, 0.25), transparent 55%),
+              radial-gradient(circle at bottom right, rgba(16, 185, 129, 0.2), transparent 45%),
+              linear-gradient(160deg, #0f172a 0%, #1f2937 100%);
 }
 
-@keyframes slideInUp {
-  from {
-    opacity: 0;
-    transform: translateY(60px) scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-/* Background Decoration */
-.bg-decoration {
+.backdrop-gradient {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  pointer-events: none;
-  overflow: hidden;
+  inset: 0;
+  opacity: 0.5;
+  background: conic-gradient(from 180deg at 50% 50%, rgba(59, 130, 246, 0.4), rgba(147, 51, 234, 0.25), rgba(16, 185, 129, 0.35), rgba(59, 130, 246, 0.4));
+  filter: blur(80px);
+  transform: scale(1.2);
+  animation: rotateGradient 20s linear infinite;
 }
 
-.circle {
+.backdrop-glow {
   position: absolute;
+  width: 380px;
+  height: 380px;
   border-radius: 50%;
-  background: linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(59, 130, 246, 0.1));
-  animation: pulse 4s ease-in-out infinite;
+  filter: blur(60px);
+  opacity: 0.6;
 }
 
-.circle-1 {
-  width: 120px;
-  height: 120px;
-  top: -60px;
-  right: -60px;
-  animation-delay: 0s;
+.glow-1 {
+  top: -120px;
+  left: -80px;
+  background: rgba(59, 130, 246, 0.35);
 }
 
-.circle-2 {
-  width: 80px;
-  height: 80px;
-  bottom: -40px;
-  left: -40px;
-  animation-delay: 1s;
+.glow-2 {
+  bottom: -160px;
+  right: -40px;
+  background: rgba(129, 140, 248, 0.3);
 }
 
-.circle-3 {
-  width: 60px;
-  height: 60px;
-  top: 50%;
-  right: -30px;
-  animation-delay: 2s;
+.backdrop-grid {
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 60px 60px;
+  opacity: 0.4;
+  mask-image: radial-gradient(circle, rgba(255, 255, 255, 0.9), transparent 70%);
 }
 
-@keyframes pulse {
-  0%, 100% { transform: scale(1); opacity: 0.3; }
-  50% { transform: scale(1.1); opacity: 0.1; }
+@keyframes rotateGradient {
+  0% { transform: scale(1.2) rotate(0deg); }
+  100% { transform: scale(1.2) rotate(360deg); }
 }
 
-/* Login Content */
-.login-content {
-  padding: 3rem 2.5rem;
+.auth-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  max-width: 960px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.98);
+  border-radius: 28px;
+  box-shadow: 0 30px 60px -35px rgba(15, 23, 42, 0.65), 0 18px 40px -24px rgba(14, 116, 144, 0.35);
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  backdrop-filter: blur(24px);
+}
+
+.auth-showcase {
+  position: relative;
+  padding: 3.5rem 3rem;
+  background: linear-gradient(160deg, rgba(37, 99, 235, 0.92), rgba(79, 70, 229, 0.85));
+  color: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.auth-showcase::after {
+  content: "";
+  position: absolute;
+  inset: 20% -20% -20% 40%;
+  background: radial-gradient(circle at top, rgba(248, 250, 252, 0.45), transparent 60%);
+  opacity: 0.75;
+  pointer-events: none;
+}
+
+.brand-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.35rem 0.9rem;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.55);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.brand-dot {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #38bdf8, #f472b6);
+  box-shadow: 0 0 0.75rem rgba(56, 189, 248, 0.8);
+}
+
+.showcase-title {
+  font-size: clamp(2.1rem, 3vw, 2.8rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  margin: 0;
+}
+
+.showcase-subtitle {
+  font-size: 1.05rem;
+  line-height: 1.8;
+  color: rgba(248, 250, 252, 0.9);
+  margin: 0;
+}
+
+.showcase-features {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 1rem;
   position: relative;
   z-index: 1;
 }
 
-/* Header */
-.login-header {
-  text-align: center;
-  margin-bottom: 2.5rem;
-}
-
-.login-icon {
-  margin-bottom: 1.5rem;
-  animation: bounce 2s ease-in-out infinite;
-}
-
-@keyframes bounce {
-  0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
-  40% { transform: translateY(-10px); }
-  60% { transform: translateY(-5px); }
-}
-
-.login-title {
-  font-size: 2rem;
-  font-weight: 700;
-  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  margin-bottom: 0.5rem;
-  letter-spacing: -0.025em;
-}
-
-.login-subtitle {
-  color: #64748b;
-  font-size: 1rem;
-  margin: 0;
-  font-weight: 400;
-}
-
-/* Form */
-.login-form {
-  margin-bottom: 2rem;
-}
-
-.form-group {
-  margin-bottom: 1.5rem;
-}
-
-.form-label {
+.showcase-features li {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.9rem;
+  padding: 0.85rem 1rem;
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.35);
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.12);
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.showcase-features svg {
+  width: 22px;
+  height: 22px;
+  stroke: #a5b4fc;
+  stroke-width: 2.2;
+  fill: none;
+}
+
+.auth-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  padding: 3.5rem 3rem;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.panel-header {
+  display: flex;
+  gap: 1.25rem;
+  align-items: center;
+}
+
+.panel-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(129, 140, 248, 0.35));
+  display: grid;
+  place-items: center;
+  color: #2563eb;
+}
+
+.panel-icon svg {
+  width: 28px;
+  height: 28px;
+  fill: currentColor;
+}
+
+.panel-title {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.panel-description {
+  margin: 0.25rem 0 0;
+  color: #475569;
+  font-size: 0.95rem;
+}
+
+.auth-form {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.input-field {
+  display: grid;
+  gap: 0.75rem;
+  font-size: 0.95rem;
+  color: #0f172a;
   font-weight: 600;
-  color: #374151;
-  margin-bottom: 0.5rem;
-  font-size: 0.875rem;
 }
 
-.form-input {
-  width: 100%;
-  padding: 1rem 1.25rem;
-  border: 2px solid #e5e7eb;
-  border-radius: 12px;
-  font-size: 1rem;
-  transition: all 0.3s ease;
-  background: #ffffff;
-  color: #111827;
+.input-label {
+  letter-spacing: 0.01em;
 }
 
-.form-input:focus {
+.input-wrapper {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.9rem 1.1rem;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  background: rgba(248, 250, 252, 0.85);
+  box-shadow: inset 0 1px 2px rgba(148, 163, 184, 0.2);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.input-wrapper svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: #64748b;
+  stroke-width: 1.8;
+}
+
+.input-wrapper input {
+  border: none;
+  background: transparent;
+  font: inherit;
+  padding: 0;
+  color: #0f172a;
+}
+
+.input-wrapper input::placeholder {
+  color: #94a3b8;
+}
+
+.input-wrapper input:focus-visible {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+}
+
+.input-field:focus-within .input-wrapper {
+  border-color: rgba(59, 130, 246, 0.75);
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
   transform: translateY(-1px);
 }
 
-.form-input::placeholder {
-  color: #9ca3af;
-}
-
-/* Login Button */
-.login-button {
-  width: 100%;
-  padding: 1rem 1.5rem;
-  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
-  color: white;
-  border: none;
-  border-radius: 12px;
-  font-size: 1.1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
+.auth-button {
+  margin-top: 0.5rem;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  position: relative;
-  overflow: hidden;
-}
-
-.login-button::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
+  gap: 0.75rem;
   width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-  transition: left 0.5s ease;
+  padding: 0.95rem 1.2rem;
+  border-radius: 18px;
+  border: none;
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: #f8fafc;
+  background: linear-gradient(135deg, #2563eb, #6366f1);
+  box-shadow: 0 20px 40px -20px rgba(37, 99, 235, 0.7);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.login-button:hover::before {
-  left: 100%;
+.auth-button svg {
+  width: 22px;
+  height: 22px;
+  stroke: currentColor;
+  stroke-width: 2.1;
+  fill: none;
 }
 
-.login-button:hover {
+.auth-button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 24px 45px -20px rgba(37, 99, 235, 0.75);
 }
 
-.login-button:active {
+.auth-button:active {
   transform: translateY(0);
 }
 
-.button-text {
-  position: relative;
-  z-index: 1;
-}
-
-/* Login Footer */
-.login-footer {
-  text-align: center;
-  padding-top: 1rem;
-  border-top: 1px solid #e2e8f0;
-}
-
-.footer-text {
+.panel-footer {
+  font-size: 0.9rem;
   color: #64748b;
-  font-size: 0.875rem;
-  margin: 0;
-  font-weight: 500;
+  text-align: center;
+  border-top: 1px solid rgba(226, 232, 240, 0.8);
+  padding-top: 1.25rem;
 }
 
-/* Responsive Design */
-@media (max-width: 480px) {
-  .login-content {
-    padding: 2rem 1.5rem;
+@media (max-width: 1024px) {
+  .auth-card {
+    grid-template-columns: 1fr;
+    max-width: 560px;
   }
-  
-  .login-title {
-    font-size: 1.75rem;
+
+  .auth-showcase {
+    padding: 3rem 2.5rem;
   }
-  
-  .form-input {
-    padding: 0.875rem 1rem;
-  }
-  
-  .login-button {
-    padding: 0.875rem 1.25rem;
-    font-size: 1rem;
+
+  .auth-showcase::after {
+    display: none;
   }
 }
 
-/* Dark mode support */
+@media (max-width: 680px) {
+  .auth-page {
+    padding: 2.5rem 1rem 3.5rem;
+  }
+
+  .auth-card {
+    border-radius: 22px;
+  }
+
+  .auth-showcase {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.25);
+    gap: 1.6rem;
+  }
+
+  .auth-panel {
+    padding: 2.5rem 1.75rem 2.75rem;
+  }
+
+  .panel-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .panel-icon {
+    width: 48px;
+    height: 48px;
+  }
+}
+
 @media (prefers-color-scheme: dark) {
-  .login-card {
-    background: rgba(17, 24, 39, 0.95);
-    color: #f9fafb;
+  .auth-card {
+    background: rgba(15, 23, 42, 0.82);
+    border-color: rgba(148, 163, 184, 0.15);
   }
-  
-  .form-input {
-    background: #374151;
-    border-color: #4b5563;
-    color: #f9fafb;
+
+  .auth-panel {
+    background: rgba(15, 23, 42, 0.85);
+    color: #e2e8f0;
   }
-  
-  .form-input::placeholder {
-    color: #9ca3af;
+
+  .panel-title {
+    color: #e2e8f0;
   }
-  
-  .login-footer {
-    border-color: #4b5563;
+
+  .panel-description {
+    color: #94a3b8;
+  }
+
+  .input-field {
+    color: #e2e8f0;
+  }
+
+  .input-wrapper {
+    background: rgba(30, 41, 59, 0.9);
+    border-color: rgba(71, 85, 105, 0.65);
+    box-shadow: inset 0 1px 1px rgba(15, 23, 42, 0.6);
+  }
+
+  .input-wrapper input {
+    color: #e2e8f0;
+  }
+
+  .input-wrapper input::placeholder {
+    color: #94a3b8;
+  }
+
+  .panel-footer {
+    border-color: rgba(71, 85, 105, 0.65);
+    color: #94a3b8;
   }
 }
 </style>
 {% endblock %}
-
