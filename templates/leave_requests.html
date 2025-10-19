@@ -148,14 +148,19 @@
             </td>
             <td style="padding: 1rem; text-align: center;">
               <div style="display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap;">
-                {% if leave.leave_type == 'Urlaub' %}
-                  <a href="{{ url_for('approve_leave', leave_id=leave.id) }}" 
-                     class="btn btn-success" 
+                {% if leave.leave_type in ['Urlaub', 'ÜSA'] %}
+                  <a href="{{ url_for('approve_leave', leave_id=leave.id) }}"
+                     class="btn btn-success"
                      style="padding: 0.5rem 1rem; font-size: 0.875rem;">
-                    <span style="margin-right: 0.25rem;">✅</span>Genehmigen
+                    <span style="margin-right: 0.25rem;">✅</span>
+                    {% if leave.leave_type == 'ÜSA' %}
+                      Bestätigen
+                    {% else %}
+                      Genehmigen
+                    {% endif %}
                   </a>
-                  <a href="{{ url_for('decline_leave', leave_id=leave.id) }}" 
-                     class="btn" 
+                  <a href="{{ url_for('decline_leave', leave_id=leave.id) }}"
+                     class="btn"
                      style="padding: 0.5rem 1rem; font-size: 0.875rem; background-color: #d97706; color: white;"
                      onclick="return confirm('Abwesenheit von {{ leave.employee.name }} wirklich ablehnen?')">
                     <span style="margin-right: 0.25rem;">❌</span>Ablehnen
