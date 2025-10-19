@@ -150,6 +150,42 @@ body {
   box-shadow: var(--shadow-sm);
 }
 
+.shift-delete-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  font-size: 1rem;
+  line-height: 1;
+  font-weight: 700;
+  color: #ffffff;
+  background: var(--danger-color);
+  box-shadow: var(--shadow-sm);
+  opacity: 0.95;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+.shift-delete-btn:hover,
+.shift-delete-btn:focus {
+  opacity: 1;
+  transform: scale(1.05);
+  box-shadow: var(--shadow-md);
+}
+
+.shift-delete-btn:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}
+
+.shift-delete-btn:active {
+  transform: scale(0.95);
+  box-shadow: none;
+}
+
 .highlight-icon {
   display: inline-flex;
   align-items: center;
