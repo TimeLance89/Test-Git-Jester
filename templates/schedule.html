@@ -132,11 +132,15 @@
                   </div>
                 {% endif %}
               {% elif shift %}
-                <div class="badge bg-success position-relative" style="color: #000 !important;">
-                  {% if shift.approved %}{{ shift.hours }}h{% else %}"{{ shift.hours }}h"{% endif %}
-                  {% if shift.shift_type and not shift.shift_type.startswith('Standard') %}<br><small style="color: #000 !important;">{{ shift.shift_type[:3] }}</small>{% endif %}
-                  <button type="button" class="btn-close btn-close-sm position-absolute top-0 start-100 translate-middle" 
-                          onclick="deleteShift({{ shift.id }})" style="font-size: 0.5rem;"></button>
+                <div class="shift-entry">
+                  <div class="badge bg-success" style="color: #000 !important;">
+                    {% if shift.approved %}{{ shift.hours }}h{% else %}"{{ shift.hours }}h"{% endif %}
+                    {% if shift.shift_type and not shift.shift_type.startswith('Standard') %}<br><small style="color: #000 !important;">{{ shift.shift_type[:3] }}</small>{% endif %}
+                  </div>
+                  <button type="button" class="shift-delete-button" onclick="deleteShift({{ shift.id }})" title="Schicht löschen">
+                    <span class="shift-delete-icon" aria-hidden="true">🗑️</span>
+                    <span class="shift-delete-label">Schicht löschen</span>
+                  </button>
                 </div>
               {% endif %}
             </td>
@@ -237,8 +241,14 @@
                         </div>
                       {% endif %}
                     {% elif shift %}
-                      <div class="badge bg-success position-relative" style="color: #000 !important;">
-                        {% if shift.approved %}{{ shift.hours }}h{% else %}"{{ shift.hours }}h"{% endif %}
+                      <div class="shift-entry">
+                        <div class="badge bg-success" style="color: #000 !important;">
+                          {% if shift.approved %}{{ shift.hours }}h{% else %}"{{ shift.hours }}h"{% endif %}
+                        </div>
+                        <button type="button" class="shift-delete-button" onclick="deleteShift({{ shift.id }})" title="Schicht löschen">
+                          <span class="shift-delete-icon" aria-hidden="true">🗑️</span>
+                          <span class="shift-delete-label">Schicht löschen</span>
+                        </button>
                       </div>
                     {% endif %}
                   </td>
