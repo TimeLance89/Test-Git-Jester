@@ -405,11 +405,12 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        <div class="mb-3 small text-muted" data-role="day-summary"></div>
-        <div class="alert alert-info d-none" role="alert" data-role="empty-state">
-          Für diesen Tag sind keine Mitarbeitenden eingeplant.
+        <div class="day-productivity-summary" data-role="day-summary"></div>
+        <div class="day-productivity-empty d-none" role="status" data-role="empty-state">
+          <div class="day-empty-illustration" aria-hidden="true">🗓️</div>
+          <p class="day-empty-text">Für diesen Tag sind keine Mitarbeitenden eingeplant.</p>
         </div>
-        <ul class="list-group" data-role="assignments-list"></ul>
+        <div class="day-assignments-list" data-role="assignments-list"></div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Schließen</button>
@@ -560,7 +561,13 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!Number.isNaN(productivityNumber)) {
       summaryParts.push(`Produktivität ${productivityNumber.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}`);
     }
-    daySummary.textContent = summaryParts.join(' · ');
+    daySummary.innerHTML = '';
+    summaryParts.forEach((part) => {
+      const chip = document.createElement('span');
+      chip.className = 'day-summary-chip';
+      chip.textContent = part;
+      daySummary.appendChild(chip);
+    });
 
     dayAssignmentsList.innerHTML = '';
 
@@ -572,41 +579,85 @@ document.addEventListener('DOMContentLoaded', function() {
 
     dayEmptyState.classList.add('d-none');
 
+    const getInitials = (name) => {
+      if (!name) {
+        return '–';
+      }
+      const parts = String(name)
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean);
+      if (!parts.length) {
+        return '–';
+      }
+      const initials = parts.slice(0, 2).map((part) => part[0].toUpperCase()).join('');
+      return initials || parts[0][0].toUpperCase();
+    };
+
+    const applyAvatarAccent = (element, name) => {
+      const text = String(name || '');
+      let hash = 0;
+      for (let i = 0; i < text.length; i += 1) {
+        hash = text.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      const hue = Math.abs(hash) % 360;
+      element.style.background = `linear-gradient(135deg, hsl(${hue}, 80%, 92%), hsl(${(hue + 25) % 360}, 85%, 84%))`;
+      element.style.color = `hsl(${hue}, 45%, 32%)`;
+    };
+
+    const createMetaChip = (label, variant = '') => {
+      const chip = document.createElement('span');
+      chip.className = `day-assignment-chip${variant ? ` ${variant}` : ''}`;
+      chip.textContent = label;
+      return chip;
+    };
+
     assignments.forEach((assignment) => {
-      const item = document.createElement('li');
-      item.className = 'list-group-item d-flex justify-content-between align-items-start gap-3';
+      const card = document.createElement('article');
+      card.className = 'day-assignment-card';
+
+      if (!assignment.approved) {
+        card.classList.add('is-pending');
+      }
+
+      const header = document.createElement('div');
+      header.className = 'day-assignment-header';
+
+      const avatar = document.createElement('div');
+      avatar.className = 'day-assignment-avatar';
+
+      avatar.textContent = getInitials(assignment.employeeName);
+      applyAvatarAccent(avatar, assignment.employeeName);
 
       const infoWrapper = document.createElement('div');
-      infoWrapper.className = 'flex-grow-1';
+      infoWrapper.className = 'day-assignment-info';
 
       const nameEl = document.createElement('div');
-      nameEl.className = 'fw-semibold';
+      nameEl.className = 'day-assignment-name';
       nameEl.textContent = assignment.employeeName;
       infoWrapper.appendChild(nameEl);
 
+      const metaWrapper = document.createElement('div');
+      metaWrapper.className = 'day-assignment-meta';
+
       if (assignment.position) {
-        const positionEl = document.createElement('div');
-        positionEl.className = 'text-muted small';
-        positionEl.textContent = assignment.position;
-        infoWrapper.appendChild(positionEl);
+        metaWrapper.appendChild(createMetaChip(assignment.position));
       }
 
       if (assignment.shiftType) {
-        const typeEl = document.createElement('div');
-        typeEl.className = 'text-muted small';
-        typeEl.textContent = assignment.shiftType;
-        infoWrapper.appendChild(typeEl);
+        metaWrapper.appendChild(createMetaChip(assignment.shiftType, 'is-alt'));
       }
 
       if (!assignment.approved) {
-        const pendingBadge = document.createElement('span');
-        pendingBadge.className = 'badge bg-warning text-dark mt-2';
-        pendingBadge.textContent = 'nicht freigegeben';
-        infoWrapper.appendChild(pendingBadge);
+        metaWrapper.appendChild(createMetaChip('⚠️ Nicht freigegeben', 'is-warning'));
       }
 
-      const hoursBadge = document.createElement('span');
-      hoursBadge.className = 'badge bg-primary rounded-pill align-self-center';
+      if (metaWrapper.childElementCount > 0) {
+        infoWrapper.appendChild(metaWrapper);
+      }
+
+      const hoursWrapper = document.createElement('div');
+      hoursWrapper.className = 'day-assignment-hours';
 
       let hoursLabel = assignment.hours;
       if (typeof assignment.hours === 'number') {
@@ -618,11 +669,24 @@ document.addEventListener('DOMContentLoaded', function() {
           : parsedHours.toLocaleString('de-DE');
       }
 
-      hoursBadge.textContent = `${hoursLabel}h`;
+      const hoursValue = document.createElement('div');
+      hoursValue.className = 'day-hours-value';
+      hoursValue.textContent = `${hoursLabel}h`;
 
-      item.appendChild(infoWrapper);
-      item.appendChild(hoursBadge);
-      dayAssignmentsList.appendChild(item);
+      const hoursLabelEl = document.createElement('div');
+      hoursLabelEl.className = 'day-hours-label';
+      hoursLabelEl.textContent = 'geplant';
+
+      hoursWrapper.appendChild(hoursValue);
+      hoursWrapper.appendChild(hoursLabelEl);
+
+      header.appendChild(avatar);
+      header.appendChild(infoWrapper);
+      header.appendChild(hoursWrapper);
+
+      card.appendChild(header);
+
+      dayAssignmentsList.appendChild(card);
     });
 
     dayProductivityModal.show();
