@@ -3659,6 +3659,405 @@ body {
 }
 
 
+/* Wochenansicht – hochwertige Kartenübersicht */
+.schedule-week {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.week-hero-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.9fr);
+  gap: 1.75rem;
+  align-items: center;
+  padding: clamp(1.5rem, 3vw, 2rem) clamp(1.5rem, 3vw, 2.25rem);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.12), rgba(16, 185, 129, 0.12));
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  box-shadow: var(--shadow-md);
+}
+
+.week-eyebrow {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+.week-hero-text h3 {
+  margin: 0.35rem 0 0.5rem;
+  font-size: clamp(2rem, 3vw, 2.4rem);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.week-subtitle {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  max-width: 60ch;
+}
+
+.week-hero-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+}
+
+.week-meta-item {
+  padding: 1rem 1.1rem;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  display: grid;
+  gap: 0.35rem;
+}
+
+.week-meta-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+}
+
+.week-meta-value {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.week-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.5rem;
+  align-items: center;
+}
+
+.week-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.week-legend-label {
+  font-size: 0.8rem;
+}
+
+.week-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+.week-group {
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  background: var(--surface-color);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.week-group-header {
+  position: relative;
+  padding: 1.1rem 1.6rem;
+  display: flex;
+  align-items: center;
+}
+
+.week-group-header::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.7), transparent 70%);
+}
+
+.week-group-title {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  position: relative;
+  z-index: 1;
+}
+
+.week-group-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 1rem;
+  font-size: 1.5rem;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--group-accent);
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 0 0 2px var(--group-accent);
+}
+
+.week-group-title-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.week-group-name {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.week-group-count {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.week-group-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.25rem 1.6rem 1.6rem;
+}
+
+.week-employee-card {
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: linear-gradient(135deg, rgba(148, 163, 184, 0.08), rgba(255, 255, 255, 0.9));
+  box-shadow: var(--shadow-sm);
+  padding: 1.1rem 1.25rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.week-employee-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.week-employee-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.week-employee-name {
+  font-weight: 600;
+  font-size: 1.05rem;
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.week-employee-name:hover {
+  color: var(--primary-color);
+}
+
+.week-employee-meta {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.week-employee-total {
+  display: grid;
+  justify-items: end;
+  gap: 0.2rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-md);
+  background: rgba(37, 99, 235, 0.08);
+  color: var(--primary-color);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.week-employee-total.is-empty {
+  background: rgba(148, 163, 184, 0.14);
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.week-employee-total-value {
+  font-size: 1.1rem;
+}
+
+.week-employee-total-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.week-employee-grid-wrapper {
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+}
+
+.week-employee-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(140px, 1fr));
+  gap: 0.9rem;
+  min-width: max-content;
+}
+
+.week-day-cell {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background: var(--surface-color);
+  padding: 0.85rem;
+  display: grid;
+  gap: 0.65rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  min-height: 120px;
+}
+
+.week-day-cell:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.week-day-cell.is-today {
+  border-color: var(--primary-color);
+  box-shadow: var(--shadow-md);
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(37, 99, 235, 0.03));
+}
+
+.week-day-cell.is-weekend {
+  background: linear-gradient(135deg, rgba(148, 163, 184, 0.1), rgba(255, 255, 255, 0.8));
+}
+
+.week-day-cell.is-outside-month {
+  opacity: 0.65;
+}
+
+.week-day-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.week-day-name {
+  font-size: 0.9rem;
+}
+
+.week-day-date {
+  font-size: 0.85rem;
+}
+
+.week-day-body {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.week-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  width: fit-content;
+}
+
+.week-status-icon {
+  font-size: 1rem;
+}
+
+.week-status-hours {
+  font-variant-numeric: tabular-nums;
+}
+
+.week-status-note {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.week-status-note.is-pending {
+  color: #b45309;
+  font-weight: 600;
+}
+
+.week-status-shift {
+  background: rgba(37, 99, 235, 0.12);
+  color: var(--primary-color);
+}
+
+.week-status-shift.is-pending {
+  background: rgba(245, 158, 11, 0.18);
+  color: #b45309;
+}
+
+.week-status-leave {
+  background: rgba(234, 179, 8, 0.18);
+  color: #92400e;
+}
+
+.week-status-leave[data-type="Krank"] {
+  background: rgba(220, 38, 38, 0.18);
+  color: #991b1b;
+}
+
+.week-status-leave[data-type="ÜSA"] {
+  background: rgba(16, 185, 129, 0.2);
+  color: #047857;
+}
+
+.week-status-blocked {
+  background: rgba(220, 38, 38, 0.18);
+  color: #991b1b;
+}
+
+.week-status-empty {
+  background: rgba(148, 163, 184, 0.16);
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+@media (max-width: 1200px) {
+  .week-hero-card {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .week-hero-meta {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  }
+
+  .week-employee-grid {
+    grid-template-columns: repeat(7, minmax(120px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .week-hero-card {
+    gap: 1.25rem;
+  }
+
+  .week-legend {
+    gap: 0.65rem 1rem;
+  }
+
+  .week-group-body {
+    padding: 1.1rem 1rem 1.25rem;
+  }
+
+  .week-employee-card {
+    padding: 1rem;
+  }
+
+  .week-employee-grid {
+    grid-template-columns: repeat(7, minmax(110px, 1fr));
+  }
+}
+
+
 /* Mitarbeiterprofil Styles */
 .profile-wrapper {
   display: flex;

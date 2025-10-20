@@ -1124,10 +1124,19 @@ def create_app() -> Flask:
         """Monatliche Übersicht über Einsätze und Abwesenheiten."""
         month = request.args.get("month", type=int)
         year = request.args.get("year", type=int)
+        today = date.today()
         if not month or not year:
-            today = date.today()
             month = today.month
             year = today.year
+
+        if today.year == year and today.month == month:
+            reference_date = today
+        else:
+            reference_date = date(year, month, 1)
+
+        week_start = reference_date - timedelta(days=reference_date.weekday())
+        week_end = week_start + timedelta(days=6)
+        week_days = [week_start + timedelta(days=offset) for offset in range(7)]
         # Abteilungsbasierte Filterung erzwingen
         current_user = get_current_user()
         if current_user and current_user.department_id:
@@ -1139,6 +1148,8 @@ def create_app() -> Flask:
         
         cal = calendar.Calendar(firstweekday=0)
         month_days = [d for d in cal.itermonthdates(year, month) if d.month == month]
+        schedule_start = min(month_days[0], week_start)
+        schedule_end = max(month_days[-1], week_end)
         
         if department_id:
             all_employees = (
@@ -1183,29 +1194,41 @@ def create_app() -> Flask:
         employees = all_employees
 
         shifts_query = Shift.query.filter(
-            Shift.date.between(month_days[0], month_days[-1])
+            Shift.date.between(schedule_start, schedule_end)
         ).all()
         shifts = {(s.employee_id, s.date): s for s in shifts_query}
         leaves_query = Leave.query.filter(
             and_(
-                Leave.start_date <= month_days[-1],
-                Leave.end_date >= month_days[0],
+                Leave.start_date <= schedule_end,
+                Leave.end_date >= schedule_start,
                 Leave.approved == True
             )
         ).all()
         leaves: Dict[Tuple[int, date], Leave] = {}
         for leave in leaves_query:
-            current_date = leave.start_date
-            while current_date <= leave.end_date:
-                if current_date.month == month:
-                    leaves[(leave.employee_id, current_date)] = leave
+            current_date = max(leave.start_date, schedule_start)
+            last_relevant_day = min(leave.end_date, schedule_end)
+            while current_date <= last_relevant_day:
+                leaves[(leave.employee_id, current_date)] = leave
                 current_date += timedelta(days=1)
         employee_totals = {
             emp.id: sum(
-                s.hours for (eid, _), s in shifts.items() if eid == emp.id and s.approved
+                s.hours
+                for (eid, day), s in shifts.items()
+                if eid == emp.id and s.approved and day.month == month and day.year == year
             )
             for emp in employees
         }
+        week_employee_totals = {
+            emp.id: sum(
+                s.hours
+                for (eid, day), s in shifts.items()
+                if eid == emp.id and s.approved and week_start <= day <= week_end
+            )
+            for emp in employees
+        }
+        total_week_hours = sum(week_employee_totals.values())
+        employees_with_shifts = sum(1 for hours in week_employee_totals.values() if hours > 0)
         departments = Department.query.order_by(Department.name).all()
         current_user = Employee.query.get(session.get("user_id"))
 
@@ -1213,7 +1236,7 @@ def create_app() -> Flask:
 
         # Gesperrte Tage für den Monat abrufen
         blocked_days_query = BlockedDay.query.filter(
-            BlockedDay.date.between(month_days[0], month_days[-1])
+            BlockedDay.date.between(schedule_start, schedule_end)
         ).all()
         blocked_days = {bd.date: bd for bd in blocked_days_query}
 
@@ -1222,6 +1245,9 @@ def create_app() -> Flask:
             month=month,
             year=year,
             month_days=month_days,
+            week_days=week_days,
+            week_start=week_start,
+            week_end=week_end,
             employees=employees,
             vollzeit_employees=vollzeit_employees,
             teilzeit_employees=teilzeit_employees,
@@ -1232,10 +1258,14 @@ def create_app() -> Flask:
             leaves=leaves,
             blocked_days=blocked_days,
             employee_totals=employee_totals,
+            week_employee_totals=week_employee_totals,
+            total_week_hours=total_week_hours,
+            employees_with_shifts=employees_with_shifts,
             departments=departments,
             selected_department=department_id,
             calendar=calendar,
             current_user=current_user,
+            today=today,
             productivity_data=productivity_data,
             productivity_data_totals=productivity_data_totals,
         )
