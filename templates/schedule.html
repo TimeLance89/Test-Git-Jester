@@ -287,7 +287,7 @@
                   {% set leave = leaves.get((emp.id, day)) %}
                   {% set shift = shifts.get((emp.id, day)) %}
                   {% set blocked_day = blocked_days.get(day) %}
-                  <div class="week-day-cell{% if day == today %} is-today{% endif %}{% if day.weekday() >= 5 %} is-weekend{% endif %}{% if day.month != month or day.year != year %} is-outside-month{% endif %}">
+                  <div class="week-day-cell{% if day == today %} is-today{% endif %}{% if day.weekday() >= 5 %} is-weekend{% endif %}{% if day.month != month or day.year != year %} is-outside-month{% endif %}{% if shift %} has-shift{% endif %}">
                     <div class="week-day-head">
                       <span class="week-day-name">{{ ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'][day.weekday()] }}</span>
                       <span class="week-day-date">{{ day.strftime('%d.%m.') }}</span>
