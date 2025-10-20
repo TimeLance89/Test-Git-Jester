@@ -1945,13 +1945,8 @@ body {
 .nav-links {
   display: flex;
   align-items: stretch;
-  gap: clamp(1rem, 1.75vw, 2rem);
+  gap: 2rem;
   margin-left: auto;
-  flex: 1 1 0;
-  min-width: 0;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  row-gap: 1rem;
 }
 
 .nav-links-guest {
@@ -1962,8 +1957,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  flex: 1 1 clamp(200px, 24vw, 280px);
-  min-width: min(240px, 100%);
+  min-width: max-content;
 }
 
 .nav-group-title {
@@ -1978,8 +1972,6 @@ body {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  flex-wrap: wrap;
-  row-gap: 0.5rem;
 }
 
 .nav-group-items a,
@@ -2031,8 +2023,6 @@ body {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  flex: 0 1 clamp(220px, 18vw, 260px);
-  justify-content: flex-end;
 }
 
 .notification-wrapper {
@@ -2215,17 +2205,10 @@ body {
     background: rgba(15, 23, 42, 0.25);
     box-shadow: var(--shadow-md);
     backdrop-filter: blur(18px);
-    justify-content: flex-start;
   }
 
   .nav-links[data-nav-open] {
     display: flex;
-  }
-
-  .nav-group,
-  .nav-actions {
-    flex: 1 1 100%;
-    min-width: 100%;
   }
 
   .nav-group-items {
