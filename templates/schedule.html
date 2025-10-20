@@ -199,7 +199,14 @@
         {% set day_data = week_productivity_data.get(day, {}) %}
         {% set is_weekend = day.weekday() >= 5 %}
         {% set is_empty = day_data.get('gesamt_std', 0) == 0 %}
-        <div class="week-productivity-item{% if is_weekend %} is-weekend{% endif %}{% if is_empty %} is-empty{% endif %}">
+        <div class="week-productivity-item js-week-productivity-item{% if is_weekend %} is-weekend{% endif %}{% if is_empty %} is-empty{% endif %}"
+             role="button"
+             tabindex="0"
+             data-date="{{ day.isoformat() }}"
+             data-display-date="{{ day.strftime('%d.%m.%Y') }}"
+             data-total-parts="{{ day_data.get('teile', 0)|int }}"
+             data-total-hours="{{ '%g' % day_data.get('gesamt_std', 0) }}"
+             data-productivity="{% if day_data.get('gesamt_std', 0) > 0 %}{{ '%.1f'|format(day_data.get('produktivitaet', 0)) }}{% endif %}">
           <div class="week-productivity-day">{{ ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'][day.weekday()] }} {{ day.strftime('%d.%m.%Y') }}</div>
           <div class="week-productivity-value"{% if day_data.get('gesamt_std', 0) > 0 %}
                title="Berechnung für {{ day.strftime('%d.%m.%Y') }}:&#10;Std Aushilfen + ZA: {{ day_data.get('aushilfen_za_std', 0) }}h&#10;Std Feste: {{ day_data.get('feste_std', 0) }}h&#10;Gesamt: {{ day_data.get('gesamt_std', 0) }}h&#10;Produktivität: {{ day_data.get('produktivitaet', 0) }}&#10;Teile: {{ day_data.get('gesamt_std', 0) }} × {{ day_data.get('produktivitaet', 0) }} = {{ day_data.get('teile', 0) }}"{% endif %}>
@@ -389,6 +396,28 @@
   </div>
 </div>
 
+<!-- Modal für Tages-Produktivität -->
+<div class="modal fade" id="dayProductivityModal" tabindex="-1" aria-labelledby="dayProductivityModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="dayProductivityModalLabel">Produktivität</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3 small text-muted" data-role="day-summary"></div>
+        <div class="alert alert-info d-none" role="alert" data-role="empty-state">
+          Für diesen Tag sind keine Mitarbeitenden eingeplant.
+        </div>
+        <ul class="list-group" data-role="assignments-list"></ul>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Schließen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Modal für Gruppen-Sortierung -->
 <div class="modal fade" id="reorderGroupsModal" tabindex="-1" aria-labelledby="reorderGroupsModalLabel" aria-hidden="true">
   <div class="modal-dialog">
@@ -418,6 +447,7 @@
 <script>
 // Drag & Drop Funktionalität für Gruppen-Sortierung
 document.addEventListener('DOMContentLoaded', function() {
+  const weekAssignments = {{ week_assignments|tojson|safe }};
   const viewButtons = document.querySelectorAll('[data-view]');
   const views = {
     month: document.getElementById('monthView'),
@@ -490,7 +520,126 @@ document.addEventListener('DOMContentLoaded', function() {
   const modal = new bootstrap.Modal(document.getElementById('reorderGroupsModal'));
   const sortableList = document.getElementById('sortableGroups');
   const saveBtn = document.getElementById('saveGroupOrder');
-  
+  const dayProductivityModalEl = document.getElementById('dayProductivityModal');
+  const dayProductivityModal = dayProductivityModalEl ? new bootstrap.Modal(dayProductivityModalEl) : null;
+  const daySummary = dayProductivityModalEl ? dayProductivityModalEl.querySelector('[data-role="day-summary"]') : null;
+  const dayAssignmentsList = dayProductivityModalEl ? dayProductivityModalEl.querySelector('[data-role="assignments-list"]') : null;
+  const dayEmptyState = dayProductivityModalEl ? dayProductivityModalEl.querySelector('[data-role="empty-state"]') : null;
+
+  const updateDayModal = (triggerEl) => {
+    if (!dayProductivityModal || !triggerEl || !daySummary || !dayAssignmentsList || !dayEmptyState) {
+      return;
+    }
+
+    const isoDate = triggerEl.getAttribute('data-date');
+    const displayDate = triggerEl.getAttribute('data-display-date') || '';
+    const totalPartsAttr = triggerEl.getAttribute('data-total-parts') || '0';
+    const totalHoursAttr = triggerEl.getAttribute('data-total-hours') || '0';
+    const productivityAttr = triggerEl.getAttribute('data-productivity') || '';
+    const assignments = weekAssignments[isoDate] || [];
+    const modalTitle = dayProductivityModalEl.querySelector('.modal-title');
+
+    if (modalTitle) {
+      modalTitle.textContent = `Produktivität ${displayDate}`.trim();
+    }
+
+    const summaryParts = [];
+    const totalPartsNumber = Number.parseInt(totalPartsAttr, 10);
+    const totalHoursNumber = Number.parseFloat(totalHoursAttr);
+    const productivityNumber = Number.parseFloat(productivityAttr);
+
+    const partsText = Number.isNaN(totalPartsNumber)
+      ? totalPartsAttr
+      : totalPartsNumber.toLocaleString('de-DE');
+    const hoursText = Number.isNaN(totalHoursNumber)
+      ? totalHoursAttr
+      : totalHoursNumber.toLocaleString('de-DE');
+    summaryParts.push(`${partsText} Teile`);
+    summaryParts.push(`${hoursText}h Gesamtstunden`);
+
+    if (!Number.isNaN(productivityNumber)) {
+      summaryParts.push(`Produktivität ${productivityNumber.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}`);
+    }
+    daySummary.textContent = summaryParts.join(' · ');
+
+    dayAssignmentsList.innerHTML = '';
+
+    if (!assignments.length) {
+      dayEmptyState.classList.remove('d-none');
+      dayProductivityModal.show();
+      return;
+    }
+
+    dayEmptyState.classList.add('d-none');
+
+    assignments.forEach((assignment) => {
+      const item = document.createElement('li');
+      item.className = 'list-group-item d-flex justify-content-between align-items-start gap-3';
+
+      const infoWrapper = document.createElement('div');
+      infoWrapper.className = 'flex-grow-1';
+
+      const nameEl = document.createElement('div');
+      nameEl.className = 'fw-semibold';
+      nameEl.textContent = assignment.employeeName;
+      infoWrapper.appendChild(nameEl);
+
+      if (assignment.position) {
+        const positionEl = document.createElement('div');
+        positionEl.className = 'text-muted small';
+        positionEl.textContent = assignment.position;
+        infoWrapper.appendChild(positionEl);
+      }
+
+      if (assignment.shiftType) {
+        const typeEl = document.createElement('div');
+        typeEl.className = 'text-muted small';
+        typeEl.textContent = assignment.shiftType;
+        infoWrapper.appendChild(typeEl);
+      }
+
+      if (!assignment.approved) {
+        const pendingBadge = document.createElement('span');
+        pendingBadge.className = 'badge bg-warning text-dark mt-2';
+        pendingBadge.textContent = 'nicht freigegeben';
+        infoWrapper.appendChild(pendingBadge);
+      }
+
+      const hoursBadge = document.createElement('span');
+      hoursBadge.className = 'badge bg-primary rounded-pill align-self-center';
+
+      let hoursLabel = assignment.hours;
+      if (typeof assignment.hours === 'number') {
+        hoursLabel = assignment.hours.toLocaleString('de-DE');
+      } else {
+        const parsedHours = Number.parseFloat(assignment.hours);
+        hoursLabel = Number.isNaN(parsedHours)
+          ? String(assignment.hours)
+          : parsedHours.toLocaleString('de-DE');
+      }
+
+      hoursBadge.textContent = `${hoursLabel}h`;
+
+      item.appendChild(infoWrapper);
+      item.appendChild(hoursBadge);
+      dayAssignmentsList.appendChild(item);
+    });
+
+    dayProductivityModal.show();
+  };
+
+  const productivityItems = document.querySelectorAll('.js-week-productivity-item');
+  productivityItems.forEach((item) => {
+    item.style.cursor = 'pointer';
+    item.addEventListener('click', () => updateDayModal(item));
+    item.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        updateDayModal(item);
+      }
+    });
+  });
+
   if (reorderBtn) {
     reorderBtn.addEventListener('click', function() {
       modal.show();

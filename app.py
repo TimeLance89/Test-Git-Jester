@@ -1269,6 +1269,28 @@ def create_app() -> Flask:
         ).all()
         blocked_days = {bd.date: bd for bd in blocked_days_query}
 
+        week_assignments: Dict[str, List[Dict[str, object]]] = {}
+        for day in week_days:
+            assignments: List[Dict[str, object]] = []
+            for emp in employees:
+                shift = shifts.get((emp.id, day))
+                if not shift:
+                    continue
+
+                assignments.append(
+                    {
+                        "employeeId": emp.id,
+                        "employeeName": emp.name,
+                        "hours": float(shift.hours or 0),
+                        "approved": bool(shift.approved),
+                        "shiftType": shift.shift_type or "",
+                        "position": emp.position or "",
+                    }
+                )
+
+            assignments.sort(key=lambda entry: entry["employeeName"].lower())
+            week_assignments[day.isoformat()] = assignments
+
         return render_template(
             "schedule.html",
             month=month,
@@ -1299,6 +1321,7 @@ def create_app() -> Flask:
             productivity_data_totals=productivity_data_totals,
             week_productivity_data=week_productivity_data,
             active_schedule_view=active_schedule_view,
+            week_assignments=week_assignments,
         )
 
     @app.route("/dienstplan/ansicht", methods=["POST"])
