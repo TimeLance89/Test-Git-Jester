@@ -168,101 +168,153 @@
   </div>
 
   <!-- Wochenansicht -->
-  <div id="weekView" class="mobile-schedule schedule-view d-none">
-    {% set weeks = [] %}
-    {% set current_week = [] %}
-    {% for day in month_days %}
-      {% if day.weekday() == 0 and current_week %}
-        {% set _ = weeks.append(current_week) %}
-        {% set current_week = [day] %}
-      {% else %}
-        {% set _ = current_week.append(day) %}
-      {% endif %}
-    {% endfor %}
-    {% if current_week %}
-      {% set _ = weeks.append(current_week) %}
-    {% endif %}
-
-    {% for week in weeks %}
-      <div class="card mb-4">
-        <div class="card-header bg-primary text-white">
-          <h5 class="mb-0">
-            Woche {{ week[0].day }} - {{ week[-1].day }} {{ calendar.month_name[month] }} {{ year }}
-          </h5>
+  <div id="weekView" class="schedule-week schedule-view d-none">
+    {% set week_number = week_start.isocalendar()[1] %}
+    <div class="week-hero-card">
+      <div class="week-hero-text">
+        <p class="week-eyebrow">Aktuelle Woche</p>
+        <h3>Kalenderwoche {{ week_number }}</h3>
+        <p class="week-subtitle">Fokussierte Übersicht der laufenden Dienstplanwoche{% if today %} – Stand {{ today.strftime('%d.%m.%Y') }}{% endif %}.</p>
+      </div>
+      <div class="week-hero-meta">
+        <div class="week-meta-item">
+          <span class="week-meta-label">Zeitraum</span>
+          <span class="week-meta-value">{{ week_start.strftime('%d.%m.%Y') }} – {{ week_end.strftime('%d.%m.%Y') }}</span>
         </div>
-        <div class="card-body p-0">
-          <div class="table-responsive">
-            <table class="table table-bordered table-sm mb-0">
-              <thead class="table-light">
-                <tr>
-                  <th style="min-width: 100px;">Mitarbeiter</th>
-                  {% for day in week %}
-                  <th class="text-center" style="min-width: 50px;">
-                    {{ day.day }}<br>
-                    <small>{{ ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'][day.weekday()] }}</small>
-                  </th>
-                  {% endfor %}
-                </tr>
-              </thead>
-              <tbody>
-                {% for group_name in ordered_group_names %}
-                  {% set group_employees = employee_groups.get(group_name, []) %}
-                  {% if group_employees %}
-                <tr>
-                  <td colspan="{{ week|length + 1 }}" class="text-center fw-bold" style="background-color: {{ group_colors[group_name] }}; color: white; padding: 0.5rem;">
-                    {{ group_icons[group_name] }} {{ group_name|upper }} MITARBEITER ({{ group_employees|length }})
-                  </td>
-                </tr>
-                    {% for emp in group_employees %}
-                <tr>
-                  <td class="fw-bold" style="background-color: {{ group_bg_colors[group_name] }};">
-                    <a href="{{ url_for('employee_profile', emp_id=emp.id) }}" class="text-decoration-none">{{ emp.name }}</a>
-                  </td>
-                  {% for day in week %}
+        <div class="week-meta-item">
+          <span class="week-meta-label">Geplante Stunden</span>
+          <span class="week-meta-value">{{ '%g' % total_week_hours }} h</span>
+        </div>
+        <div class="week-meta-item">
+          <span class="week-meta-label">Eingesetzte Mitarbeitende</span>
+          <span class="week-meta-value">{{ employees_with_shifts }} / {{ employees|length }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="week-legend">
+      <div class="week-legend-item">
+        <span class="week-status week-status-shift"><span class="week-status-icon">⏱️</span>Schicht</span>
+        <span class="week-legend-label">genehmigt</span>
+      </div>
+      <div class="week-legend-item">
+        <span class="week-status week-status-shift is-pending"><span class="week-status-icon">⏱️</span>Schicht</span>
+        <span class="week-legend-label">angefragt</span>
+      </div>
+      <div class="week-legend-item">
+        <span class="week-status week-status-leave" data-type="Urlaub"><span class="week-status-icon">🌴</span>Abwesenheit</span>
+        <span class="week-legend-label">Urlaub / Krank</span>
+      </div>
+      <div class="week-legend-item">
+        <span class="week-status week-status-blocked"><span class="week-status-icon">🚫</span>Gesperrt</span>
+        <span class="week-legend-label">gesperrter Tag</span>
+      </div>
+      <div class="week-legend-item">
+        <span class="week-status week-status-empty"><span class="week-status-icon">—</span>Frei</span>
+        <span class="week-legend-label">kein Einsatz</span>
+      </div>
+    </div>
+
+    {% set group_icons = {'Vollzeit': '👔', 'Teilzeit': '⏰', 'Aushilfe': '🤝'} %}
+    {% set group_colors = {'Vollzeit': '#3b82f6', 'Teilzeit': '#10b981', 'Aushilfe': '#f59e0b'} %}
+
+    <div class="week-groups">
+      {% for group_name in ordered_group_names %}
+        {% set group_employees = employee_groups.get(group_name, []) %}
+        {% if group_employees %}
+        <section class="week-group" style="--group-accent: {{ group_colors.get(group_name, '#2563eb') }};">
+          <header class="week-group-header" style="background: linear-gradient(120deg, {{ group_colors.get(group_name, '#2563eb') }}1a, transparent); border-bottom: 1px solid {{ group_colors.get(group_name, '#2563eb') }}33;">
+            <div class="week-group-title">
+              <span class="week-group-icon">{{ group_icons.get(group_name, '👥') }}</span>
+              <div class="week-group-title-text">
+                <span class="week-group-name">{{ group_name }}</span>
+                <span class="week-group-count">{{ group_employees|length }} Mitarbeitende</span>
+              </div>
+            </div>
+          </header>
+          <div class="week-group-body">
+            {% for emp in group_employees %}
+            {% set weekly_hours = week_employee_totals.get(emp.id, 0) %}
+            <article class="week-employee-card">
+              <header class="week-employee-header">
+                <div class="week-employee-info">
+                  <a href="{{ url_for('employee_profile', emp_id=emp.id) }}" class="week-employee-name">{{ emp.name }}</a>
+                  {% if emp.monthly_hours %}
+                  <span class="week-employee-meta">Soll: {{ emp.monthly_hours }}h / Monat</span>
+                  {% endif %}
+                </div>
+                <div class="week-employee-total {% if weekly_hours == 0 %}is-empty{% endif %}">
+                  {% if weekly_hours > 0 %}
+                    <span class="week-employee-total-value">{{ '%g' % weekly_hours }}h</span>
+                    <span class="week-employee-total-label">diese Woche</span>
+                  {% else %}
+                    <span class="week-employee-total-label">Keine Einsätze</span>
+                  {% endif %}
+                </div>
+              </header>
+              <div class="week-employee-grid-wrapper">
+                <div class="week-employee-grid">
+                  {% for day in week_days %}
                   {% set leave = leaves.get((emp.id, day)) %}
                   {% set shift = shifts.get((emp.id, day)) %}
                   {% set blocked_day = blocked_days.get(day) %}
-                  <td class="text-center p-1" style="font-size: 0.7rem; {% if blocked_day %}background-color: #fee2e2;{% endif %}">
-                    {% if blocked_day %}
-                      <div class="badge" style="background-color: #dc2626; color: white; font-size: 0.6rem;" 
-                           title="{{ blocked_day.name }}{% if blocked_day.description %} - {{ blocked_day.description }}{% endif %}">
-                        🚫
+                  <div class="week-day-cell{% if day == today %} is-today{% endif %}{% if day.weekday() >= 5 %} is-weekend{% endif %}{% if day.month != month or day.year != year %} is-outside-month{% endif %}">
+                    <div class="week-day-head">
+                      <span class="week-day-name">{{ ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'][day.weekday()] }}</span>
+                      <span class="week-day-date">{{ day.strftime('%d.%m.') }}</span>
+                    </div>
+                    <div class="week-day-body">
+                      {% if blocked_day %}
+                      <div class="week-status week-status-blocked" title="{{ blocked_day.name }}{% if blocked_day.description %} – {{ blocked_day.description }}{% endif %}">
+                        <span class="week-status-icon">🚫</span>
+                        <span>Gesperrt</span>
                       </div>
-                    {% elif leave %}
+                      {% elif leave %}
                       {% if leave.leave_type == 'Urlaub' %}
-                        <div class="badge mt-1 position-relative" style="background-color: orange; color: green;">
-                          {{ leave.leave_type[:2] }}
-                        </div>
+                        {% set leave_icon = '🌴' %}
                       {% elif leave.leave_type == 'Krank' %}
-                        <div class="badge mt-1 position-relative" style="background-color: red; color: white;">
-                          {{ leave.leave_type[:2] }}
-                        </div>
+                        {% set leave_icon = '🤒' %}
                       {% elif leave.leave_type == 'ÜSA' %}
-                        <div class="badge mt-1 position-relative" style="background-color: #22c55e; color: #000;">
-                          {{ leave.leave_type }}
-                        </div>
+                        {% set leave_icon = '⚡' %}
                       {% else %}
-                        <div class="badge bg-warning text-dark mt-1 position-relative">
-                          {{ leave.leave_type[:2] }}
-                        </div>
+                        {% set leave_icon = '🗓️' %}
                       {% endif %}
-                    {% elif shift %}
-                      <div class="badge bg-success position-relative" style="color: #000 !important;">
-                        {% if shift.approved %}{{ shift.hours }}h{% else %}"{{ shift.hours }}h"{% endif %}
+                      <div class="week-status week-status-leave" data-type="{{ leave.leave_type }}">
+                        <span class="week-status-icon">{{ leave_icon }}</span>
+                        <span>{{ leave.leave_type }}</span>
                       </div>
-                    {% endif %}
-                  </td>
+                      {% if leave.description %}
+                      <div class="week-status-note">{{ leave.description }}</div>
+                      {% endif %}
+                      {% elif shift %}
+                      <div class="week-status week-status-shift{% if not shift.approved %} is-pending{% endif %}">
+                        <span class="week-status-icon">⏱️</span>
+                        <span class="week-status-hours">{{ '%g' % shift.hours }}h</span>
+                      </div>
+                      {% if shift.shift_type and not shift.shift_type.startswith('Standard') %}
+                      <div class="week-status-note">{{ shift.shift_type }}</div>
+                      {% endif %}
+                      {% if not shift.approved %}
+                      <div class="week-status-note is-pending">Angefragt</div>
+                      {% endif %}
+                      {% else %}
+                      <div class="week-status week-status-empty">
+                        <span class="week-status-icon">—</span>
+                        <span>Frei</span>
+                      </div>
+                      {% endif %}
+                    </div>
+                  </div>
                   {% endfor %}
-                </tr>
-                    {% endfor %}
-                  {% endif %}
-                {% endfor %}
-              </tbody>
-            </table>
+                </div>
+              </div>
+            </article>
+            {% endfor %}
           </div>
-        </div>
-      </div>
-    {% endfor %}
+        </section>
+        {% endif %}
+      {% endfor %}
+    </div>
   </div>
 </div>
 
