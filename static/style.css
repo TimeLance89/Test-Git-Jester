@@ -1950,7 +1950,8 @@ body {
   flex: 1 1 0;
   min-width: 0;
   flex-wrap: wrap;
-  justify-content: flex-end;
+  flex-direction: row-reverse;
+  justify-content: flex-start;
   row-gap: 1rem;
 }
 
@@ -2033,6 +2034,7 @@ body {
   gap: 0.75rem;
   flex: 0 1 clamp(220px, 18vw, 260px);
   justify-content: flex-end;
+  order: -1;
 }
 
 .notification-wrapper {
@@ -2226,6 +2228,10 @@ body {
   .nav-actions {
     flex: 1 1 100%;
     min-width: 100%;
+  }
+
+  .nav-actions {
+    order: 0;
   }
 
   .nav-group-items {
