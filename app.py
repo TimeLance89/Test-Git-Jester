@@ -26,6 +26,8 @@ from flask import (
     url_for,
     flash,
     session,
+    jsonify,
+    Response,
 )
 
 from functools import wraps
@@ -44,121 +46,140 @@ from models import (
 )
 from auto_schedule import create_default_shifts_for_month, create_default_shifts_for_employee_position
 
-def get_productivity_data(year: int, month: int, department_id: int = None):
-    """Berechnet die Produktivitätsdaten basierend auf geplanten Stunden und Produktivitätseinstellungen."""
-    import calendar
-    from datetime import date, timedelta
-    
-    # Berechne die Tage des Monats
-    num_days = calendar.monthrange(year, month)[1]
-    month_days = [date(year, month, day) for day in range(1, num_days + 1)]
-    
-    # Hole alle Schichten für den Monat
+def calculate_productivity_for_dates(dates: List[date], department_id: int | None = None) -> Dict[date, Dict[str, float]]:
+    """Berechnet Produktivitätskennzahlen für eine beliebige Liste an Tagen."""
+
+    if not dates:
+        return {}
+
+    relevant_days = sorted(set(dates))
+    start_date = relevant_days[0]
+    end_date = relevant_days[-1]
+
     shifts_query = Shift.query.filter(
-        Shift.date.between(month_days[0], month_days[-1]),
+        Shift.date >= start_date,
+        Shift.date <= end_date,
         Shift.approved == True
     )
-    
+
     if department_id:
         shifts_query = shifts_query.join(Employee).filter(Employee.department_id == department_id)
-    
+
     shifts = shifts_query.all()
 
-    # Hole alle genehmigten Abwesenheiten für den Monat
-    leaves = Leave.query.filter(
-        Leave.start_date <= month_days[-1],
-        Leave.end_date >= month_days[0],
+    leaves_query = Leave.query.filter(
+        Leave.start_date <= end_date,
+        Leave.end_date >= start_date,
         Leave.approved == True
     ).all()
-    
-    # Hole alle Produktivitätseinstellungen
+
     productivity_settings = {}
     all_settings = ProductivitySettings.query.filter_by(is_active=True).all()
-    
+
     for setting in all_settings:
         if setting.department_id:
             productivity_settings[setting.department_id] = setting.productivity_value
         else:
             productivity_settings['global'] = setting.productivity_value
-    
-    # Fallback auf Standard-Produktivität
+
     default_productivity = productivity_settings.get('global', 40.0)
-    
-    # Gruppiere Schichten nach Datum
-    daily_data = {}
-    for day in month_days:
-        daily_shifts = [s for s in shifts if s.date == day]
-        
-        # Berechne Stunden nach Abteilungen
-        department_hours = {}
-        aushilfen_hours = 0
-        feste_hours = 0
-        
-        # Hole alle genehmigten Abwesenheiten für den aktuellen Tag
-        daily_leaves = [l for l in leaves if l.start_date <= day <= l.end_date]
-        
+
+    shifts_by_day: Dict[date, List[Shift]] = {day: [] for day in relevant_days}
+    for shift in shifts:
+        if shift.date in shifts_by_day:
+            shifts_by_day[shift.date].append(shift)
+
+    leaves_by_day: Dict[date, List[Leave]] = {day: [] for day in relevant_days}
+    for leave in leaves_query:
+        current = max(leave.start_date, start_date)
+        last = min(leave.end_date, end_date)
+        while current <= last:
+            if current in leaves_by_day:
+                leaves_by_day[current].append(leave)
+            current += timedelta(days=1)
+
+    daily_data: Dict[date, Dict[str, float]] = {}
+
+    for day in relevant_days:
+        daily_shifts = shifts_by_day.get(day, [])
+        daily_leaves = leaves_by_day.get(day, [])
+
+        department_hours: Dict[int, Dict[str, float]] = {}
+        aushilfen_hours = 0.0
+        feste_hours = 0.0
+
         for shift in daily_shifts:
-            # Prüfe, ob der Mitarbeiter an diesem Tag Urlaub hat
-            is_on_leave = any(leave.employee_id == shift.employee_id and leave.leave_type == 'Urlaub' for leave in daily_leaves)
-            
+            is_on_leave = any(
+                leave.employee_id == shift.employee_id and leave.leave_type == 'Urlaub'
+                for leave in daily_leaves
+            )
+
             if is_on_leave:
-                continue # Überspringe Schichten von Mitarbeitern im Urlaub
+                continue
 
             dept_id = shift.employee.department_id
-            
-            # Hole die Produktivität für diese Abteilung
             dept_productivity = productivity_settings.get(dept_id, default_productivity)
-            
+
             if dept_id not in department_hours:
                 department_hours[dept_id] = {
-                    'hours': 0,
+                    'hours': 0.0,
                     'productivity': dept_productivity,
-                    'teile': 0
+                    'teile': 0.0,
                 }
-            
+
             department_hours[dept_id]['hours'] += shift.hours
-            
-            # Unterscheide zwischen festen Mitarbeitern und Aushilfen
+
             if shift.employee.monthly_hours and shift.employee.monthly_hours >= 160:
                 feste_hours += shift.hours
             else:
                 aushilfen_hours += shift.hours
-        
-        # Berechne Gesamtteile basierend auf abteilungsspezifischen Produktivitäten
-        total_teile = 0
+
         gesamt_hours = aushilfen_hours + feste_hours
-        
-        # Wenn nur eine Abteilung arbeitet oder alle die gleiche Produktivität haben
-        if len(set(dept['productivity'] for dept in department_hours.values())) <= 1:
-            # Verwende eine einheitliche Produktivität
-            used_productivity = list(department_hours.values())[0]['productivity'] if department_hours else default_productivity
+        total_teile = 0.0
+
+        distinct_productivities = {dept['productivity'] for dept in department_hours.values()}
+        if len(distinct_productivities) <= 1:
+            used_productivity = next(iter(distinct_productivities), default_productivity)
             total_teile = gesamt_hours * used_productivity
         else:
-            # Berechne gewichteten Durchschnitt der Produktivitäten
-            total_weighted_productivity = 0
+            total_weighted_productivity = 0.0
             for dept_data in department_hours.values():
                 total_teile += dept_data['hours'] * dept_data['productivity']
                 total_weighted_productivity += dept_data['hours'] * dept_data['productivity']
-            
-            used_productivity = total_weighted_productivity / gesamt_hours if gesamt_hours > 0 else default_productivity
-        
+
+            used_productivity = (
+                total_weighted_productivity / gesamt_hours if gesamt_hours > 0 else default_productivity
+            )
+
         daily_data[day] = {
             "aushilfen_za_std": aushilfen_hours,
             "feste_std": feste_hours,
             "gesamt_std": gesamt_hours,
             "produktivitaet": round(used_productivity, 1),
             "teile": round(total_teile, 0),
-            "department_breakdown": department_hours
+            "department_breakdown": department_hours,
         }
-    
-    # Berechne Gesamtsummen
+
+    return daily_data
+
+
+def get_productivity_data(year: int, month: int, department_id: int = None):
+    """Berechnet die Produktivitätsdaten basierend auf geplanten Stunden und Produktivitätseinstellungen."""
+    import calendar
+    from datetime import date
+
+    num_days = calendar.monthrange(year, month)[1]
+    month_days = [date(year, month, day) for day in range(1, num_days + 1)]
+
+    daily_data = calculate_productivity_for_dates(month_days, department_id)
+
     totals = {
         "aushilfen_za_std_total": sum(data["aushilfen_za_std"] for data in daily_data.values()),
         "feste_std_total": sum(data["feste_std"] for data in daily_data.values()),
         "gesamt_std_total": sum(data["gesamt_std"] for data in daily_data.values()),
         "teile_total": sum(data["teile"] for data in daily_data.values()),
     }
-    
+
     return daily_data, totals
 
 def calculate_employee_hours_summary(employee_id: int, year: int = None, month: int = None):
@@ -1231,8 +1252,12 @@ def create_app() -> Flask:
         employees_with_shifts = sum(1 for hours in week_employee_totals.values() if hours > 0)
         departments = Department.query.order_by(Department.name).all()
         current_user = Employee.query.get(session.get("user_id"))
+        active_schedule_view = "month"
+        if current_user and current_user.preferred_schedule_view in {"month", "week"}:
+            active_schedule_view = current_user.preferred_schedule_view
 
         productivity_data, productivity_data_totals = get_productivity_data(year, month, department_id)
+        week_productivity_data = calculate_productivity_for_dates(week_days, department_id)
 
         # Gesperrte Tage für den Monat abrufen
         blocked_days_query = BlockedDay.query.filter(
@@ -1268,7 +1293,29 @@ def create_app() -> Flask:
             today=today,
             productivity_data=productivity_data,
             productivity_data_totals=productivity_data_totals,
+            week_productivity_data=week_productivity_data,
+            active_schedule_view=active_schedule_view,
         )
+
+    @app.route("/dienstplan/ansicht", methods=["POST"])
+    @login_required
+    def update_schedule_view() -> Response:
+        """Speichert die zuletzt verwendete Dienstplan-Ansicht im Benutzerkonto."""
+
+        payload = request.get_json(silent=True) or {}
+        requested_view = payload.get("view")
+
+        if requested_view not in {"month", "week"}:
+            return jsonify({"success": False, "message": "Ungültige Ansicht."}), 400
+
+        current_user = get_current_user()
+        if not current_user:
+            return jsonify({"success": False, "message": "Benutzer nicht angemeldet."}), 401
+
+        current_user.preferred_schedule_view = requested_view
+        db.session.commit()
+
+        return jsonify({"success": True, "view": requested_view})
 
     @app.route("/einsatz/hinzufuegen", methods=["POST"])
     @login_required
