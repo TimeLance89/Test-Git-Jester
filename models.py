@@ -7,6 +7,8 @@ SQLAlchemy und stellen die Grundlage für die gesamte Anwendung dar.
 
 from datetime import date, datetime
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import inspect, text
+from sqlalchemy.exc import NoSuchTableError, OperationalError, ProgrammingError
 
 # Die SQLAlchemy‑Instanz wird in app.py initialisiert und hier importiert.
 db = SQLAlchemy()
@@ -211,6 +213,61 @@ class Notification(db.Model):
         return f"<Notification to={self.recipient_id} read={self.is_read}>"
 
 
+def _upgrade_schema_if_needed() -> None:
+    """Erweitert ältere SQLite-Datenbanken um neue Spalten.
+
+    Die Anwendung wurde ursprünglich ohne einige optionale Felder
+    ausgeliefert. Nutzer, die bereits eine bestehende ``planner.db``
+    einsetzen, erhalten beim Zugriff auf neue Attribute (wie die
+    bevorzugte Dienstplanansicht) sonst einen ``OperationalError``
+    von SQLite. Diese Routine ergänzt fehlende Spalten mit geeigneten
+    Defaults, ohne dass ein separates Migrationsskript manuell
+    ausgeführt werden muss.
+    """
+
+    engine = db.engine
+
+    # Die automatische Migration wird aktuell nur für SQLite benötigt.
+    if engine.dialect.name != "sqlite":
+        return
+
+    inspector = inspect(engine)
+
+    try:
+        employee_columns = {col["name"] for col in inspector.get_columns("employee")}
+    except (NoSuchTableError, OperationalError):
+        # Tabelle existiert (noch) nicht – nichts zu tun.
+        return
+
+    column_statements = {
+        "short_code": ["ALTER TABLE employee ADD COLUMN short_code VARCHAR(20)"],
+        "username": ["ALTER TABLE employee ADD COLUMN username VARCHAR(120)"],
+        "password_hash": ["ALTER TABLE employee ADD COLUMN password_hash VARCHAR(200)"],
+        "is_admin": ["ALTER TABLE employee ADD COLUMN is_admin BOOLEAN DEFAULT 0"],
+        "preferred_schedule_view": [
+            "ALTER TABLE employee ADD COLUMN preferred_schedule_view VARCHAR(20) NOT NULL DEFAULT 'month'",
+            "UPDATE employee SET preferred_schedule_view = 'month' WHERE preferred_schedule_view IS NULL OR TRIM(preferred_schedule_view) = ''",
+        ],
+    }
+
+    missing_columns = [
+        stmts for column, stmts in column_statements.items() if column not in employee_columns
+    ]
+
+    if not missing_columns:
+        return
+
+    with engine.begin() as connection:
+        for statements in missing_columns:
+            for statement in statements:
+                try:
+                    connection.execute(text(statement))
+                except (OperationalError, ProgrammingError):
+                    # Wenn das Statement doch nicht kompatibel ist (z.B. durch
+                    # parallele Migrationen), wird der Start der Anwendung nicht blockiert.
+                    continue
+
+
 def init_db(app):
     """Initialisiert die Datenbank.
 
@@ -221,6 +278,7 @@ def init_db(app):
     db.init_app(app)
     with app.app_context():
         db.create_all()
+        _upgrade_schema_if_needed()
 
 
 
