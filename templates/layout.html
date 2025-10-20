@@ -39,98 +39,96 @@
       </div>
       {% if session.get('user_id') %}
       <div class="nav-links">
-        <div class="nav-sections-grid">
-          <div class="nav-section">
-            <span class="nav-section-title">Planung</span>
-            <div class="nav-section-items">
-              <a class="nav-tile" href="{{ url_for('schedule') }}">
-                <span class="nav-icon" aria-hidden="true">📅</span>
-                <span>Dienstplan</span>
-              </a>
-              {% if session.get('is_admin') %}
-              <a class="nav-tile" href="{{ url_for('auto_schedule_form') }}">
-                <span class="nav-icon" aria-hidden="true">🤖</span>
-                <span>Auto-Schichten</span>
-              </a>
-              <a class="nav-tile" href="{{ url_for('blocked_days') }}">
-                <span class="nav-icon" aria-hidden="true">🚫</span>
-                <span>Gesperrte Tage</span>
-              </a>
-              {% endif %}
-            </div>
+        <div class="nav-group">
+          <span class="nav-group-title">Planung</span>
+          <div class="nav-group-items">
+            <a href="{{ url_for('schedule') }}">
+              <span class="nav-icon" aria-hidden="true">📅</span>
+              <span>Dienstplan</span>
+            </a>
+            {% if session.get('is_admin') %}
+            <a href="{{ url_for('auto_schedule_form') }}">
+              <span class="nav-icon" aria-hidden="true">🤖</span>
+              <span>Auto-Schichten</span>
+            </a>
+            <a href="{{ url_for('blocked_days') }}">
+              <span class="nav-icon" aria-hidden="true">🚫</span>
+              <span>Gesperrte Tage</span>
+            </a>
+            {% endif %}
           </div>
-          {% if session.get('is_admin') %}
-          <div class="nav-section">
-            <span class="nav-section-title">Anträge</span>
-            <div class="nav-section-items">
-              <a class="nav-tile" href="{{ url_for('leave_requests') }}">
-                <span class="nav-icon" aria-hidden="true">🏖️</span>
-                <span>Abwesenheiten</span>
-                {% if pending_leaves_count > 0 %}
-                  <span class="nav-badge">{{ pending_leaves_count }}</span>
-                {% endif %}
-              </a>
-              <a class="nav-tile" href="{{ url_for('shift_requests_overview') }}">
-                <span class="nav-icon" aria-hidden="true">⏰</span>
-                <span>Offene Einsätze</span>
-                {% if pending_shifts_count > 0 %}
-                  <span class="nav-badge">{{ pending_shifts_count }}</span>
-                {% endif %}
-              </a>
-            </div>
-          </div>
-          <div class="nav-section">
-            <span class="nav-section-title">Verwaltung</span>
-            <div class="nav-section-items">
-              <a class="nav-tile" href="{{ url_for('employees') }}">
-                <span class="nav-icon" aria-hidden="true">👥</span>
-                <span>Mitarbeiter</span>
-              </a>
-              <a class="nav-tile" href="{{ url_for('departments') }}">
-                <span class="nav-icon" aria-hidden="true">🏢</span>
-                <span>Abteilungen</span>
-              </a>
-              {% if not session.get('department_id') %}
-              <a class="nav-tile" href="{{ url_for('user_management') }}">
-                <span class="nav-icon" aria-hidden="true">🛠️</span>
-                <span>Benutzerverwaltung</span>
-              </a>
-              {% endif %}
-              <a class="nav-tile" href="{{ url_for('productivity_settings') }}">
-                <span class="nav-icon" aria-hidden="true">⚙️</span>
-                <span>Produktivität</span>
-              </a>
-            </div>
-          </div>
-          <div class="nav-section">
-            <span class="nav-section-title">Auswertungen</span>
-            <div class="nav-section-items">
-              <a class="nav-tile" href="{{ url_for('monthly_report') }}">
-                <span class="nav-icon" aria-hidden="true">📈</span>
-                <span>Monatsbericht</span>
-              </a>
-            </div>
-          </div>
-          {% else %}
-          <div class="nav-section">
-            <span class="nav-section-title">Übersicht</span>
-            <div class="nav-section-items">
-              <a class="nav-tile" href="{{ url_for('schedule') }}">
-                <span class="nav-icon" aria-hidden="true">📅</span>
-                <span>Dienstplan</span>
-              </a>
-              <a class="nav-tile" href="{{ url_for('employee_hours_overview') }}">
-                <span class="nav-icon" aria-hidden="true">📊</span>
-                <span>Meine Stunden</span>
-              </a>
-              <a class="nav-tile" href="{{ url_for('leave_form') }}">
-                <span class="nav-icon" aria-hidden="true">📝</span>
-                <span>Abwesenheit beantragen</span>
-              </a>
-            </div>
-          </div>
-          {% endif %}
         </div>
+        {% if session.get('is_admin') %}
+        <div class="nav-group">
+          <span class="nav-group-title">Anträge</span>
+          <div class="nav-group-items">
+            <a href="{{ url_for('leave_requests') }}">
+              <span class="nav-icon" aria-hidden="true">🏖️</span>
+              <span>Abwesenheiten</span>
+              {% if pending_leaves_count > 0 %}
+                <span class="nav-badge">{{ pending_leaves_count }}</span>
+              {% endif %}
+            </a>
+            <a href="{{ url_for('shift_requests_overview') }}">
+              <span class="nav-icon" aria-hidden="true">⏰</span>
+              <span>Offene Einsätze</span>
+              {% if pending_shifts_count > 0 %}
+                <span class="nav-badge">{{ pending_shifts_count }}</span>
+              {% endif %}
+            </a>
+          </div>
+        </div>
+        <div class="nav-group">
+          <span class="nav-group-title">Verwaltung</span>
+          <div class="nav-group-items">
+            <a href="{{ url_for('employees') }}">
+              <span class="nav-icon" aria-hidden="true">👥</span>
+              <span>Mitarbeiter</span>
+            </a>
+            <a href="{{ url_for('departments') }}">
+              <span class="nav-icon" aria-hidden="true">🏢</span>
+              <span>Abteilungen</span>
+            </a>
+            {% if not session.get('department_id') %}
+            <a href="{{ url_for('user_management') }}">
+              <span class="nav-icon" aria-hidden="true">🛠️</span>
+              <span>Benutzerverwaltung</span>
+            </a>
+            {% endif %}
+            <a href="{{ url_for('productivity_settings') }}">
+              <span class="nav-icon" aria-hidden="true">⚙️</span>
+              <span>Produktivität</span>
+            </a>
+          </div>
+        </div>
+        <div class="nav-group">
+          <span class="nav-group-title">Auswertungen</span>
+          <div class="nav-group-items">
+            <a href="{{ url_for('monthly_report') }}">
+              <span class="nav-icon" aria-hidden="true">📈</span>
+              <span>Monatsbericht</span>
+            </a>
+          </div>
+        </div>
+        {% else %}
+        <div class="nav-group">
+          <span class="nav-group-title">Übersicht</span>
+          <div class="nav-group-items">
+            <a href="{{ url_for('schedule') }}">
+              <span class="nav-icon" aria-hidden="true">📅</span>
+              <span>Dienstplan</span>
+            </a>
+            <a href="{{ url_for('employee_hours_overview') }}">
+              <span class="nav-icon" aria-hidden="true">📊</span>
+              <span>Meine Stunden</span>
+            </a>
+            <a href="{{ url_for('leave_form') }}">
+              <span class="nav-icon" aria-hidden="true">📝</span>
+              <span>Abwesenheit beantragen</span>
+            </a>
+          </div>
+        </div>
+        {% endif %}
         <div class="nav-actions">
           <div class="notification-wrapper" data-mark-read-url="{{ url_for('mark_notifications_read') }}">
             <button class="notification-button" type="button" aria-label="Benachrichtigungen" data-unread="{{ unread_notifications_count }}">
@@ -164,7 +162,7 @@
               </ul>
             </div>
           </div>
-          <a class="nav-tile nav-logout" href="{{ url_for('logout') }}">
+          <a href="{{ url_for('logout') }}">
             <span class="nav-icon" aria-hidden="true">🚪</span>
             <span>Logout</span>
           </a>
@@ -172,7 +170,7 @@
       </div>
       {% else %}
       <div class="nav-links nav-links-guest">
-        <a class="nav-tile" href="{{ url_for('login') }}">
+        <a href="{{ url_for('login') }}">
           <span class="nav-icon" aria-hidden="true">🔐</span>
           <span>Login</span>
         </a>
