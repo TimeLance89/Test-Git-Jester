@@ -316,13 +316,17 @@
                       <div class="week-status-note">{{ leave.description }}</div>
                       {% endif %}
                       {% elif shift %}
-                      <div class="week-status week-status-shift{% if not shift.approved %} is-pending{% endif %} has-delete">
+                      {% set can_delete_shift = session.get('is_admin') or session.get('user_id') == emp.id %}
+                      <div class="week-status week-status-shift{% if not shift.approved %} is-pending{% endif %}{% if can_delete_shift %} has-delete{% endif %}">
                         <span class="week-status-icon">⏱️</span>
                         <span class="week-status-hours">{{ '%g' % shift.hours }}h</span>
+                        {% if can_delete_shift %}
                         <button type="button"
-                                class="btn-close btn-close-sm week-delete-shift"
+                                class="week-delete-shift"
                                 aria-label="Schicht löschen"
-                                onclick="deleteShift({{ shift.id }})"></button>
+                                title="Schicht löschen"
+                                onclick="deleteShift({{ shift.id }})">❌</button>
+                        {% endif %}
                       </div>
                       {% if shift.shift_type and not shift.shift_type.startswith('Standard') %}
                       <div class="week-status-note">{{ shift.shift_type }}</div>

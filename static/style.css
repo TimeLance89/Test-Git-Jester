@@ -4229,15 +4229,21 @@ body {
 
 .week-delete-shift {
   position: absolute;
-  top: -0.35rem;
-  right: -0.35rem;
-  width: 0.85rem;
-  height: 0.85rem;
-  opacity: 0.7;
+  top: -0.4rem;
+  right: -0.4rem;
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.75;
+  transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
 .week-delete-shift:hover {
   opacity: 1;
+  transform: scale(1.05);
 }
 
 .week-status-icon {
