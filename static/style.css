@@ -3195,9 +3195,9 @@ body {
 }
 
 .desktop-schedule table {
-  font-size: 0.75rem;
+  font-size: clamp(0.6rem, 0.9vw, 0.75rem);
   margin-bottom: 0;
-  white-space: nowrap;
+  table-layout: fixed;
 }
 
 .desktop-schedule th,
@@ -3617,12 +3617,14 @@ body {
 
 .schedule-page .desktop-schedule .table {
   width: 100%;
-  min-width: 1200px; /* Eine Mindestbreite, um das Layout des Bildes zu simulieren */
+  min-width: 0;
+  table-layout: fixed;
 }
 
 .schedule-page .desktop-schedule th,
 .schedule-page .desktop-schedule td {
-  white-space: nowrap;
+  white-space: normal;
+  word-break: break-word;
   padding: 0.5rem;
 }
 

@@ -3,11 +3,17 @@
 {% block content %}
 
 <div class="container-fluid px-3">
-  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-    <h2 style="margin: 0;">Dienstplan für {{ month }}.{{ year }}</h2>
-    <button type="button" class="btn btn-success btn-lg" data-bs-toggle="modal" data-bs-target="#addShiftModal">
-      ➕ Einsatz hinzufügen
-    </button>
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+    <h2 class="mb-0">Dienstplan für {{ month }}.{{ year }}</h2>
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+      <div class="btn-group" role="group" aria-label="Ansicht wechseln">
+        <button type="button" class="btn btn-outline-primary active" data-view="month">Monatsansicht</button>
+        <button type="button" class="btn btn-outline-primary" data-view="week">Wochenansicht</button>
+      </div>
+      <button type="button" class="btn btn-success btn-lg" data-bs-toggle="modal" data-bs-target="#addShiftModal">
+        ➕ Einsatz hinzufügen
+      </button>
+    </div>
   </div>
 
   <form method="get" class="row g-3 mb-4">
@@ -48,15 +54,19 @@
     {% endif %}
   </form>
 
-  <!-- Desktop Layout: Normale Tabelle (≥1200px) -->
-  <div class="desktop-schedule d-none d-xl-block">
+  {% set employee_col_width = 18 %}
+  {% set total_col_width = 12 %}
+  {% set day_col_width = (100 - employee_col_width - total_col_width) / month_days|length %}
+
+  <!-- Monatsansicht -->
+  <div id="monthView" class="desktop-schedule schedule-view">
     <div class="table-responsive">
       <table class="table table-bordered table-sm">
         <thead class="table-primary">
           <tr>
-            <th rowspan="2" class="text-center align-middle" style="min-width: 120px;">MITARBEITER</th>
+            <th rowspan="2" class="text-center align-middle" style="width: {{ employee_col_width }}%;">MITARBEITER</th>
             {% for day in month_days %}
-            <th class="text-center" style="min-width: 35px; font-size: 0.75rem;">
+            <th class="text-center" style="width: {{ day_col_width }}%; font-size: 0.75rem;">
               {{ day.day }}
               {% set day_data = productivity_data.get(day, {}) %}
               {% if day_data.get("teile", 0) > 0 %}
@@ -68,11 +78,11 @@
               {% endif %}
             </th>
             {% endfor %}
-            <th rowspan="2" class="text-center align-middle" style="min-width: 60px;">Σ</th>
+            <th rowspan="2" class="text-center align-middle" style="width: {{ total_col_width }}%;">Σ</th>
           </tr>
           <tr>
             {% for day in month_days %}
-            <th class="text-center" style="font-size: 0.6rem;">{{ ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'][day.weekday()] }}</th>
+            <th class="text-center" style="width: {{ day_col_width }}%; font-size: 0.6rem;">{{ ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'][day.weekday()] }}</th>
             {% endfor %}
           </tr>
         </thead>
@@ -86,22 +96,22 @@
             {% set group_employees = employee_groups.get(group_name, []) %}
             {% if group_employees %}
           <tr>
-            <td colspan="{{ month_days|length + 1 }}" class="text-center fw-bold" style="background-color: {{ group_colors[group_name] }}; color: white; padding: 0.5rem;">
+            <td colspan="{{ month_days|length + 2 }}" class="text-center fw-bold" style="background-color: {{ group_colors[group_name] }}; color: white; padding: 0.5rem;">
               {{ group_icons[group_name] }} {{ group_name|upper }} MITARBEITER ({{ group_employees|length }})
             </td>
           </tr>
               {% for emp in group_employees %}
           <tr>
-            <td class="fw-bold" style="background-color: {{ group_bg_colors[group_name] }};">
+            <td class="fw-bold" style="background-color: {{ group_bg_colors[group_name] }}; width: {{ employee_col_width }}%;">
               <a href="{{ url_for('employee_profile', emp_id=emp.id) }}" class="text-decoration-none">{{ emp.name }}</a>
             </td>
             {% for day in month_days %}
             {% set leave = leaves.get((emp.id, day)) %}
             {% set shift = shifts.get((emp.id, day)) %}
             {% set blocked_day = blocked_days.get(day) %}
-            <td class="text-center p-1" style="font-size: 0.7rem; {% if blocked_day %}background-color: #fee2e2;{% endif %}">
+            <td class="text-center p-1" style="width: {{ day_col_width }}%; font-size: 0.7rem; {% if blocked_day %}background-color: #fee2e2;{% endif %}">
               {% if blocked_day %}
-                <div class="badge" style="background-color: #dc2626; color: white; font-size: 0.6rem;" 
+                <div class="badge" style="background-color: #dc2626; color: white; font-size: 0.6rem;"
                      title="{{ blocked_day.name }}{% if blocked_day.description %} - {{ blocked_day.description }}{% endif %}">
                   🚫
                 </div>
@@ -141,7 +151,7 @@
               {% endif %}
             </td>
             {% endfor %}
-            <td class="text-center fw-bold" style="background-color: {{ group_total_bg[group_name] }};">
+            <td class="text-center fw-bold" style="background-color: {{ group_total_bg[group_name] }}; width: {{ total_col_width }}%;">
               {% if group_name == 'Vollzeit' and emp.monthly_hours and emp.monthly_hours >= 160 %}
                 {{ employee_totals.get(emp.id, 0) }}h (Vollzeit)
               {% else %}
@@ -157,8 +167,8 @@
     </div>
   </div>
 
-  <!-- Mobile Layout: Wochenweise Ansicht (<1200px) -->
-  <div class="mobile-schedule d-xl-none">
+  <!-- Wochenansicht -->
+  <div id="weekView" class="mobile-schedule schedule-view d-none">
     {% set weeks = [] %}
     {% set current_week = [] %}
     {% for day in month_days %}
@@ -334,6 +344,47 @@
 <script>
 // Drag & Drop Funktionalität für Gruppen-Sortierung
 document.addEventListener('DOMContentLoaded', function() {
+  const viewButtons = document.querySelectorAll('[data-view]');
+  const views = {
+    month: document.getElementById('monthView'),
+    week: document.getElementById('weekView')
+  };
+
+  const updateView = (targetView) => {
+    viewButtons.forEach((btn) => {
+      const isActive = btn.getAttribute('data-view') === targetView;
+      btn.classList.toggle('active', isActive);
+      if (isActive) {
+        btn.classList.remove('btn-outline-primary');
+        btn.classList.add('btn-primary');
+      } else {
+        btn.classList.remove('btn-primary');
+        btn.classList.add('btn-outline-primary');
+      }
+    });
+
+    Object.entries(views).forEach(([key, element]) => {
+      if (!element) {
+        return;
+      }
+
+      if (key === targetView) {
+        element.classList.remove('d-none');
+      } else {
+        element.classList.add('d-none');
+      }
+    });
+  };
+
+  if (viewButtons.length) {
+    updateView('month');
+    viewButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        updateView(button.getAttribute('data-view'));
+      });
+    });
+  }
+
   const reorderBtn = document.getElementById('reorderGroupsBtn');
   const modal = new bootstrap.Modal(document.getElementById('reorderGroupsModal'));
   const sortableList = document.getElementById('sortableGroups');
