@@ -632,6 +632,10 @@ def create_app() -> Flask:
                     "username": "ALTER TABLE employee ADD COLUMN username VARCHAR(120)",
                     "password_hash": "ALTER TABLE employee ADD COLUMN password_hash VARCHAR(200)",
                     "is_admin": "ALTER TABLE employee ADD COLUMN is_admin BOOLEAN DEFAULT 0",
+                    "preferred_schedule_view": (
+                        "ALTER TABLE employee "
+                        "ADD COLUMN preferred_schedule_view VARCHAR(20) NOT NULL DEFAULT 'month'"
+                    ),
                 }
                 for col, stmt in upgrades.items():
                     if col not in cols:
