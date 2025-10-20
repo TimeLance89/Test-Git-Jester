@@ -1,4 +1,4 @@
-"""Datenbank-Migrationsskript für neue EmployeeGroupOrder Tabelle."""
+"""Datenbank-Migrationsskript für neue Schemaänderungen."""
 
 import sqlite3
 from datetime import date
@@ -13,10 +13,10 @@ def migrate_database():
         
         # Prüfe ob Tabelle bereits existiert
         cursor.execute("""
-            SELECT name FROM sqlite_master 
+            SELECT name FROM sqlite_master
             WHERE type='table' AND name='employee_group_order'
         """)
-        
+
         if cursor.fetchone():
             print("✓ Tabelle 'employee_group_order' existiert bereits.")
         else:
@@ -48,7 +48,23 @@ def migrate_database():
             conn.commit()
             print("✓ Tabelle 'employee_group_order' erfolgreich erstellt.")
             print("✓ Standard-Reihenfolge (Vollzeit, Teilzeit, Aushilfe) eingetragen.")
-        
+
+        # Neue Spalte für die bevorzugte Dienstplan-Ansicht hinzufügen
+        cursor.execute("PRAGMA table_info(employee)")
+        columns = {row[1] for row in cursor.fetchall()}
+
+        if "preferred_schedule_view" not in columns:
+            cursor.execute(
+                """
+                ALTER TABLE employee
+                ADD COLUMN preferred_schedule_view VARCHAR(20) NOT NULL DEFAULT 'month'
+                """
+            )
+            conn.commit()
+            print("✓ Spalte 'preferred_schedule_view' zur Tabelle 'employee' hinzugefügt.")
+        else:
+            print("✓ Spalte 'preferred_schedule_view' existiert bereits in der Tabelle 'employee'.")
+
         conn.close()
         print("\n✅ Datenbank-Migration erfolgreich abgeschlossen!")
         

@@ -2,12 +2,12 @@
 {% block title %}Dienstplan{% endblock %}
 {% block content %}
 
-<div class="container-fluid px-3">
+<div id="scheduleApp" class="container-fluid px-3" data-initial-view="{{ active_schedule_view or 'month' }}">
   <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
     <h2 class="mb-0">Dienstplan für {{ month }}.{{ year }}</h2>
     <div class="d-flex flex-wrap gap-2 align-items-center">
       <div class="btn-group" role="group" aria-label="Ansicht wechseln">
-        <button type="button" class="btn btn-outline-primary active" data-view="month">Monatsansicht</button>
+        <button type="button" class="btn btn-outline-primary" data-view="month">Monatsansicht</button>
         <button type="button" class="btn btn-outline-primary" data-view="week">Wochenansicht</button>
       </div>
       <button type="button" class="btn btn-success btn-lg" data-bs-toggle="modal" data-bs-target="#addShiftModal">
@@ -191,6 +191,28 @@
         </div>
       </div>
     </div>
+
+    <section class="week-productivity-overview">
+      <h4 class="week-productivity-title">Produktivität je Tag</h4>
+      <div class="week-productivity-grid">
+        {% for day in week_days %}
+        {% set day_data = week_productivity_data.get(day, {}) %}
+        {% set is_weekend = day.weekday() >= 5 %}
+        {% set is_empty = day_data.get('gesamt_std', 0) == 0 %}
+        <div class="week-productivity-item{% if is_weekend %} is-weekend{% endif %}{% if is_empty %} is-empty{% endif %}">
+          <div class="week-productivity-day">{{ ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'][day.weekday()] }} {{ day.strftime('%d.%m.%Y') }}</div>
+          <div class="week-productivity-value"{% if day_data.get('gesamt_std', 0) > 0 %}
+               title="Berechnung für {{ day.strftime('%d.%m.%Y') }}:&#10;Std Aushilfen + ZA: {{ day_data.get('aushilfen_za_std', 0) }}h&#10;Std Feste: {{ day_data.get('feste_std', 0) }}h&#10;Gesamt: {{ day_data.get('gesamt_std', 0) }}h&#10;Produktivität: {{ day_data.get('produktivitaet', 0) }}&#10;Teile: {{ day_data.get('gesamt_std', 0) }} × {{ day_data.get('produktivitaet', 0) }} = {{ day_data.get('teile', 0) }}"{% endif %}>
+            <span class="week-productivity-parts">{{ day_data.get('teile', 0)|int }}</span>
+            <span class="week-productivity-label">Teile</span>
+          </div>
+          <div class="week-productivity-meta">
+            {{ '%g' % day_data.get('gesamt_std', 0) }}h · Prod. {% if day_data.get('gesamt_std', 0) > 0 %}{{ '%.1f'|format(day_data.get('produktivitaet', 0)) }}{% else %}–{% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
 
     <div class="week-legend">
       <div class="week-legend-item">
@@ -401,6 +423,9 @@ document.addEventListener('DOMContentLoaded', function() {
     month: document.getElementById('monthView'),
     week: document.getElementById('weekView')
   };
+  const scheduleApp = document.getElementById('scheduleApp');
+  const validViews = ['month', 'week'];
+  const initialView = scheduleApp ? scheduleApp.dataset.initialView : 'month';
 
   const updateView = (targetView) => {
     viewButtons.forEach((btn) => {
@@ -428,11 +453,35 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   };
 
+  const saveViewPreference = (targetView) => {
+    fetch('/dienstplan/ansicht', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ view: targetView })
+    }).then((response) => {
+      if (!response.ok) {
+        console.warn('Ansichts-Präferenz konnte nicht gespeichert werden.');
+      }
+    }).catch((error) => {
+      console.warn('Fehler beim Speichern der Ansichts-Präferenz.', error);
+    });
+  };
+
   if (viewButtons.length) {
-    updateView('month');
+    let activeView = validViews.includes(initialView) ? initialView : 'month';
+    updateView(activeView);
     viewButtons.forEach((button) => {
       button.addEventListener('click', () => {
-        updateView(button.getAttribute('data-view'));
+        const selectedView = button.getAttribute('data-view');
+        if (!validViews.includes(selectedView) || selectedView === activeView) {
+          return;
+        }
+
+        activeView = selectedView;
+        updateView(selectedView);
+        saveViewPreference(selectedView);
       });
     });
   }
