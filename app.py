@@ -46,6 +46,8 @@ from models import (
 )
 from auto_schedule import create_default_shifts_for_month, create_default_shifts_for_employee_position
 
+LEAVE_TYPES_EXCLUDED_FROM_PRODUCTIVITY = {"Urlaub", "Krank"}
+
 def calculate_productivity_for_dates(dates: List[date], department_id: int | None = None) -> Dict[date, Dict[str, float]]:
     """Berechnet Produktivitätskennzahlen für eine beliebige Liste an Tagen."""
 
@@ -110,7 +112,7 @@ def calculate_productivity_for_dates(dates: List[date], department_id: int | Non
 
         for shift in daily_shifts:
             is_on_leave = any(
-                leave.employee_id == shift.employee_id and leave.leave_type == 'Urlaub'
+                leave.employee_id == shift.employee_id and leave.leave_type in LEAVE_TYPES_EXCLUDED_FROM_PRODUCTIVITY
                 for leave in daily_leaves
             )
 
@@ -1275,6 +1277,10 @@ def create_app() -> Flask:
             for emp in employees:
                 shift = shifts.get((emp.id, day))
                 if not shift:
+                    continue
+
+                leave = leaves.get((emp.id, day))
+                if leave and leave.leave_type in LEAVE_TYPES_EXCLUDED_FROM_PRODUCTIVITY:
                     continue
 
                 assignments.append(
