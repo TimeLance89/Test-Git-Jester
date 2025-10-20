@@ -1943,46 +1943,72 @@ body {
 }
 
 .nav-links {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: stretch;
-  gap: 2rem;
+  gap: 1.5rem;
+  width: 100%;
   margin-left: auto;
 }
 
 .nav-links-guest {
   margin-left: auto;
-}
-
-.nav-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  min-width: max-content;
-}
-
-.nav-group-title {
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.65);
-}
-
-.nav-group-items {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.nav-group-items a,
-.nav-actions a,
-.nav-links-guest a {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.55rem 0.9rem;
+  gap: 0.75rem;
+  width: auto;
+}
+
+.nav-links.nav-links-guest {
+  display: inline-flex;
+  grid-template-columns: none;
+}
+
+.nav-links.nav-links-guest .nav-tile {
+  width: auto;
+}
+
+.nav-sections-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  width: 100%;
+}
+
+.nav-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 0.75rem 0.9rem;
   border-radius: var(--radius-lg);
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(15, 23, 42, 0.18);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.25);
+  min-width: 0;
+}
+
+.nav-section-title {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.nav-section-items {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.6rem;
+  align-items: stretch;
+}
+
+.nav-tile {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.55rem 0.8rem;
+  width: 100%;
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.1);
   color: rgba(255, 255, 255, 0.92);
   font-weight: 500;
   text-decoration: none;
@@ -1991,11 +2017,10 @@ body {
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.2);
 }
 
-.nav-group-items a:hover,
-.nav-actions a:hover,
-.nav-links-guest a:hover {
+.nav-tile:hover,
+.nav-tile:focus-visible {
   transform: translateY(-2px);
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.2);
   box-shadow: var(--shadow-md);
   color: #fff;
 }
@@ -2008,7 +2033,7 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  margin-left: 0.35rem;
+  margin-left: auto;
   min-width: 1.4rem;
   height: 1.4rem;
   padding: 0 0.35rem;
@@ -2021,8 +2046,23 @@ body {
 
 .nav-actions {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 0.75rem;
+  min-width: 200px;
+  align-self: flex-start;
+}
+
+.nav-actions .nav-tile {
+  justify-content: center;
+}
+
+.nav-logout {
+  background: rgba(15, 23, 42, 0.35);
+}
+
+.nav-logout:hover,
+.nav-logout:focus-visible {
+  background: rgba(15, 23, 42, 0.5);
 }
 
 .notification-wrapper {
@@ -2195,10 +2235,8 @@ body {
 
   .nav-links {
     display: none;
-    width: 100%;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 1.25rem;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
     margin-left: 0;
     padding: 1.25rem 1.5rem 1.5rem;
     border-radius: var(--radius-lg);
@@ -2208,15 +2246,23 @@ body {
   }
 
   .nav-links[data-nav-open] {
-    display: flex;
+    display: grid;
   }
 
-  .nav-group-items {
-    flex-wrap: wrap;
+  .nav-sections-grid {
+    grid-template-columns: 1fr;
+    gap: 1.1rem;
   }
 
-  .nav-group-items a,
-  .nav-actions a {
+  .nav-section {
+    gap: 0.85rem;
+  }
+
+  .nav-section-items {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+
+  .nav-tile {
     width: 100%;
     justify-content: space-between;
   }
@@ -2224,10 +2270,11 @@ body {
   .nav-actions {
     flex-direction: column;
     align-items: stretch;
+    min-width: 0;
   }
 
-  .notification-wrapper {
-    align-self: flex-end;
+  .nav-actions .notification-wrapper {
+    align-self: stretch;
   }
 
   .notification-dropdown {
@@ -2238,21 +2285,17 @@ body {
 }
 
 @media (max-width: 720px) {
-  .nav-group {
-    min-width: 100%;
+  .nav-section-title {
+    font-size: 0.68rem;
   }
 
-  .nav-group-title {
-    font-size: 0.7rem;
-  }
-
-  .nav-group-items {
+  .nav-section-items {
+    grid-template-columns: 1fr;
     gap: 0.5rem;
   }
 
-  .nav-group-items a,
-  .nav-actions a {
-    padding: 0.65rem 0.9rem;
+  .nav-tile {
+    padding: 0.5rem 0.7rem;
   }
 }
 
