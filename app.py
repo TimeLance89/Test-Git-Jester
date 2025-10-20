@@ -847,10 +847,18 @@ def create_app() -> Flask:
             "total_usa_days": 0,
         }
 
+        restrict_overtime_to_aushilfe = bool(
+            current_user
+            and current_user.department_id
+            and not is_super_admin
+        )
+
         for employee in employees:
             summary = hours_summary.get(employee.id, {})
             worked_hours = float(summary.get("worked_hours", 0))
             overtime_hours = float(summary.get("overtime_hours", 0))
+            if restrict_overtime_to_aushilfe and employee.position != "Aushilfe":
+                overtime_hours = 0.0
             target_hours = float(summary.get("target_hours", 0) or 0)
             proportional_target = float(summary.get("proportional_target", target_hours))
             remaining_hours = float(summary.get("remaining_hours", 0))
