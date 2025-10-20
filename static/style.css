@@ -4170,6 +4170,12 @@ body {
   min-height: 120px;
 }
 
+.week-day-cell.has-shift {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(191, 219, 254, 0.38));
+  border-color: rgba(59, 130, 246, 0.35);
+  box-shadow: 0 6px 12px -6px rgba(59, 130, 246, 0.35);
+}
+
 .week-day-cell:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-md);
