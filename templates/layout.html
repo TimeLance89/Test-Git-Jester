@@ -130,6 +130,38 @@
         </div>
         {% endif %}
         <div class="nav-actions">
+          <div class="notification-wrapper" data-mark-read-url="{{ url_for('mark_notifications_read') }}">
+            <button class="notification-button" type="button" aria-label="Benachrichtigungen" data-unread="{{ unread_notifications_count }}">
+              <span class="notification-icon" aria-hidden="true">🔔</span>
+              {% if unread_notifications_count > 0 %}
+              <span class="notification-badge">{{ unread_notifications_count }}</span>
+              {% endif %}
+            </button>
+            <div class="notification-dropdown" role="region" aria-live="polite">
+              <div class="notification-header">
+                <span>Benachrichtigungen</span>
+                <button class="mark-read-btn" type="button">Alle als gelesen</button>
+              </div>
+              <ul class="notification-list">
+                {% if notifications %}
+                  {% for notification in notifications %}
+                  <li class="notification-item {{ 'notification-unread' if not notification.is_read else '' }}">
+                    {% if notification.link %}
+                    <a href="{{ notification.link }}" class="notification-link">
+                      <span class="notification-message">{{ notification.message }}</span>
+                    </a>
+                    {% else %}
+                    <span class="notification-message">{{ notification.message }}</span>
+                    {% endif %}
+                    <span class="notification-timestamp">{{ notification.created_at.strftime('%d.%m.%Y %H:%M') }}</span>
+                  </li>
+                  {% endfor %}
+                {% else %}
+                  <li class="notification-empty">Keine Benachrichtigungen</li>
+                {% endif %}
+              </ul>
+            </div>
+          </div>
           <a href="{{ url_for('logout') }}">
             <span class="nav-icon" aria-hidden="true">🚪</span>
             <span>Logout</span>
@@ -229,6 +261,91 @@
 
         handleResize();
         window.addEventListener('resize', handleResize);
+      }
+
+      const notificationWrapper = document.querySelector('.notification-wrapper');
+      if (notificationWrapper) {
+        const dropdown = notificationWrapper.querySelector('.notification-dropdown');
+        const button = notificationWrapper.querySelector('.notification-button');
+        const markReadBtn = notificationWrapper.querySelector('.mark-read-btn');
+        const markReadUrl = notificationWrapper.dataset.markReadUrl;
+        const badge = notificationWrapper.querySelector('.notification-badge');
+
+        const updateUnreadState = () => {
+          if (button) {
+            button.dataset.unread = '0';
+          }
+          if (badge) {
+            badge.style.display = 'none';
+          }
+          notificationWrapper.querySelectorAll('.notification-item').forEach(item => {
+            item.classList.remove('notification-unread');
+          });
+        };
+
+        const closeDropdown = () => {
+          if (dropdown) {
+            dropdown.removeAttribute('data-open');
+          }
+          document.removeEventListener('click', handleOutsideClick);
+        };
+
+        const openDropdown = () => {
+          if (dropdown) {
+            dropdown.setAttribute('data-open', '');
+          }
+          document.addEventListener('click', handleOutsideClick);
+        };
+
+        const markAllAsRead = () => {
+          if (!button) {
+            return;
+          }
+
+          if (!markReadUrl || button.dataset.unread === '0') {
+            updateUnreadState();
+            return;
+          }
+
+          fetch(markReadUrl, {
+            method: 'POST',
+            headers: {
+              'X-Requested-With': 'XMLHttpRequest'
+            }
+          })
+            .catch(() => {})
+            .finally(() => {
+              updateUnreadState();
+            });
+        };
+
+        function handleOutsideClick(event) {
+          if (!notificationWrapper.contains(event.target)) {
+            closeDropdown();
+          }
+        }
+
+        if (button) {
+          button.addEventListener('click', event => {
+            event.preventDefault();
+            event.stopPropagation();
+
+            if (dropdown && dropdown.hasAttribute('data-open')) {
+              closeDropdown();
+            } else {
+              openDropdown();
+              markAllAsRead();
+            }
+          });
+        }
+
+        if (markReadBtn) {
+          markReadBtn.addEventListener('click', event => {
+            event.preventDefault();
+            event.stopPropagation();
+            markAllAsRead();
+          });
+        }
       }
 
       // Smooth scrolling für interne Links

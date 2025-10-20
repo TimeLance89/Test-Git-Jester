@@ -5,7 +5,7 @@ Mitarbeiter‑ und Einsatzplaner. Die Tabellen basieren auf
 SQLAlchemy und stellen die Grundlage für die gesamte Anwendung dar.
 """
 
-from datetime import date
+from datetime import date, datetime
 from flask_sqlalchemy import SQLAlchemy
 
 # Die SQLAlchemy‑Instanz wird in app.py initialisiert und hier importiert.
@@ -74,6 +74,12 @@ class Employee(db.Model):
 
     shifts = db.relationship("Shift", backref="employee", lazy=True)
     leaves = db.relationship("Leave", backref="employee", lazy=True)
+    notifications = db.relationship(
+        "Notification",
+        backref="recipient",
+        lazy=True,
+        cascade="all, delete-orphan",
+    )
 
     def set_password(self, password: str) -> None:
         """Speichert das Passwort sicher als Hash.
@@ -185,6 +191,22 @@ class BlockedDay(db.Model):
 
     def __repr__(self) -> str:
         return f"<BlockedDay {self.date} {self.name}>"
+
+
+class Notification(db.Model):
+    """Benachrichtigung für einen Benutzer der Anwendung."""
+
+    __tablename__ = "notification"
+
+    id = db.Column(db.Integer, primary_key=True)
+    recipient_id = db.Column(db.Integer, db.ForeignKey("employee.id"), nullable=False)
+    message = db.Column(db.String(255), nullable=False)
+    link = db.Column(db.String(255), nullable=True)
+    is_read = db.Column(db.Boolean, default=False, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    def __repr__(self) -> str:
+        return f"<Notification to={self.recipient_id} read={self.is_read}>"
 
 
 def init_db(app):
