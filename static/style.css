@@ -4222,6 +4222,24 @@ body {
   width: fit-content;
 }
 
+.week-status.has-delete {
+  position: relative;
+  padding-right: 1.6rem;
+}
+
+.week-delete-shift {
+  position: absolute;
+  top: -0.35rem;
+  right: -0.35rem;
+  width: 0.85rem;
+  height: 0.85rem;
+  opacity: 0.7;
+}
+
+.week-delete-shift:hover {
+  opacity: 1;
+}
+
 .week-status-icon {
   font-size: 1rem;
 }

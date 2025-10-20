@@ -316,9 +316,13 @@
                       <div class="week-status-note">{{ leave.description }}</div>
                       {% endif %}
                       {% elif shift %}
-                      <div class="week-status week-status-shift{% if not shift.approved %} is-pending{% endif %}">
+                      <div class="week-status week-status-shift{% if not shift.approved %} is-pending{% endif %} has-delete">
                         <span class="week-status-icon">⏱️</span>
                         <span class="week-status-hours">{{ '%g' % shift.hours }}h</span>
+                        <button type="button"
+                                class="btn-close btn-close-sm week-delete-shift"
+                                aria-label="Schicht löschen"
+                                onclick="deleteShift({{ shift.id }})"></button>
                       </div>
                       {% if shift.shift_type and not shift.shift_type.startswith('Standard') %}
                       <div class="week-status-note">{{ shift.shift_type }}</div>
