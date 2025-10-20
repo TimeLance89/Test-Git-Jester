@@ -31,7 +31,17 @@ from flask import (
 from functools import wraps
 from werkzeug.security import generate_password_hash, check_password_hash
 
-from models import db, init_db, Department, Employee, Shift, Leave, ProductivitySettings, BlockedDay
+from models import (
+    db,
+    init_db,
+    Department,
+    Employee,
+    Shift,
+    Leave,
+    ProductivitySettings,
+    BlockedDay,
+    Notification,
+)
 from auto_schedule import create_default_shifts_for_month, create_default_shifts_for_employee_position
 
 def get_productivity_data(year: int, month: int, department_id: int = None):
@@ -475,6 +485,52 @@ def get_pending_requests_count():
     
     return pending_shifts, pending_leaves
 
+def _create_notification(recipient_id: int, message: str, link: str | None = None) -> None:
+    """Erzeugt eine Benachrichtigung für einen bestimmten Empfänger."""
+
+    if not recipient_id or not message:
+        return
+
+    trimmed_message = message[:255]
+    trimmed_link = link[:255] if link else None
+
+    notification = Notification(
+        recipient_id=recipient_id,
+        message=trimmed_message,
+        link=trimmed_link,
+    )
+    db.session.add(notification)
+
+
+def notify_admins_of_request(employee: Employee, message: str, link: str | None = None) -> None:
+    """Informiert alle relevanten Administratoren über einen neuen Antrag."""
+
+    if not employee:
+        return
+
+    admin_query = Employee.query.filter(Employee.is_admin.is_(True))
+
+    if employee.department_id:
+        admin_query = admin_query.filter(
+            or_(
+                Employee.department_id == employee.department_id,
+                Employee.department_id.is_(None),
+            )
+        )
+
+    for admin in admin_query.all():
+        _create_notification(admin.id, message, link)
+
+
+def notify_employee(employee_id: int, message: str, link: str | None = None) -> None:
+    """Erzeugt eine Benachrichtigung für einen einzelnen Mitarbeiter."""
+
+    if not employee_id:
+        return
+
+    _create_notification(employee_id, message, link)
+
+
 def create_app() -> Flask:
 
     """Erzeugt und konfiguriert die Flask‑Anwendung."""
@@ -487,10 +543,56 @@ def create_app() -> Flask:
 
     @app.context_processor
     def inject_pending_counts():
-        if session.get("is_admin"):
+        context = dict(
+            pending_shifts_count=0,
+            pending_leaves_count=0,
+            notifications=[],
+            unread_notifications_count=0,
+        )
+
+        user_id = session.get("user_id")
+        if user_id:
+            current_user = get_current_user()
+            if current_user:
+                notifications_query = Notification.query.filter_by(
+                    recipient_id=current_user.id
+                ).order_by(Notification.created_at.desc())
+
+                context["notifications"] = notifications_query.limit(10).all()
+                context["unread_notifications_count"] = Notification.query.filter_by(
+                    recipient_id=current_user.id,
+                    is_read=False,
+                ).count()
+
+                if session.get("is_admin"):
+                    pending_shifts, pending_leaves = get_pending_requests_count()
+                    context["pending_shifts_count"] = pending_shifts
+                    context["pending_leaves_count"] = pending_leaves
+        elif session.get("is_admin"):
             pending_shifts, pending_leaves = get_pending_requests_count()
-            return dict(pending_shifts_count=pending_shifts, pending_leaves_count=pending_leaves)
-        return dict(pending_shifts_count=0, pending_leaves_count=0)
+            context["pending_shifts_count"] = pending_shifts
+            context["pending_leaves_count"] = pending_leaves
+
+        return context
+
+    @app.route("/notifications/mark-read", methods=["POST"])
+    @login_required
+    def mark_notifications_read():
+        user_id = session.get("user_id")
+        if not user_id:
+            return {"status": "unauthorized"}, 401
+
+        notifications = Notification.query.filter_by(
+            recipient_id=user_id,
+            is_read=False,
+        ).all()
+
+        for notification in notifications:
+            notification.is_read = True
+
+        db.session.commit()
+
+        return {"status": "ok"}
 
     def _upgrade_db() -> None:
 
@@ -1157,6 +1259,8 @@ def create_app() -> Flask:
         if not emp_id or not date_str or not hours:
             flash("Bitte füllen Sie alle Pflichtfelder aus.", "warning")
             return redirect(url_for("schedule"))
+
+        employee = Employee.query.get_or_404(emp_id)
         shift_date = datetime.strptime(date_str, "%Y-%m-%d").date()
 
         # Prüfen, ob das Datum ein gesperrter Tag ist
@@ -1164,13 +1268,24 @@ def create_app() -> Flask:
             flash(f"An diesem Tag ({shift_date.strftime("%d.%m.%Y")}) können keine Schichten hinzugefügt werden, da er gesperrt ist.", "danger")
             return redirect(url_for("schedule", month=shift_date.month, year=shift_date.year))
         new_shift = Shift(
-            employee_id=emp_id,
+            employee_id=employee.id,
             date=shift_date,
             hours=hours,
             shift_type=shift_type,
             approved=session.get("is_admin", False),
         )
         db.session.add(new_shift)
+
+        if not new_shift.approved:
+            message = (
+                f"{employee.name} hat einen Einsatz am {shift_date.strftime('%d.%m.%Y')} eingereicht."
+            )
+            notify_admins_of_request(
+                employee,
+                message,
+                url_for("shift_requests_overview"),
+            )
+
         db.session.commit()
         flash("Einsatz wurde hinzugefügt.", "success")
         return redirect(url_for("schedule", month=shift_date.month, year=shift_date.year))
@@ -1312,6 +1427,12 @@ def create_app() -> Flask:
         """Genehmigt einen Einsatz."""
         shift = Shift.query.get_or_404(shift_id)
         shift.approved = True
+        message = f"Dein Einsatz am {shift.date.strftime('%d.%m.%Y')} wurde genehmigt."
+        notify_employee(
+            shift.employee_id,
+            message,
+            url_for("schedule", month=shift.date.month, year=shift.date.year),
+        )
         db.session.commit()
         flash("Einsatz wurde genehmigt.", "success")
         return redirect(url_for("schedule", month=shift.date.month, year=shift.date.year))
@@ -1513,6 +1634,7 @@ def create_app() -> Flask:
             if not emp_id:
                 flash("Mitarbeiter-ID konnte nicht ermittelt werden.", "danger")
                 return redirect(url_for("index"))
+            employee = Employee.query.get_or_404(emp_id)
             start_date_str = request.form.get("start_date", "")
             end_date_str = request.form.get("end_date", "")
             leave_type = request.form.get("leave_type", "")
@@ -1536,6 +1658,19 @@ def create_app() -> Flask:
                 approved=is_approved,
             )
 
+            if not is_approved:
+                if start_date == end_date:
+                    date_range = start_date.strftime('%d.%m.%Y')
+                else:
+                    date_range = (
+                        f"{start_date.strftime('%d.%m.%Y')} bis {end_date.strftime('%d.%m.%Y')}"
+                    )
+                message = f"{employee.name} hat {leave_type} für {date_range} beantragt."
+                notify_admins_of_request(
+                    employee,
+                    message,
+                    url_for("leave_requests"),
+                )
 
             db.session.add(new_leave)
             db.session.commit()
@@ -1678,6 +1813,18 @@ def create_app() -> Flask:
         """Genehmigt einen Abwesenheitsantrag."""
         leave = Leave.query.get_or_404(leave_id)
         leave.approved = True
+        if leave.start_date == leave.end_date:
+            date_range = leave.start_date.strftime('%d.%m.%Y')
+        else:
+            date_range = (
+                f"{leave.start_date.strftime('%d.%m.%Y')} bis {leave.end_date.strftime('%d.%m.%Y')}"
+            )
+        message = f"Dein {leave.leave_type}-Antrag für {date_range} wurde genehmigt."
+        notify_employee(
+            leave.employee_id,
+            message,
+            url_for("leave_form"),
+        )
         db.session.commit()
         flash("Antrag genehmigt.", "success")
         return redirect(url_for("leave_requests"))
