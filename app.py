@@ -75,6 +75,12 @@ def calculate_productivity_for_dates(dates: List[date], department_id: int | Non
         Leave.approved == True
     ).all()
 
+    blocked_days = BlockedDay.query.filter(
+        BlockedDay.date >= start_date,
+        BlockedDay.date <= end_date,
+    ).all()
+    blocked_dates = {blocked.date for blocked in blocked_days}
+
     productivity_settings = {}
     all_settings = ProductivitySettings.query.filter_by(is_active=True).all()
 
@@ -88,6 +94,8 @@ def calculate_productivity_for_dates(dates: List[date], department_id: int | Non
 
     shifts_by_day: Dict[date, List[Shift]] = {day: [] for day in relevant_days}
     for shift in shifts:
+        if shift.date in blocked_dates:
+            continue
         if shift.date in shifts_by_day:
             shifts_by_day[shift.date].append(shift)
 
@@ -103,6 +111,18 @@ def calculate_productivity_for_dates(dates: List[date], department_id: int | Non
     daily_data: Dict[date, Dict[str, float]] = {}
 
     for day in relevant_days:
+        if day in blocked_dates:
+            daily_data[day] = {
+                "aushilfen_za_std": 0.0,
+                "feste_std": 0.0,
+                "gesamt_std": 0.0,
+                "produktivitaet": 0.0,
+                "teile": 0.0,
+                "department_breakdown": {},
+                "is_blocked": True,
+            }
+            continue
+
         daily_shifts = shifts_by_day.get(day, [])
         daily_leaves = leaves_by_day.get(day, [])
 
@@ -1281,11 +1301,23 @@ def create_app() -> Flask:
             while current_date <= last_relevant_day:
                 leaves[(leave.employee_id, current_date)] = leave
                 current_date += timedelta(days=1)
+        blocked_days_query = BlockedDay.query.filter(
+            BlockedDay.date.between(schedule_start, schedule_end)
+        ).all()
+        blocked_days = {bd.date: bd for bd in blocked_days_query}
+        blocked_dates = set(blocked_days.keys())
+
         employee_totals = {
             emp.id: sum(
                 s.hours
                 for (eid, day), s in shifts.items()
-                if eid == emp.id and s.approved and day.month == month and day.year == year
+                if (
+                    eid == emp.id
+                    and s.approved
+                    and day.month == month
+                    and day.year == year
+                    and day not in blocked_dates
+                )
             )
             for emp in employees
         }
@@ -1293,7 +1325,12 @@ def create_app() -> Flask:
             emp.id: sum(
                 s.hours
                 for (eid, day), s in shifts.items()
-                if eid == emp.id and s.approved and week_start <= day <= week_end
+                if (
+                    eid == emp.id
+                    and s.approved
+                    and week_start <= day <= week_end
+                    and day not in blocked_dates
+                )
             )
             for emp in employees
         }
@@ -1308,14 +1345,14 @@ def create_app() -> Flask:
         productivity_data, productivity_data_totals = get_productivity_data(year, month, department_id)
         week_productivity_data = calculate_productivity_for_dates(week_days, department_id)
 
-        # Gesperrte Tage für den Monat abrufen
-        blocked_days_query = BlockedDay.query.filter(
-            BlockedDay.date.between(schedule_start, schedule_end)
-        ).all()
-        blocked_days = {bd.date: bd for bd in blocked_days_query}
+        # Gesperrte Tage stehen bereits als Dictionary zur Verfügung
 
         week_assignments: Dict[str, List[Dict[str, object]]] = {}
         for day in week_days:
+            if day in blocked_dates:
+                week_assignments[day.isoformat()] = []
+                continue
+
             assignments: List[Dict[str, object]] = []
             for emp in employees:
                 shift = shifts.get((emp.id, day))
