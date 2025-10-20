@@ -169,6 +169,29 @@
 
   <!-- Wochenansicht -->
   <div id="weekView" class="schedule-week schedule-view d-none">
+    <div class="d-flex justify-content-between align-items-center week-navigation mb-3">
+      {% if has_prev_week %}
+      <a href="{{ prev_week_url }}" class="btn btn-outline-secondary btn-sm">
+        &larr; Vorherige Woche
+      </a>
+      {% else %}
+      <span class="btn btn-outline-secondary btn-sm disabled" aria-disabled="true">
+        &larr; Vorherige Woche
+      </span>
+      {% endif %}
+      <span class="week-navigation-current text-nowrap">
+        Woche {{ week_start.strftime('%d.%m.') }} – {{ week_end.strftime('%d.%m.%Y') }}
+      </span>
+      {% if has_next_week %}
+      <a href="{{ next_week_url }}" class="btn btn-outline-secondary btn-sm">
+        Nächste Woche &rarr;
+      </a>
+      {% else %}
+      <span class="btn btn-outline-secondary btn-sm disabled" aria-disabled="true">
+        Nächste Woche &rarr;
+      </span>
+      {% endif %}
+    </div>
     {% set week_number = week_start.isocalendar()[1] %}
     <div class="week-hero-card">
       <div class="week-hero-text">

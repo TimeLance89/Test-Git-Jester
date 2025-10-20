@@ -1169,7 +1169,18 @@ def create_app() -> Flask:
         else:
             reference_date = date(year, month, 1)
 
-        week_start = reference_date - timedelta(days=reference_date.weekday())
+        week_start_param = request.args.get("week_start")
+        parsed_week_start: date | None = None
+        if week_start_param:
+            try:
+                parsed_week_start = datetime.strptime(week_start_param, "%Y-%m-%d").date()
+            except ValueError:
+                parsed_week_start = None
+
+        if parsed_week_start:
+            week_start = parsed_week_start - timedelta(days=parsed_week_start.weekday())
+        else:
+            week_start = reference_date - timedelta(days=reference_date.weekday())
         week_end = week_start + timedelta(days=6)
         week_days = [week_start + timedelta(days=offset) for offset in range(7)]
         # Abteilungsbasierte Filterung erzwingen
@@ -1185,6 +1196,30 @@ def create_app() -> Flask:
         month_days = [d for d in cal.itermonthdates(year, month) if d.month == month]
         schedule_start = min(month_days[0], week_start)
         schedule_end = max(month_days[-1], week_end)
+
+        month_first_day = date(year, month, 1)
+        month_last_day = date(year, month, calendar.monthrange(year, month)[1])
+        prev_week_start = week_start - timedelta(days=7)
+        prev_week_end = prev_week_start + timedelta(days=6)
+        next_week_start = week_start + timedelta(days=7)
+
+        has_prev_week = prev_week_end >= month_first_day
+        has_next_week = next_week_start <= month_last_day
+
+        base_week_params = {"month": month, "year": year}
+        if department_id:
+            base_week_params["department"] = department_id
+
+        prev_week_url = (
+            url_for("schedule", **{**base_week_params, "week_start": prev_week_start.isoformat()})
+            if has_prev_week
+            else None
+        )
+        next_week_url = (
+            url_for("schedule", **{**base_week_params, "week_start": next_week_start.isoformat()})
+            if has_next_week
+            else None
+        )
         
         if department_id:
             all_employees = (
@@ -1336,6 +1371,11 @@ def create_app() -> Flask:
             week_productivity_data=week_productivity_data,
             active_schedule_view=active_schedule_view,
             week_assignments=week_assignments,
+            week_start_iso=week_start.isoformat(),
+            prev_week_url=prev_week_url,
+            next_week_url=next_week_url,
+            has_prev_week=has_prev_week,
+            has_next_week=has_next_week,
         )
 
     @app.route("/dienstplan/ansicht", methods=["POST"])
