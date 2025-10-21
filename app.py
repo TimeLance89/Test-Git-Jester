@@ -926,7 +926,71 @@ def create_app() -> Flask:
         employee_query = Employee.query
         if selected_department_id:
             employee_query = employee_query.filter_by(department_id=selected_department_id)
-        employees = employee_query.order_by(Employee.name).all()
+
+        base_employee_count = employee_query.count()
+
+        search_term = request.args.get("search", "").strip()
+        if search_term:
+            employee_query = employee_query.filter(Employee.name.ilike(f"%{search_term}%"))
+
+        available_positions = [
+            value
+            for (value,) in (
+                db.session.query(Employee.position)
+                .filter(Employee.position.isnot(None))
+                .filter(Employee.position != "")
+                .distinct()
+                .order_by(Employee.position)
+                .all()
+            )
+        ]
+        has_unassigned_positions = bool(
+            employee_query.filter(
+                or_(Employee.position.is_(None), Employee.position == "")
+            ).count()
+        )
+
+        position_filter_options: List[Dict[str, str]] = [
+            {"value": value, "label": value} for value in available_positions
+        ]
+        if has_unassigned_positions:
+            position_filter_options.append({"value": "__NONE__", "label": "Ohne Gruppe"})
+
+        has_position_filter = request.args.get("positions_filter") == "1"
+        requested_positions = request.args.getlist("position")
+        selected_named_positions = [
+            position for position in requested_positions if position in available_positions
+        ]
+        include_unassigned_selected = "__NONE__" in requested_positions and has_unassigned_positions
+
+        if has_position_filter:
+            position_filters = []
+            if selected_named_positions:
+                position_filters.append(Employee.position.in_(selected_named_positions))
+            if include_unassigned_selected:
+                position_filters.append(or_(Employee.position.is_(None), Employee.position == ""))
+
+            if position_filters:
+                employee_query = employee_query.filter(or_(*position_filters))
+                employees = employee_query.order_by(Employee.name).all()
+            else:
+                employees = []
+        else:
+            employees = employee_query.order_by(Employee.name).all()
+
+        applied_position_filters: List[str] = []
+        if has_position_filter:
+            applied_position_filters = list(selected_named_positions)
+            if include_unassigned_selected:
+                applied_position_filters.append("Ohne Gruppe")
+
+        selected_position_values = []
+        if has_position_filter:
+            selected_position_values = list(selected_named_positions)
+            if include_unassigned_selected:
+                selected_position_values.append("__NONE__")
+        else:
+            selected_position_values = [option["value"] for option in position_filter_options]
 
         summary_department = selected_department_id if selected_department_id else None
         hours_summary = get_all_employees_hours_summary(year, month, summary_department)
@@ -962,6 +1026,9 @@ def create_app() -> Flask:
             "total_overtime": 0.0,
             "total_sick_days": 0,
             "total_usa_days": 0,
+            "total_target_hours": 0.0,
+            "total_proportional_target": 0.0,
+            "total_remaining_hours": 0.0,
         }
 
         restrict_overtime_to_aushilfe = bool(
@@ -986,6 +1053,18 @@ def create_app() -> Flask:
             totals["total_overtime"] += overtime_hours
             totals["total_sick_days"] += sick_days
             totals["total_usa_days"] += usa_days
+            totals["total_target_hours"] += target_hours
+            totals["total_proportional_target"] += proportional_target
+            totals["total_remaining_hours"] += remaining_hours
+
+            progress_to_date = 0.0
+            if proportional_target:
+                progress_to_date = (worked_hours / proportional_target) * 100
+
+            monthly_completion = 0.0
+            if target_hours:
+                monthly_completion = (worked_hours / target_hours) * 100
+            progress_to_date_clamped = min(progress_to_date, 100.0)
 
             report_rows.append(
                 {
@@ -999,6 +1078,9 @@ def create_app() -> Flask:
                     "sick_days": sick_days,
                     "usa_days": usa_days,
                     "is_current_month": bool(summary.get("is_current_month")),
+                    "progress_to_date": progress_to_date,
+                    "progress_to_date_clamped": progress_to_date_clamped,
+                    "monthly_completion": monthly_completion,
                 }
             )
 
@@ -1007,6 +1089,23 @@ def create_app() -> Flask:
         totals["average_overtime"] = totals["total_overtime"] / employee_count if employee_count else 0
         totals["average_sick_days"] = totals["total_sick_days"] / employee_count if employee_count else 0
         totals["average_usa_days"] = totals["total_usa_days"] / employee_count if employee_count else 0
+        totals["total_absence_days"] = totals["total_sick_days"] + totals["total_usa_days"]
+
+        totals["progress_rate"] = (
+            (totals["total_hours"] / totals["total_proportional_target"]) * 100
+            if totals["total_proportional_target"]
+            else 0
+        )
+        totals["target_coverage"] = (
+            (totals["total_hours"] / totals["total_target_hours"]) * 100
+            if totals["total_target_hours"]
+            else 0
+        )
+        totals["remaining_ratio"] = (
+            (totals["total_remaining_hours"] / totals["total_target_hours"]) * 100
+            if totals["total_target_hours"]
+            else 0
+        )
 
         department_overview = []
         if is_super_admin and not selected_department_id:
@@ -1039,6 +1138,32 @@ def create_app() -> Flask:
                 for name, data in sorted(department_totals.items(), key=lambda item: item[0].lower())
             ]
 
+        overtime_hotspots = sorted(
+            [row for row in report_rows if row["overtime_hours"] > 0],
+            key=lambda entry: entry["overtime_hours"],
+            reverse=True,
+        )[:3]
+
+        remaining_focus = sorted(
+            [row for row in report_rows if row["remaining_hours"] > 0],
+            key=lambda entry: entry["remaining_hours"],
+            reverse=True,
+        )[:3]
+
+        absence_hotspots = sorted(
+            [
+                row
+                for row in report_rows
+                if (row["sick_days"] or row["usa_days"])
+            ],
+            key=lambda entry: entry["sick_days"] + entry["usa_days"],
+            reverse=True,
+        )[:3]
+
+        overtime_employee_count = sum(1 for row in report_rows if row["overtime_hours"] > 0)
+        remaining_employee_count = sum(1 for row in report_rows if row["remaining_hours"] > 0)
+        absence_employee_count = sum(1 for row in report_rows if (row["sick_days"] or row["usa_days"]))
+
         month_label = f"{calendar.month_name[month]} {year}"
         prev_month_date = start_date - timedelta(days=1)
         next_month_date = end_date + timedelta(days=1)
@@ -1048,6 +1173,18 @@ def create_app() -> Flask:
         if selected_department_id:
             prev_params["department_id"] = selected_department_id
             next_params["department_id"] = selected_department_id
+        if search_term:
+            prev_params["search"] = search_term
+            next_params["search"] = search_term
+        if has_position_filter:
+            prev_params["positions_filter"] = "1"
+            next_params["positions_filter"] = "1"
+            position_params: List[str] = list(selected_named_positions)
+            if include_unassigned_selected:
+                position_params.append("__NONE__")
+            if position_params:
+                prev_params["position"] = position_params
+                next_params["position"] = position_params
 
         month_choices = [(i, calendar.month_name[i]) for i in range(1, 13)]
         year_choices = list(range(today.year - 2, today.year + 3))
@@ -1062,10 +1199,22 @@ def create_app() -> Flask:
             selected_department_id=selected_department_id,
             available_departments=available_departments,
             is_super_admin=is_super_admin,
+            base_employee_count=base_employee_count,
+            position_filter_options=position_filter_options,
+            selected_positions=selected_position_values,
+            applied_position_filters=applied_position_filters,
+            positions_filter_active=has_position_filter,
+            search_term=search_term,
             report_rows=report_rows,
             totals=totals,
             employee_count=employee_count,
             department_overview=department_overview,
+            overtime_hotspots=overtime_hotspots,
+            remaining_focus=remaining_focus,
+            absence_hotspots=absence_hotspots,
+            overtime_employee_count=overtime_employee_count,
+            remaining_employee_count=remaining_employee_count,
+            absence_employee_count=absence_employee_count,
             prev_params=prev_params,
             next_params=next_params,
         )
