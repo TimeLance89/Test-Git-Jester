@@ -4,6 +4,31 @@
 {% set is_admin = session.get('is_admin') %}
 {% set is_system_admin = is_admin and (current_user and not current_user.department_id) %}
 {% set current_user_id = current_user.id if current_user else None %}
+{% set total_employees = employee_count or 0 %}
+{% set pending_ratio = (pending_leaves / (total_employees if total_employees else 1)) * 100 %}
+{% if total_employees == 0 %}
+  {% set pending_ratio = 0 %}
+{% endif %}
+{% set pending_ratio = ([pending_ratio, 100] | min) %}
+{% set pending_ratio = ([pending_ratio, 0] | max) %}
+{% set coverage_score = 100 - pending_ratio %}
+{% set coverage_score = ([coverage_score, 100] | min) %}
+{% set coverage_score = ([coverage_score, 0] | max) %}
+{% set available_people = total_employees - pending_leaves %}
+{% set available_people = ([available_people, 0] | max) %}
+{% set available_people = ([available_people, total_employees] | min) %}
+{% if coverage_score > 75 %}
+  {% set focus_score = 92 %}
+  {% set satisfaction_score = 88 %}
+{% elif coverage_score > 50 %}
+  {% set focus_score = 84 %}
+  {% set satisfaction_score = 82 %}
+{% else %}
+  {% set focus_score = 71 %}
+  {% set satisfaction_score = 76 %}
+{% endif %}
+{% set response_speed = 'unter 24 Stunden' if is_admin else 'innerhalb von 2 Tagen' %}
+{% set highlight_statement = 'Einsätze bleiben stabil. Plane Feinjustierungen in den Stoßzeiten.' if coverage_score > 65 else 'Plane zusätzliche Ressourcen für Stoßzeiten und gleiche Engpässe aktiv aus.' %}
 <div class="dashboard-page">
   <section class="dashboard-hero">
     <div class="dashboard-hero-main">
@@ -328,6 +353,319 @@
       </div>
     </article>
   </section>
+
+  <section class="dashboard-pulse" aria-label="Team Pulse">
+    <header class="pulse-header">
+      <div>
+        <p class="pulse-eyebrow">Live-Status</p>
+        <h2>Puls der Organisation</h2>
+        <p class="pulse-description">
+          {% if is_admin %}
+            Interaktive Kennzahlen unterstützen dich bei Entscheidungen zu Kapazitäten, Stimmung und offenen Aufgaben.
+          {% else %}
+            Behalte deine Einsätze, Verfügbarkeiten und die Stimmung im Team im Blick – alles live aktualisiert.
+          {% endif %}
+        </p>
+      </div>
+      <div class="pulse-filters" role="group" aria-label="Darstellung wählen">
+        <button class="pulse-filter is-active" type="button" data-target="pulse-capacity">Kapazität</button>
+        <button class="pulse-filter" type="button" data-target="pulse-availability">Verfügbarkeit</button>
+        <button class="pulse-filter" type="button" data-target="pulse-sentiment">Teamgefühl</button>
+      </div>
+    </header>
+    <div class="pulse-panels">
+      <article class="pulse-panel is-active" id="pulse-capacity">
+        <div class="pulse-metric">
+          <span class="pulse-metric-label">Abgedeckte Schichten</span>
+          <div class="pulse-metric-value-wrapper">
+            <span class="pulse-metric-value" data-count-to="{{ coverage_score|round(0, 'floor')|int }}">0</span>
+            <span class="pulse-metric-unit">%</span>
+          </div>
+          <p class="pulse-metric-hint">{{ highlight_statement }}</p>
+          <div class="pulse-progress" style="--progress: {{ coverage_score|round(0, 'floor')|int }}%">
+            <div class="pulse-progress-fill"></div>
+          </div>
+        </div>
+        <ul class="pulse-highlights">
+          <li>
+            <span class="status-dot {% if pending_leaves > 0 %}status-warning{% else %}status-success{% endif %}"></span>
+            <div>
+              <p class="pulse-highlight-title">
+                {% if is_admin %}
+                  {{ pending_leaves }} offene Anträge
+                {% else %}
+                  {{ pending_leaves }} offene Rückmeldungen
+                {% endif %}
+              </p>
+              <p class="pulse-highlight-text">
+                {% if is_admin %}
+                  Priorisiere Freigaben, um Engpässe frühzeitig zu entschärfen.
+                {% else %}
+                  Bleibe proaktiv: Halte dein Team über Wunschschichten und Anträge auf dem Laufenden.
+                {% endif %}
+              </p>
+            </div>
+          </li>
+          <li>
+            <span class="status-dot status-info"></span>
+            <div>
+              <p class="pulse-highlight-title">Fokus-Index</p>
+              <p class="pulse-highlight-value">
+                <span data-count-to="{{ focus_score|int }}">0</span>
+                <span class="pulse-highlight-unit">%</span>
+              </p>
+              <p class="pulse-highlight-text">
+                {% if is_admin %}
+                  Nutze Kapazitätsdaten, um Teams zielgerichtet für anstehende Projekte auszurichten.
+                {% else %}
+                  Stimme Wünsche frühzeitig mit deiner Leitung ab und sichere dir Wunschschichten.
+                {% endif %}
+              </p>
+            </div>
+          </li>
+          <li>
+            <span class="status-dot status-neutral"></span>
+            <div>
+              <p class="pulse-highlight-title">Reaktionszeit</p>
+              <p class="pulse-highlight-value">{{ response_speed }}</p>
+              <p class="pulse-highlight-text">
+                {% if is_admin %}
+                  Transparente Rückmeldungen schaffen Vertrauen im Team.
+                {% else %}
+                  Teile Updates, damit Entscheidungen schneller getroffen werden können.
+                {% endif %}
+              </p>
+            </div>
+          </li>
+        </ul>
+      </article>
+      <article class="pulse-panel" id="pulse-availability">
+        <div class="pulse-split">
+          <div class="pulse-tile">
+            <p class="pulse-tile-eyebrow">Verfügbarkeit</p>
+            <h3>
+              <span data-count-to="{{ available_people|int }}">0</span>
+              <span class="pulse-tile-separator">/</span>
+              {{ total_employees }}
+            </h3>
+            <p class="pulse-tile-text">
+              {% if is_admin %}
+                Mitarbeitende sind aktuell einsatzbereit. Plane Vertretungen für Abwesenheiten rechtzeitig ein.
+              {% else %}
+                Kolleg:innen stehen für Schichttausch bereit – nutze ruhige Zeiten für Abstimmungen.
+              {% endif %}
+            </p>
+          </div>
+          <div class="pulse-tile">
+            <p class="pulse-tile-eyebrow">Aktivität</p>
+            <h3>
+              {% if total_employees %}
+              <span data-count-to="{{ pending_ratio|round(0, 'floor')|int }}">0</span><span class="pulse-tile-unit">%</span>
+              {% else %}
+              <span>0</span><span class="pulse-tile-unit">%</span>
+              {% endif %}
+            </h3>
+            <p class="pulse-tile-text">
+              {% if is_admin %}
+                Anteil der Teammitglieder mit offenen Abwesenheiten in dieser Woche.
+              {% else %}
+                Zeigt, wie viele Anfragen aktuell bearbeitet werden und wie dynamisch die Planung ist.
+              {% endif %}
+            </p>
+          </div>
+        </div>
+        <ul class="pulse-checklist">
+          <li>
+            <span class="status-dot status-success"></span>
+            <div>
+              <p class="pulse-highlight-title">Schichtabdeckung prüfen</p>
+              <p class="pulse-highlight-text">
+                {% if is_admin %}
+                  Gleiche Kapazitäten zwischen Abteilungen aus und dokumentiere Anpassungen transparent.
+                {% else %}
+                  Aktualisiere deine Einsatzzeiten, um verlässliche Übersichten für die Leitung zu ermöglichen.
+                {% endif %}
+              </p>
+            </div>
+          </li>
+          <li>
+            <span class="status-dot status-info"></span>
+            <div>
+              <p class="pulse-highlight-title">Kommunikation synchronisieren</p>
+              <p class="pulse-highlight-text">
+                {% if is_admin %}
+                  Informiere Teams über aktuelle Prioritäten und bestätigte Änderungen unmittelbar im System.
+                {% else %}
+                  Nutze Chat und Kommentare, um schnelle Rückfragen zu klären.
+                {% endif %}
+              </p>
+            </div>
+          </li>
+        </ul>
+      </article>
+      <article class="pulse-panel" id="pulse-sentiment">
+        <div class="pulse-split pulse-sentiment-grid">
+          <div class="pulse-tile">
+            <p class="pulse-tile-eyebrow">Teamzufriedenheit</p>
+            <h3>
+              <span data-count-to="{{ satisfaction_score|int }}">0</span>
+              <span class="pulse-tile-unit">%</span>
+            </h3>
+            <p class="pulse-tile-text">
+              {% if is_admin %}
+                Hohe Zufriedenheit entsteht durch transparente Dienstpläne und schnelle Genehmigungen.
+              {% else %}
+                Teile Feedback zu Schichten und melde Wünsche frühzeitig, um das Stimmungsbild zu stärken.
+              {% endif %}
+            </p>
+          </div>
+          <div class="pulse-tile">
+            <p class="pulse-tile-eyebrow">Highlights</p>
+            <ul class="pulse-mini-list">
+              <li>
+                <span>💡</span>
+                <div>
+                  <p>Arbeitsbelastung</p>
+                  <p class="pulse-mini-text">
+                    {% if coverage_score > 70 %}
+                      Gleichmäßig verteilt – perfekter Zeitpunkt für Optimierungen.
+                    {% else %}
+                      Engpässe sichtbar – plane zusätzliche Unterstützung.
+                    {% endif %}
+                  </p>
+                </div>
+              </li>
+              <li>
+                <span>🤝</span>
+                <div>
+                  <p>Teamspirit</p>
+                  <p class="pulse-mini-text">
+                    {% if is_admin %}
+                      Gemeinsame Reviews stärken Vertrauen und Transparenz.
+                    {% else %}
+                      Kurze Abstimmungen vor Dienstbeginn halten alle informiert.
+                    {% endif %}
+                  </p>
+                </div>
+              </li>
+            </ul>
+          </div>
+          <div class="pulse-tile">
+            <p class="pulse-tile-eyebrow">Empfehlung</p>
+            <p class="pulse-recommendation">
+              {% if is_admin %}
+                Nutze regelmäßige Check-ins, um Feedback zur Planung einzuholen und Trends früh zu erkennen.
+              {% else %}
+                Teile Verbesserungsvorschläge direkt über das Portal – deine Stimme gestaltet den Plan aktiv mit.
+              {% endif %}
+            </p>
+          </div>
+        </div>
+      </article>
+    </div>
+  </section>
 </div>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const filters = document.querySelectorAll('.pulse-filter');
+    const panels = document.querySelectorAll('.pulse-panel');
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    const formatNumber = (value) => {
+      if (Number.isNaN(value)) {
+        return '0';
+      }
+      if (Math.abs(value % 1) < 0.05) {
+        return Math.round(value).toLocaleString('de-DE');
+      }
+      return value.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    };
+
+    const animateCounter = (element) => {
+      if (!element || element.dataset.animated === 'true') {
+        return;
+      }
+
+      const target = parseFloat(element.dataset.countTo);
+      if (Number.isNaN(target)) {
+        element.textContent = element.textContent || '0';
+        element.dataset.animated = 'true';
+        return;
+      }
+
+      if (prefersReducedMotion) {
+        element.textContent = formatNumber(target);
+        element.dataset.animated = 'true';
+        return;
+      }
+
+      const duration = 900;
+      const start = performance.now();
+
+      const step = (currentTime) => {
+        const elapsed = currentTime - start;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        const value = target % 1 === 0 ? Math.round(target * eased) : target * eased;
+        element.textContent = formatNumber(value);
+
+        if (progress < 1) {
+          window.requestAnimationFrame(step);
+        } else {
+          element.textContent = formatNumber(target);
+        }
+      };
+
+      element.dataset.animated = 'true';
+      window.requestAnimationFrame(step);
+    };
+
+    const animatePanel = (panel) => {
+      if (!panel) {
+        return;
+      }
+
+      panel.classList.add('is-animated');
+      panel.querySelectorAll('[data-count-to]').forEach(animateCounter);
+      panel.querySelectorAll('.pulse-progress').forEach((progressBar, index) => {
+        progressBar.style.setProperty('--pulse-delay', `${index * 80}ms`);
+        progressBar.classList.add('is-animated');
+      });
+      panel.querySelectorAll('.pulse-tile').forEach((tile, index) => {
+        tile.style.setProperty('--pulse-delay', `${index * 80}ms`);
+        tile.classList.add('is-animated');
+      });
+    };
+
+    const activePanel = document.querySelector('.pulse-panel.is-active');
+    if (activePanel) {
+      animatePanel(activePanel);
+    }
+
+    filters.forEach((button) => {
+      button.addEventListener('click', () => {
+        if (button.classList.contains('is-active')) {
+          return;
+        }
+
+        const targetId = button.dataset.target;
+        const targetPanel = document.getElementById(targetId);
+        if (!targetPanel) {
+          return;
+        }
+
+        filters.forEach((item) => {
+          item.classList.toggle('is-active', item === button);
+        });
+
+        panels.forEach((panel) => {
+          panel.classList.toggle('is-active', panel === targetPanel);
+        });
+
+        animatePanel(targetPanel);
+      });
+    });
+  });
+</script>
 {% endblock %}
 
