@@ -5655,6 +5655,283 @@ body {
 }
 
 /* --------------------------------------------------
+   Abwesenheitsantrag
+-------------------------------------------------- */
+
+.leave-form-page {
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+  padding-block: 1.5rem 3rem;
+}
+
+.leave-form-page .page-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1.75rem 2rem;
+  border-radius: var(--radius-lg);
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+}
+
+.leave-form-page .page-header h1 {
+  margin: 0;
+  font-size: clamp(1.9rem, 2.5vw, 2.3rem);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.leave-form-page .page-header p {
+  margin: 0.35rem 0 0;
+  color: var(--text-secondary);
+}
+
+.leave-form-page .meta-pill {
+  background: rgba(37, 99, 235, 0.12);
+  color: var(--primary-color);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.leave-form-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 2rem;
+  align-items: flex-start;
+}
+
+.leave-form-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+  padding: 2rem;
+  border-radius: var(--radius-lg);
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+}
+
+.leave-form-card-header h2 {
+  margin: 0 0 0.35rem;
+  font-size: 1.55rem;
+  font-weight: 600;
+}
+
+.leave-form-card-header p {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.leave-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+.leave-form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.5rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: linear-gradient(135deg, rgba(148, 163, 184, 0.08), rgba(148, 163, 184, 0.03));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.leave-form-section-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.leave-form-section-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.8rem;
+  height: 2.8rem;
+  border-radius: 0.9rem;
+  background: rgba(37, 99, 235, 0.12);
+  color: var(--primary-color);
+  font-size: 1.4rem;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.leave-form-section-heading h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.leave-form-section-heading p {
+  margin: 0.35rem 0 0;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+.leave-form-grid {
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.leave-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.leave-form-readonly {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.leave-form-readonly-value {
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-md);
+  border: 1px dashed rgba(148, 163, 184, 0.65);
+  background: rgba(241, 245, 249, 0.6);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.leave-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: flex-end;
+  align-items: center;
+  border-top: 1px solid var(--border-color);
+  padding-top: 1.5rem;
+}
+
+.leave-form-actions .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 600;
+}
+
+.leave-form-actions .btn-success,
+.leave-form-actions .btn-outline-secondary {
+  padding: 0.85rem 1.75rem;
+}
+
+.leave-form-aside {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.leave-form-aside .info-card {
+  padding: 1.6rem 1.8rem;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  color: var(--text-primary);
+}
+
+.leave-form-aside .info-card h3 {
+  margin-top: 0;
+  margin-bottom: 0.75rem;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.leave-form-aside .info-card p {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.leave-form-aside .info-list {
+  padding-left: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.leave-form-aside .info-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.leave-form-aside .info-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.8rem;
+  height: 1.8rem;
+  border-radius: 50%;
+  background: rgba(37, 99, 235, 0.12);
+  color: var(--primary-color);
+  font-size: 1rem;
+  margin-top: 0.15rem;
+}
+
+.leave-form-aside .info-card--subtle {
+  background: rgba(226, 232, 240, 0.45);
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  color: var(--text-secondary);
+}
+
+.leave-form-aside .info-card--subtle h3 {
+  color: var(--text-primary);
+}
+
+.leave-form-aside .info-card--subtle a {
+  color: var(--primary-color);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.leave-form-aside .info-card--subtle a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 1024px) {
+  .leave-form-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .leave-form-actions {
+    justify-content: center;
+  }
+
+  .leave-form-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 640px) {
+  .leave-form-card {
+    padding: 1.5rem;
+  }
+
+  .leave-form-section {
+    padding: 1.25rem;
+  }
+
+  .leave-form-section-icon {
+    width: 2.4rem;
+    height: 2.4rem;
+    font-size: 1.2rem;
+  }
+
+  .leave-form-aside .info-card {
+    padding: 1.4rem 1.5rem;
+  }
+}
+
+/* --------------------------------------------------
    Benutzerverwaltung
 --------------------------------------------------- */
 .user-management-page {

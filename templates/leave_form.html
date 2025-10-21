@@ -1,157 +1,186 @@
 {% extends "layout.html" %}
 {% block title %}Abwesenheit beantragen - Xerxes{% endblock %}
 {% block content %}
-<div style="margin-bottom: 2rem;">
-  <h1 style="display: flex; align-items: center; margin-bottom: 0.5rem;">
-    <span style="margin-right: 0.75rem; font-size: 2rem;">📝</span>
-    Abwesenheit beantragen
-  </h1>
-  <p style="color: #64748b; font-size: 1.125rem; margin: 0;">Neuen Urlaubs- oder Abwesenheitsantrag erstellen</p>
-</div>
-
-<div class="card">
-  <div class="card-header">
-    <h3 style="margin: 0; display: flex; align-items: center;">
-      <span style="margin-right: 0.75rem;">🏖️</span>
-      Antrag auf Abwesenheit
-    </h3>
-  </div>
-  <div class="card-body">
-    <form method="post">
-      <!-- Mitarbeiter-Auswahl -->
-      {% if session.get('is_admin') %}
-      <div style="margin-bottom: 2rem;">
-        <h4 style="color: #374151; margin-bottom: 1rem; display: flex; align-items: center;">
-          <span style="margin-right: 0.5rem;">👤</span>Mitarbeiter
-        </h4>
-        <div class="row">
-          <div class="col-md-6">
-            <label for="employee_id" class="form-label">
-              <span style="margin-right: 0.5rem;">👥</span>Für wen soll der Antrag gestellt werden? *
-            </label>
-            <select class="form-select" id="employee_id" name="employee_id" required>
-              {% for emp in employees %}
-              <option value="{{ emp.id }}">{{ emp.name }}</option>
-              {% endfor %}
-            </select>
-          </div>
-        </div>
+<section class="leave-form-page">
+  <header class="page-header">
+    <div class="page-header-main">
+      <span class="page-header-icon" aria-hidden="true">📝</span>
+      <div>
+        <h1>Abwesenheit beantragen</h1>
+        <p>Neuen Urlaubs- oder Abwesenheitsantrag erstellen.</p>
       </div>
-      {% else %}
-      {% set current_emp = current_employee %}
-      <div style="margin-bottom: 2rem;">
-        <h4 style="color: #374151; margin-bottom: 1rem; display: flex; align-items: center;">
-          <span style="margin-right: 0.5rem;">👤</span>Mitarbeiter
-        </h4>
-        <div class="row">
-          <div class="col-md-6">
-            <label class="form-label">
-              <span style="margin-right: 0.5rem;">👥</span>Antrag für
-            </label>
-            <div style="padding: 0.75rem 1rem; background-color: #f8fafc; border: 2px solid #e2e8f0; border-radius: 0.5rem; font-weight: 600; color: #1e293b;">
-              {{ current_emp.name }}
+    </div>
+    <div class="page-header-meta">
+      <span class="meta-pill">
+        <span class="meta-icon" aria-hidden="true">📆</span>
+        Flexible Zeitraumwahl
+      </span>
+      <span class="meta-pill">
+        <span class="meta-icon" aria-hidden="true">🤒</span>
+        Krankmeldungen werden automatisch genehmigt
+      </span>
+    </div>
+  </header>
+
+  <div class="leave-form-layout">
+    <section class="leave-form-card">
+      <header class="leave-form-card-header">
+        <div>
+          <h2>Dein Antrag</h2>
+          <p>Fülle die folgenden Angaben aus, damit wir deinen Antrag zügig bearbeiten können.</p>
+        </div>
+      </header>
+
+      <form method="post" class="leave-form">
+        <section class="leave-form-section" aria-labelledby="leave-section-employee">
+          <div class="leave-form-section-heading">
+            <span class="leave-form-section-icon" aria-hidden="true">👤</span>
+            <div>
+              <h3 id="leave-section-employee">Mitarbeiter</h3>
+              <p>Wähle, für wen der Antrag eingereicht wird.</p>
             </div>
+          </div>
+
+          {% if session.get('is_admin') %}
+          <div class="leave-form-grid">
+            <div class="leave-form-field">
+              <label for="employee_id" class="form-label">Für welchen Mitarbeiter wird der Antrag gestellt? *</label>
+              <select class="form-select" id="employee_id" name="employee_id" required>
+                {% for emp in employees %}
+                <option value="{{ emp.id }}">{{ emp.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          {% else %}
+          {% set current_emp = current_employee %}
+          <div class="leave-form-readonly">
+            <span class="form-label">Antrag für</span>
+            <div class="leave-form-readonly-value">{{ current_emp.name }}</div>
             <input type="hidden" name="employee_id" value="{{ current_emp.id }}" />
           </div>
-        </div>
-      </div>
-      {% endif %}
+          {% endif %}
+        </section>
 
-      <!-- Zeitraum -->
-      <div style="margin-bottom: 2rem;">
-        <h4 style="color: #374151; margin-bottom: 1rem; display: flex; align-items: center;">
-          <span style="margin-right: 0.5rem;">📅</span>Zeitraum
-        </h4>
-        <div class="row">
-          <div class="col-md-6">
-            <label for="start_date" class="form-label">
-              <span style="margin-right: 0.5rem;">🗓️</span>Startdatum *
-            </label>
-            <input type="date" class="form-control" id="start_date" name="start_date" required />
+        <section class="leave-form-section" aria-labelledby="leave-section-period">
+          <div class="leave-form-section-heading">
+            <span class="leave-form-section-icon" aria-hidden="true">📅</span>
+            <div>
+              <h3 id="leave-section-period">Zeitraum</h3>
+              <p>Definiere Start- und Enddatum deiner Abwesenheit.</p>
+            </div>
           </div>
-          <div class="col-md-6">
-            <label for="end_date" class="form-label">
-              <span style="margin-right: 0.5rem;">🗓️</span>Enddatum *
-            </label>
-            <input type="date" class="form-control" id="end_date" name="end_date" required />
-          </div>
-        </div>
-      </div>
 
-      <!-- Art der Abwesenheit -->
-      <div style="margin-bottom: 2rem;">
-        <h4 style="color: #374151; margin-bottom: 1rem; display: flex; align-items: center;">
-          <span style="margin-right: 0.5rem;">🏷️</span>Art der Abwesenheit
-        </h4>
-        <div class="row">
-          <div class="col-md-6">
-            <label for="leave_type" class="form-label">
-              <span style="margin-right: 0.5rem;">📋</span>Typ *
-            </label>
-            <select class="form-select" id="leave_type" name="leave_type" required>
-              <option value="Urlaub">🏖️ Urlaub</option>
-              <option value="Krank">🤒 Krank</option>
-              <option value="ÜSA">⏰ ÜSA (Überstundenabbau)</option>
-              <option value="VL">📚 VL</option>
-              <option value="ECOM">💼 ECOM</option>
-              <option value="Fac">🏭 Fac</option>
-            </select>
+          <div class="leave-form-grid">
+            <div class="leave-form-field">
+              <label for="start_date" class="form-label">Startdatum *</label>
+              <input type="date" class="form-control" id="start_date" name="start_date" required />
+            </div>
+            <div class="leave-form-field">
+              <label for="end_date" class="form-label">Enddatum *</label>
+              <input type="date" class="form-control" id="end_date" name="end_date" required />
+            </div>
           </div>
-        </div>
-      </div>
+        </section>
 
-      <!-- Notizen -->
-      <div style="margin-bottom: 2rem;">
-        <h4 style="color: #374151; margin-bottom: 1rem; display: flex; align-items: center;">
-          <span style="margin-right: 0.5rem;">📝</span>Zusätzliche Informationen
-        </h4>
-        <div class="row">
-          <div class="col-12">
-            <label for="notes" class="form-label">
-              <span style="margin-right: 0.5rem;">💬</span>Bemerkung (optional)
-            </label>
-            <textarea 
-              class="form-control" 
-              id="notes" 
-              name="notes" 
-              rows="4" 
+        <section class="leave-form-section" aria-labelledby="leave-section-type">
+          <div class="leave-form-section-heading">
+            <span class="leave-form-section-icon" aria-hidden="true">🏷️</span>
+            <div>
+              <h3 id="leave-section-type">Art der Abwesenheit</h3>
+              <p>Wähle den passenden Typ für deinen Antrag.</p>
+            </div>
+          </div>
+
+          <div class="leave-form-grid">
+            <div class="leave-form-field">
+              <label for="leave_type" class="form-label">Typ *</label>
+              <select class="form-select" id="leave_type" name="leave_type" required>
+                <option value="Urlaub">🏖️ Urlaub</option>
+                <option value="Krank">🤒 Krank</option>
+                <option value="ÜSA">⏰ ÜSA (Überstundenabbau)</option>
+              </select>
+            </div>
+          </div>
+        </section>
+
+        <section class="leave-form-section" aria-labelledby="leave-section-notes">
+          <div class="leave-form-section-heading">
+            <span class="leave-form-section-icon" aria-hidden="true">💬</span>
+            <div>
+              <h3 id="leave-section-notes">Zusätzliche Informationen</h3>
+              <p>Optional: Teile uns weitere Details zu deinem Antrag mit.</p>
+            </div>
+          </div>
+
+          <div class="leave-form-field">
+            <label for="notes" class="form-label">Bemerkung</label>
+            <textarea
+              class="form-control"
+              id="notes"
+              name="notes"
+              rows="4"
               placeholder="Zusätzliche Informationen zum Antrag..."
-              style="resize: vertical;"
             ></textarea>
           </div>
+        </section>
+
+        <div class="leave-form-actions">
+          <button type="submit" class="btn btn-success">
+            <span aria-hidden="true">📤</span>
+            Antrag einreichen
+          </button>
+          <a href="{{ url_for('leave_requests') if session.get('is_admin') else url_for('schedule') }}" class="btn btn-outline-secondary">
+            <span aria-hidden="true">↩️</span>
+            Abbrechen
+          </a>
         </div>
+      </form>
+    </section>
+
+    <aside class="leave-form-aside">
+      <div class="info-card leave-form-info">
+        <h3>Tipps für einen reibungslosen Ablauf</h3>
+        <ul class="info-list">
+          <li><span class="info-icon" aria-hidden="true">⏱️</span> Reiche Urlaubsanträge möglichst frühzeitig ein, damit dein Team planen kann.</li>
+          <li><span class="info-icon" aria-hidden="true">📝</span> Nutze das Kommentarfeld für Hinweise zu Vertretungen oder Teilabwesenheiten.</li>
+          <li><span class="info-icon" aria-hidden="true">📧</span> Du wirst automatisch informiert, sobald dein Antrag bearbeitet wurde.</li>
+        </ul>
       </div>
 
-      <!-- Aktionen -->
-      <div style="text-align: center; padding-top: 2rem; border-top: 1px solid #e2e8f0; display: flex; gap: 1rem; justify-content: center;">
-        <button type="submit" class="btn btn-success" style="padding: 1rem 2rem; font-size: 1.1rem; font-weight: 600;">
-          <span style="margin-right: 0.5rem;">📤</span>Antrag einreichen
-        </button>
-        <a href="{{ url_for('leave_requests') if session.get('is_admin') else url_for('schedule') }}" class="btn btn-secondary" style="padding: 1rem 2rem; font-size: 1.1rem; font-weight: 600;">
-          <span style="margin-right: 0.5rem;">❌</span>Abbrechen
-        </a>
+      {% if not session.get('is_admin') %}
+      <div class="info-card info-card--subtle">
+        <h3>Wer sieht deinen Antrag?</h3>
+        <p>Dein zuständiger Abteilungsleiter wird automatisch benachrichtigt und kann den Antrag genehmigen oder ablehnen.</p>
       </div>
-    </form>
+      {% else %}
+      <div class="info-card info-card--subtle">
+        <h3>Schnellzugriff für Admins</h3>
+        <p>Nutze die Übersicht der <a href="{{ url_for('leave_requests') }}">Abwesenheitsanträge</a>, um neue Einreichungen direkt zu prüfen.</p>
+      </div>
+      {% endif %}
+    </aside>
   </div>
-</div>
+</section>
 
-<!-- JavaScript für bessere UX -->
 <script>
-  // Automatisches Setzen des Enddatums wenn Startdatum gewählt wird
-  document.getElementById('start_date').addEventListener('change', function() {
-    const endDate = document.getElementById('end_date');
-    if (!endDate.value) {
-      endDate.value = this.value;
-    }
-  });
-  
-  // Validierung: Enddatum muss nach Startdatum liegen
-  document.getElementById('end_date').addEventListener('change', function() {
-    const startDate = document.getElementById('start_date').value;
-    if (startDate && this.value < startDate) {
-      alert('Das Enddatum muss nach dem Startdatum liegen.');
-      this.value = startDate;
-    }
-  });
+  const startDateInput = document.getElementById('start_date');
+  const endDateInput = document.getElementById('end_date');
+
+  if (startDateInput && endDateInput) {
+    startDateInput.addEventListener('change', () => {
+      if (!endDateInput.value) {
+        endDateInput.value = startDateInput.value;
+      }
+    });
+
+    endDateInput.addEventListener('change', () => {
+      const startValue = startDateInput.value;
+      if (startValue && endDateInput.value < startValue) {
+        alert('Das Enddatum muss nach dem Startdatum liegen.');
+        endDateInput.value = startValue;
+      }
+    });
+  }
 </script>
 {% endblock %}
