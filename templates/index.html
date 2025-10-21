@@ -24,8 +24,8 @@
           Behalte deine Schichten, Teamabwesenheiten und Freigaben live im Blick.
         {% endif %}
       </p>
+      {% if is_admin %}
       <div class="hero-metrics" role="list">
-        {% if is_admin %}
         <div class="hero-metric" role="listitem">
           <span class="hero-metric-label">Geplante Stunden (7 Tage)</span>
           <span class="hero-metric-value" data-count-to="{{ total_hours }}">0</span>
@@ -38,21 +38,31 @@
           <span class="hero-metric-label">Ø Abdeckung</span>
           <span class="hero-metric-value" data-count-to="{{ coverage_average }}">0</span><span class="hero-metric-suffix">%</span>
         </div>
-        {% else %}
-        <div class="hero-metric" role="listitem">
-          <span class="hero-metric-label">Meine Stunden (7 Tage)</span>
-          <span class="hero-metric-value" data-count-to="{{ personal_week_overview.hours }}">0</span>
-        </div>
-        <div class="hero-metric" role="listitem">
-          <span class="hero-metric-label">Teamgröße</span>
-          <span class="hero-metric-value" data-count-to="{{ team_size }}">0</span>
-        </div>
-        <div class="hero-metric" role="listitem">
-          <span class="hero-metric-label">Offene Anträge</span>
-          <span class="hero-metric-value" data-count-to="{{ pending_leaves }}">0</span>
-        </div>
-        {% endif %}
       </div>
+      {% else %}
+      <div class="hero-compact" role="list">
+        <article class="hero-compact-card" role="listitem">
+          <p class="hero-compact-label">Nächster Einsatz</p>
+          {% if next_shift_info %}
+          <p class="hero-compact-value">{{ next_shift_info.date_label }}</p>
+          <p class="hero-compact-helper">{{ next_shift_info.title }}{% if next_shift_info.hours %} • {{ next_shift_info.hours }} Std{% endif %}</p>
+          {% else %}
+          <p class="hero-compact-value">Noch offen</p>
+          <p class="hero-compact-helper">Aktuell ist keine Schicht geplant.</p>
+          {% endif %}
+        </article>
+        <article class="hero-compact-card" role="listitem">
+          <p class="hero-compact-label">Geplante Woche</p>
+          <p class="hero-compact-value">{{ personal_week_overview.shift_count }} Schichten</p>
+          <p class="hero-compact-helper">{{ personal_week_overview.hours }} Std • {{ personal_week_overview.leave_days }} freie Tage</p>
+        </article>
+        <article class="hero-compact-card" role="listitem">
+          <p class="hero-compact-label">Offene Anträge</p>
+          <p class="hero-compact-value">{{ personal_week_overview.pending_leaves }}</p>
+          <p class="hero-compact-helper">Noch ausstehende Abwesenheiten.</p>
+        </article>
+      </div>
+      {% endif %}
       <div class="dashboard-hero-actions">
         <a class="hero-action primary" href="{{ url_for('schedule') }}">
           <span class="hero-action-icon">📅</span>
@@ -125,8 +135,8 @@
     </div>
   </section>
 
+  {% if is_admin %}
   <section class="dashboard-kpis" aria-label="Kennzahlen">
-    {% if is_admin %}
     <article class="kpi-card kpi-employees">
       <div class="kpi-icon">👥</div>
       <div class="kpi-content">
@@ -165,38 +175,71 @@
         <p class="kpi-helper">{{ coverage_message }}</p>
       </div>
     </article>
-    {% else %}
-    <article class="kpi-card kpi-hours">
-      <div class="kpi-icon">⏱️</div>
-      <div class="kpi-content">
-        <p class="kpi-label">Bestätigte Stunden (7 Tage)</p>
-        <p class="kpi-value">{{ personal_week_overview.hours }}</p>
-        <p class="kpi-helper">Deine genehmigten Einsätze in dieser Woche.</p>
-      </div>
-      <a class="kpi-link" href="{{ url_for('employee_hours_overview') }}">Meine Übersicht →</a>
-    </article>
-
-    <article class="kpi-card kpi-shifts">
-      <div class="kpi-icon">🗓️</div>
-      <div class="kpi-content">
-        <p class="kpi-label">Geplante Schichten</p>
-        <p class="kpi-value">{{ personal_week_overview.shift_count }}</p>
-        <p class="kpi-helper">Anzahl deiner bestätigten Einsätze.</p>
-      </div>
-      <a class="kpi-link" href="{{ url_for('schedule') }}">Dienstplan ansehen →</a>
-    </article>
-
-    <article class="kpi-card kpi-leaves">
-      <div class="kpi-icon">📋</div>
-      <div class="kpi-content">
-        <p class="kpi-label">Offene Anträge</p>
-        <p class="kpi-value">{{ pending_leaves }}</p>
-        <p class="kpi-helper">Noch nicht freigegebene Abwesenheiten.</p>
-      </div>
-      <a class="kpi-link" href="{{ url_for('leave_form') }}">Status prüfen →</a>
-    </article>
-    {% endif %}
   </section>
+  {% else %}
+  <section class="dashboard-essentials" aria-label="Mein Überblick">
+    <article class="essentials-card">
+      <header class="essentials-header">
+        <h2 class="essentials-title">Meine Woche</h2>
+        <p class="essentials-subtitle">Alles Wichtige auf einen Blick.</p>
+      </header>
+      <ul class="essentials-list">
+        <li class="essentials-item">
+          <div class="essentials-meta">
+            <p class="essentials-label">Bestätigte Stunden</p>
+            <p class="essentials-hint">Nächste sieben Tage</p>
+          </div>
+          <span class="essentials-value">{{ personal_week_overview.hours }}</span>
+        </li>
+        <li class="essentials-item">
+          <div class="essentials-meta">
+            <p class="essentials-label">Geplante Schichten</p>
+            <p class="essentials-hint">Genehmigte Einsätze</p>
+          </div>
+          <span class="essentials-value">{{ personal_week_overview.shift_count }}</span>
+        </li>
+        <li class="essentials-item">
+          <div class="essentials-meta">
+            <p class="essentials-label">Abwesenheitstage</p>
+            <p class="essentials-hint">Im selben Zeitraum</p>
+          </div>
+          <span class="essentials-value">{{ personal_week_overview.leave_days }}</span>
+        </li>
+      </ul>
+    </article>
+    <article class="essentials-card">
+      <header class="essentials-header">
+        <h2 class="essentials-title">Status &amp; Anträge</h2>
+        <p class="essentials-subtitle">So steht dein Team diese Woche da.</p>
+      </header>
+      <div class="essentials-highlight">
+        <p class="essentials-label">Nächster Einsatz</p>
+        {% if next_shift_info %}
+        <p class="essentials-lead">{{ next_shift_info.title }}</p>
+        <p class="essentials-hint">{{ next_shift_info.date_label }}{% if next_shift_info.hours %} • {{ next_shift_info.hours }} Std{% endif %}{% if next_shift_info.department %} • {{ next_shift_info.department }}{% endif %}</p>
+        {% else %}
+        <p class="essentials-empty">Noch keine Schicht geplant.</p>
+        {% endif %}
+      </div>
+      <ul class="essentials-list">
+        <li class="essentials-item">
+          <div class="essentials-meta">
+            <p class="essentials-label">Offene Anträge</p>
+            <p class="essentials-hint">Persönlich</p>
+          </div>
+          <span class="essentials-value">{{ personal_week_overview.pending_leaves }}</span>
+        </li>
+        <li class="essentials-item">
+          <div class="essentials-meta">
+            <p class="essentials-label">Team im Urlaub</p>
+            <p class="essentials-hint">Genehmigt &amp; offen (7 Tage)</p>
+          </div>
+          <span class="essentials-value">{{ leave_status_overview.approved + leave_status_overview.pending }}</span>
+        </li>
+      </ul>
+    </article>
+  </section>
+  {% endif %}
 
   <section class="dashboard-analytics" aria-label="Datenvisualisierung">
     <div class="analytics-grid">
@@ -300,7 +343,8 @@
         </ul>
       </article>
       {% else %}
-      <article class="analytics-card activity-card wide">
+      {% set personal_events = upcoming_events[:4] if upcoming_events else [] %}
+      <article class="analytics-card activity-card wide compact-card">
         <header class="analytics-header">
           <div>
             <p class="analytics-eyebrow">Meine Timeline</p>
@@ -308,20 +352,14 @@
           </div>
         </header>
         <ul class="activity-list">
-          {% if upcoming_events %}
-            {% for event in upcoming_events %}
+          {% if personal_events %}
+            {% for event in personal_events %}
             <li class="activity-item activity-{{ event.type }}">
               <div class="activity-meta">
                 <span class="activity-date">{{ event.date_label }}</span>
                 <span class="activity-type">{% if event.type == 'shift' %}Einsatz{% else %}Abwesenheit{% endif %}</span>
               </div>
-              <p class="activity-title">
-                {% if event.type == 'shift' %}
-                  {{ event.title }}
-                {% else %}
-                  {{ event.title }}
-                {% endif %}
-              </p>
+              <p class="activity-title">{{ event.title }}</p>
               <p class="activity-subtitle">
                 {% if event.type == 'shift' %}
                   {{ event.hours }} Std{% if event.department %} • {{ event.department }}{% endif %}
@@ -337,7 +375,8 @@
         </ul>
       </article>
 
-      <article class="analytics-card personal-week-card">
+      {% set week_preview = personal_day_overview[:5] if personal_day_overview else [] %}
+      <article class="analytics-card personal-week-card compact-card">
         <header class="analytics-header">
           <div>
             <p class="analytics-eyebrow">Wochenplanung</p>
@@ -345,8 +384,8 @@
           </div>
         </header>
         <ul class="activity-list">
-          {% if personal_day_overview %}
-            {% for entry in personal_day_overview %}
+          {% if week_preview %}
+            {% for entry in week_preview %}
             <li class="activity-item activity-{{ entry.status }}">
               <div class="activity-meta">
                 <span class="activity-date">{{ entry.date_label }}</span>
@@ -363,23 +402,28 @@
         </ul>
       </article>
 
-      <article class="analytics-card chart-card">
+      <article class="analytics-card summary-card">
         <header class="analytics-header">
           <div>
-            <p class="analytics-eyebrow">Abwesenheiten</p>
-            <h2>Mein Status</h2>
+            <p class="analytics-eyebrow">Status</p>
+            <h2>Abwesenheiten im Überblick</h2>
           </div>
         </header>
-        <div class="chart-wrapper">
-          {% if leave_status_overview.approved == 0 and leave_status_overview.pending == 0 %}
-          <p class="chart-empty">Keine Abwesenheiten im ausgewählten Zeitraum.</p>
-          {% endif %}
+        <div class="summary-grid">
+          <div>
+            <p class="summary-label">Genehmigt</p>
+            <p class="summary-value">{{ leave_status_overview.approved }}</p>
+          </div>
+          <div>
+            <p class="summary-label">Offen</p>
+            <p class="summary-value">{{ leave_status_overview.pending }}</p>
+          </div>
+          <div>
+            <p class="summary-label">Geplante Tage</p>
+            <p class="summary-value">{{ personal_week_overview.leave_days }}</p>
+          </div>
         </div>
-        <ul class="chart-stats">
-          <li>Genehmigt: {{ leave_status_overview.approved }}</li>
-          <li>Offen: {{ leave_status_overview.pending }}</li>
-          <li>Geplante Tage (7 Tage): {{ personal_week_overview.leave_days }}</li>
-        </ul>
+        <a class="summary-link" href="{{ url_for('leave_form') }}">Zu meinen Anträgen →</a>
       </article>
       {% endif %}
     </div>
@@ -394,40 +438,27 @@
         </div>
       </header>
       <ul class="panel-list">
+        {% if is_admin %}
         <li>
           <span class="status-dot {% if pending_leaves > 0 %}status-warning{% else %}status-success{% endif %}"></span>
           <div>
-            <p class="list-title">{% if is_admin %}Offene Abwesenheiten{% else %}Meine offenen Anträge{% endif %}</p>
-            <p class="list-subtitle">
-              {% if is_admin %}
-                {{ pending_leaves }} Anträge warten auf Freigabe.
-              {% else %}
-                {{ pending_leaves }} deiner Anträge sind noch in Prüfung.
-              {% endif %}
-            </p>
+            <p class="list-title">Offene Abwesenheiten</p>
+            <p class="list-subtitle">{{ pending_leaves }} Anträge warten auf Freigabe.</p>
           </div>
-          <a class="panel-link" href="{{ url_for('leave_requests') if is_admin else url_for('leave_form') }}">
-            {% if is_admin %}Bearbeiten{% else %}Status prüfen{% endif %}
-          </a>
+          <a class="panel-link" href="{{ url_for('leave_requests') }}">Bearbeiten</a>
         </li>
         <li>
           <span class="status-dot status-info"></span>
           <div>
-            <p class="list-title">{% if is_admin %}Geplante Stunden{% else %}Meine Stunden{% endif %}</p>
-            <p class="list-subtitle">
-              {% if is_admin %}
-                {{ total_hours }} Stunden in den nächsten sieben Tagen.
-              {% else %}
-                {{ personal_week_overview.hours }} Stunden in den nächsten sieben Tagen.
-              {% endif %}
-            </p>
+            <p class="list-title">Geplante Stunden</p>
+            <p class="list-subtitle">{{ total_hours }} Stunden in den nächsten sieben Tagen.</p>
           </div>
           <a class="panel-link" href="{{ url_for('schedule') }}">Öffnen</a>
         </li>
         <li>
           <span class="status-dot status-neutral"></span>
           <div>
-            <p class="list-title">{% if is_admin %}Eigene Woche{% else %}Meine Woche{% endif %}</p>
+            <p class="list-title">Eigene Woche</p>
             <p class="list-subtitle">
               {% if personal_week_overview.shift_count > 0 %}
                 {{ personal_week_overview.shift_count }} Schichten • {{ personal_week_overview.hours }} Std • {{ personal_week_overview.leave_days }} Tage Abwesenheit
@@ -436,10 +467,52 @@
               {% endif %}
             </p>
           </div>
-          <a class="panel-link" href="{{ url_for('employee_hours_overview') if not is_admin else url_for('schedule') }}">
-            {% if is_admin %}Teamstunden{% else %}Meine Übersicht{% endif %}
-          </a>
+          <a class="panel-link" href="{{ url_for('schedule') }}">Teamstunden</a>
         </li>
+        {% else %}
+        <li>
+          <span class="status-dot {% if personal_week_overview.pending_leaves > 0 %}status-warning{% else %}status-success{% endif %}"></span>
+          <div>
+            <p class="list-title">Meine Anträge</p>
+            <p class="list-subtitle">
+              {% if personal_week_overview.pending_leaves > 0 %}
+                {{ personal_week_overview.pending_leaves }} Anfrage(n) warten auf Rückmeldung.
+              {% else %}
+                Alle Abwesenheiten sind freigegeben.
+              {% endif %}
+            </p>
+          </div>
+          <a class="panel-link" href="{{ url_for('leave_form') }}">Status prüfen</a>
+        </li>
+        <li>
+          <span class="status-dot status-info"></span>
+          <div>
+            <p class="list-title">Nächster Einsatz</p>
+            <p class="list-subtitle">
+              {% if next_shift_info %}
+                {{ next_shift_info.date_label }}{% if next_shift_info.hours %} • {{ next_shift_info.hours }} Std{% endif %}
+              {% else %}
+                Noch kein Einsatz geplant.
+              {% endif %}
+            </p>
+          </div>
+          <a class="panel-link" href="{{ url_for('schedule') }}">Dienstplan</a>
+        </li>
+        <li>
+          <span class="status-dot status-neutral"></span>
+          <div>
+            <p class="list-title">Woche im Überblick</p>
+            <p class="list-subtitle">
+              {% if personal_week_overview.shift_count > 0 %}
+                {{ personal_week_overview.shift_count }} Schichten • {{ personal_week_overview.hours }} Std • {{ personal_week_overview.leave_days }} Tage frei
+              {% else %}
+                Deine Woche ist aktuell frei von Einsätzen.
+              {% endif %}
+            </p>
+          </div>
+          <a class="panel-link" href="{{ url_for('employee_hours_overview') }}">Meine Übersicht</a>
+        </li>
+        {% endif %}
       </ul>
     </article>
 
