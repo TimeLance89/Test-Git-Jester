@@ -250,7 +250,7 @@
             {% endif %}
           </div>
 
-          {% if emp.position != 'Vollzeit' %}
+          {% if emp.position == 'Aushilfe' %}
           <div class="employee-stat">
             <span class="stat-label">Überstunden</span>
             {% set overtime = emp_hours.get('overtime_hours', 0) %}
