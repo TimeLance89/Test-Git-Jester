@@ -1,337 +1,325 @@
 {% extends "layout.html" %}
 {% block title %}Abwesenheiten verwalten - Dienstplaner{% endblock %}
 {% block content %}
-<div style="margin-bottom: 2rem;">
-  <h1 style="display: flex; align-items: center; margin-bottom: 0.5rem;">
-    <span style="margin-right: 0.75rem; font-size: 2rem;">🏖️</span>
-    Abwesenheiten verwalten
-  </h1>
-  <p style="color: #64748b; font-size: 1.125rem; margin: 0;">Übersicht und Verwaltung aller Urlaubsanträge und Abwesenheiten</p>
-</div>
-
-<!-- Schnellaktionen -->
-<div style="margin-bottom: 2rem;">
-  <a href="{{ url_for('leave_form') }}" class="btn btn-primary" style="display: flex; align-items: center; padding: 0.75rem 1.5rem; width: fit-content;">
-    <span style="margin-right: 0.5rem;">➕</span>Neue Abwesenheit beantragen
-  </a>
-</div>
-
-<!-- Krankheitsstatistik Chart -->
-{% if chart_data %}
-<div class="card" style="margin-bottom: 2rem; border: 2px solid #ef4444;">
-  <div class="card-header" style="background-color: #fef2f2; border-bottom: 2px solid #ef4444; display: flex; justify-content: space-between; align-items: center;">
-    <h3 style="margin: 0; display: flex; align-items: center;">
-      <span style="margin-right: 0.75rem;">📊</span>
-      Krankheitsstatistik (Aktueller Monat)
-    </h3>
-    {% if not session.get('department_id') %}
-    <!-- Abteilungsauswahl für Super-Admin -->
-    <div class="dropdown">
-      <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-        {% if selected_department_id %}
-          Abteilung: {{ departments|selectattr('id', 'equalto', selected_department_id)|map(attribute='name')|first }}
-        {% else %}
-          Alle Abteilungen
-        {% endif %}
-      </button>
-      <ul class="dropdown-menu">
-        <li><a class="dropdown-item" href="{{ url_for('leave_requests') }}">Alle Abteilungen</a></li>
-        {% for dept in departments %}
-        <li><a class="dropdown-item" href="{{ url_for('leave_requests', department_id=dept.id) }}">{{ dept.name }}</a></li>
-        {% endfor %}
-      </ul>
+<div class="leave-requests-page">
+  <header class="page-header">
+    <div class="page-header-main">
+      <span class="page-header-icon" aria-hidden="true">🏖️</span>
+      <div>
+        <h1>Abwesenheiten verwalten</h1>
+        <p>Alle offenen, genehmigten und krankheitsbedingten Abwesenheiten auf einen Blick.</p>
+      </div>
     </div>
-    {% endif %}
-  </div>
-  <div class="card-body">
-    {% if chart_data %}
-    <canvas id="sickLeaveChart" style="max-height: 400px;"></canvas>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <script>
-      const ctx = document.getElementById('sickLeaveChart').getContext('2d');
-      const chartData = {{ chart_data|tojson }};
-      
-      const labels = chartData.map(item => item[0]);
-      const data = chartData.map(item => item[1]);
-      
-      new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: labels,
-          datasets: [{
-            label: 'Krankheitstage',
-            data: data,
-            backgroundColor: 'rgba(239, 68, 68, 0.6)',
-            borderColor: 'rgba(239, 68, 68, 1)',
-            borderWidth: 2
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: true,
-          plugins: {
-            legend: {
-              display: true,
-              position: 'top'
-            },
-            title: {
-              display: false
-            }
+    <div class="page-header-actions">
+      <a href="{{ url_for('leave_form') }}" class="btn btn-primary">
+        <span aria-hidden="true">➕</span>
+        Neue Abwesenheit beantragen
+      </a>
+    </div>
+  </header>
+
+  <section class="summary-grid" aria-label="Überblick Abwesenheiten">
+    <article class="summary-card summary-card-pending">
+      <span class="summary-label">Offene Anträge</span>
+      <span class="summary-value">{{ pending_leaves|length }}</span>
+      <span class="summary-hint">Warten auf Entscheidung</span>
+    </article>
+    <article class="summary-card summary-card-sick">
+      <span class="summary-label">Krankmeldungen</span>
+      <span class="summary-value">{{ sick_leaves|length }}</span>
+      <span class="summary-hint">Erfasste Meldungen insgesamt</span>
+    </article>
+    <article class="summary-card summary-card-approved">
+      <span class="summary-label">Genehmigte Abwesenheiten</span>
+      <span class="summary-value">{{ approved_leaves|length }}</span>
+      <span class="summary-hint">Bereits freigegebene Zeiträume</span>
+    </article>
+  </section>
+
+  <section class="card leave-card">
+    <div class="card-header card-header-soft card-header-sick">
+      <div class="card-header-content">
+        <span class="card-header-icon" aria-hidden="true">📊</span>
+        <div>
+          <p class="card-eyebrow">Aktueller Monat</p>
+          <h2>Krankheitsstatistik</h2>
+        </div>
+      </div>
+      {% if not session.get('department_id') %}
+      <form method="get" class="department-filter" aria-label="Abteilung filtern">
+        <label for="departmentFilter">Abteilung</label>
+        <select id="departmentFilter" name="department_id" onchange="this.form.submit()">
+          <option value="" {% if not selected_department_id %}selected{% endif %}>Alle Abteilungen</option>
+          {% for dept in departments %}
+          <option value="{{ dept.id }}" {% if selected_department_id == dept.id %}selected{% endif %}>{{ dept.name }}</option>
+          {% endfor %}
+        </select>
+      </form>
+      {% endif %}
+    </div>
+    <div class="card-body">
+      {% if chart_data %}
+      <div class="chart-wrapper">
+        <canvas id="sickLeaveChart" aria-label="Diagramm Krankheitstage" role="img"></canvas>
+      </div>
+      <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+      <script>
+        const ctx = document.getElementById('sickLeaveChart').getContext('2d');
+        const chartData = {{ chart_data|tojson }};
+
+        const labels = chartData.map(item => item[0]);
+        const data = chartData.map(item => item[1]);
+
+        new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: 'Krankheitstage',
+              data: data,
+              backgroundColor: 'rgba(239, 68, 68, 0.6)',
+              borderColor: 'rgba(239, 68, 68, 1)',
+              borderWidth: 2,
+              borderRadius: 6
+            }]
           },
-          scales: {
-            y: {
-              beginAtZero: true,
-              ticks: {
-                stepSize: 1
-              },
-              title: {
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
                 display: true,
-                text: 'Anzahl Tage'
+                position: 'top'
               }
             },
-            x: {
-              title: {
-                display: true,
-                text: 'Mitarbeiter'
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: {
+                  stepSize: 1
+                },
+                title: {
+                  display: true,
+                  text: 'Anzahl Tage'
+                }
+              },
+              x: {
+                title: {
+                  display: true,
+                  text: 'Mitarbeiter'
+                }
               }
             }
           }
-        }
-      });
-    </script>
-    {% else %}
-    <div style="text-align: center; padding: 2rem; color: #64748b;">
-      <p style="margin: 0;">Keine Krankheitsdaten für den aktuellen Monat verfügbar.</p>
+        });
+      </script>
+      {% else %}
+      <div class="empty-state">
+        <div aria-hidden="true" class="empty-state-icon">ℹ️</div>
+        <p>Keine Krankheitsdaten für den aktuellen Monat verfügbar.</p>
+      </div>
+      {% endif %}
     </div>
-    {% endif %}
-  </div>
-</div>
-{% endif %}
+  </section>
 
-<!-- Ausstehende Abwesenheiten (ohne Krankheit) -->
-<div class="card" style="margin-bottom: 2rem;">
-  <div class="card-header">
-    <h3 style="margin: 0; display: flex; align-items: center;">
-      <span style="margin-right: 0.75rem;">⏳</span>
-      Ausstehende Anträge ({{ pending_leaves|length }})
-    </h3>
-  </div>
-  <div class="card-body" style="padding: 0;">
-    {% if pending_leaves %}
-    <div style="overflow-x: auto;">
-      <table class="table" style="margin: 0;">
-        <thead>
-          <tr>
-            <th style="padding: 1.5rem 1rem;">
-              <span style="margin-right: 0.5rem;">👤</span>Mitarbeiter
-            </th>
-            <th style="padding: 1.5rem 1rem;">
-              <span style="margin-right: 0.5rem;">📅</span>Zeitraum
-            </th>
-            <th style="padding: 1.5rem 1rem;">
-              <span style="margin-right: 0.5rem;">🏷️</span>Typ
-            </th>
-            <th style="padding: 1.5rem 1rem; text-align: center;">
-              <span style="margin-right: 0.5rem;">⚙️</span>Aktionen
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for leave in pending_leaves %}
-          <tr>
-            <td style="padding: 1rem; font-weight: 600;">{{ leave.employee.name }}</td>
-            <td style="padding: 1rem; font-weight: 500;">
-              {{ leave.start_date.strftime('%d.%m.%Y') }} – {{ leave.end_date.strftime('%d.%m.%Y') }}
-            </td>
-            <td style="padding: 1rem;">
-              <span class="badge" style="background-color: #3b82f6;">{{ leave.leave_type }}</span>
-            </td>
-            <td style="padding: 1rem; text-align: center;">
-              <div style="display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap;">
-                {% if leave.leave_type in ['Urlaub', 'ÜSA'] %}
-                  <a href="{{ url_for('approve_leave', leave_id=leave.id) }}"
-                     class="btn btn-success"
-                     style="padding: 0.5rem 1rem; font-size: 0.875rem;">
-                    <span style="margin-right: 0.25rem;">✅</span>
-                    {% if leave.leave_type == 'ÜSA' %}
-                      Bestätigen
-                    {% else %}
-                      Genehmigen
-                    {% endif %}
+  <section class="card leave-card">
+    <div class="card-header card-header-soft">
+      <div class="card-header-content">
+        <span class="card-header-icon" aria-hidden="true">⏳</span>
+        <div>
+          <p class="card-eyebrow">Offene Vorgänge</p>
+          <h2>Ausstehende Anträge</h2>
+        </div>
+      </div>
+      <span class="card-counter">{{ pending_leaves|length }} Anträge</span>
+    </div>
+    <div class="card-body">
+      {% if pending_leaves %}
+      <div class="table-scroll">
+        <table class="table-modern">
+          <thead>
+            <tr>
+              <th scope="col">Mitarbeiter</th>
+              <th scope="col">Zeitraum</th>
+              <th scope="col">Typ</th>
+              <th scope="col" class="text-center">Aktionen</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for leave in pending_leaves %}
+            <tr>
+              <td>
+                <span class="cell-primary">{{ leave.employee.name }}</span>
+              </td>
+              <td>
+                <span class="cell-primary">{{ leave.start_date.strftime('%d.%m.%Y') }} – {{ leave.end_date.strftime('%d.%m.%Y') }}</span>
+              </td>
+              <td>
+                <span class="badge badge-primary">{{ leave.leave_type }}</span>
+              </td>
+              <td>
+                <div class="action-group">
+                  {% if leave.leave_type in ['Urlaub', 'ÜSA'] %}
+                    <a href="{{ url_for('approve_leave', leave_id=leave.id) }}" class="btn btn-success">
+                      <span aria-hidden="true">✅</span>
+                      {% if leave.leave_type == 'ÜSA' %}
+                        Bestätigen
+                      {% else %}
+                        Genehmigen
+                      {% endif %}
+                    </a>
+                    <a href="{{ url_for('decline_leave', leave_id=leave.id) }}" class="btn btn-warning" onclick="return confirm('Abwesenheit von {{ leave.employee.name }} wirklich ablehnen?')">
+                      <span aria-hidden="true">⚠️</span>
+                      Ablehnen
+                    </a>
+                  {% endif %}
+                  <a href="{{ url_for('delete_leave', leave_id=leave.id) }}" class="btn btn-ghost" onclick="return confirm('Abwesenheit von {{ leave.employee.name }} wirklich löschen?')">
+                    <span aria-hidden="true">🗑️</span>
+                    Löschen
                   </a>
-                  <a href="{{ url_for('decline_leave', leave_id=leave.id) }}"
-                     class="btn"
-                     style="padding: 0.5rem 1rem; font-size: 0.875rem; background-color: #d97706; color: white;"
-                     onclick="return confirm('Abwesenheit von {{ leave.employee.name }} wirklich ablehnen?')">
-                    <span style="margin-right: 0.25rem;">❌</span>Ablehnen
-                  </a>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <div aria-hidden="true" class="empty-state-icon">✅</div>
+        <p>Aktuell liegen keine ausstehenden Abwesenheitsanträge vor.</p>
+      </div>
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="card leave-card leave-card-accent">
+    <div class="card-header card-header-soft card-header-emphasis">
+      <div class="card-header-content">
+        <span class="card-header-icon" aria-hidden="true">🤒</span>
+        <div>
+          <p class="card-eyebrow">Transparente Übersicht</p>
+          <h2>Krankheitsanträge</h2>
+        </div>
+      </div>
+      <span class="card-counter">{{ sick_leaves|length }} Meldungen</span>
+    </div>
+    <div class="card-body">
+      {% if sick_leaves %}
+      <div class="table-scroll">
+        <table class="table-modern">
+          <thead>
+            <tr>
+              <th scope="col">Mitarbeiter</th>
+              <th scope="col">Zeitraum</th>
+              <th scope="col">Tage</th>
+              <th scope="col">Status</th>
+              <th scope="col" class="text-center">Aktionen</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for leave in sick_leaves %}
+            <tr>
+              <td>
+                <span class="cell-primary">{{ leave.employee.name }}</span>
+              </td>
+              <td>
+                <span class="cell-primary">{{ leave.start_date.strftime('%d.%m.%Y') }} – {{ leave.end_date.strftime('%d.%m.%Y') }}</span>
+              </td>
+              <td>
+                <span class="badge badge-warning">{{ (leave.end_date - leave.start_date).days + 1 }} Tage</span>
+              </td>
+              <td>
+                {% if leave.approved %}
+                  <span class="badge badge-success">Erfasst</span>
+                {% else %}
+                  <span class="badge badge-warning">Ausstehend</span>
                 {% endif %}
-                <a href="{{ url_for('delete_leave', leave_id=leave.id) }}" 
-                   class="btn btn-outline-danger" 
-                   style="padding: 0.5rem 1rem; font-size: 0.875rem;"
-                   onclick="return confirm('Abwesenheit von {{ leave.employee.name }} wirklich löschen?')">
-                  <span style="margin-right: 0.25rem;">🗑️</span>Löschen
-                </a>
-              </div>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    {% else %}
-    <div style="text-align: center; padding: 3rem 2rem; color: #64748b;">
-      <div style="font-size: 4rem; margin-bottom: 1rem;">✅</div>
-      <h3 style="margin-bottom: 0.5rem;">Keine ausstehenden Anträge</h3>
-      <p style="margin-bottom: 0;">Alle Abwesenheitsanträge wurden bearbeitet.</p>
-    </div>
-    {% endif %}
-  </div>
-</div>
-
-<!-- Krankheitsanträge (separat) -->
-<div class="card" style="margin-bottom: 2rem; border: 2px solid #ef4444;">
-  <div class="card-header" style="background-color: #fef2f2; border-bottom: 2px solid #ef4444;">
-    <h3 style="margin: 0; display: flex; align-items: center;">
-      <span style="margin-right: 0.75rem;">🤒</span>
-      Krankheitsanträge ({{ sick_leaves|length }})
-    </h3>
-  </div>
-  <div class="card-body" style="padding: 0;">
-    {% if sick_leaves %}
-    <div style="overflow-x: auto;">
-      <table class="table" style="margin: 0;">
-        <thead>
-          <tr>
-            <th style="padding: 1.5rem 1rem;">
-              <span style="margin-right: 0.5rem;">👤</span>Mitarbeiter
-            </th>
-            <th style="padding: 1.5rem 1rem;">
-              <span style="margin-right: 0.5rem;">📅</span>Zeitraum
-            </th>
-            <th style="padding: 1.5rem 1rem;">
-              <span style="margin-right: 0.5rem;">📊</span>Tage
-            </th>
-            <th style="padding: 1.5rem 1rem;">
-              <span style="margin-right: 0.5rem;">✅</span>Status
-            </th>
-            <th style="padding: 1.5rem 1rem; text-align: center;">
-              <span style="margin-right: 0.5rem;">⚙️</span>Aktionen
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for leave in sick_leaves %}
-          <tr>
-            <td style="padding: 1rem; font-weight: 600;">{{ leave.employee.name }}</td>
-            <td style="padding: 1rem; font-weight: 500;">
-              {{ leave.start_date.strftime('%d.%m.%Y') }} – {{ leave.end_date.strftime('%d.%m.%Y') }}
-            </td>
-            <td style="padding: 1rem;">
-              <span style="font-weight: 600; color: #ef4444;">
-                {{ (leave.end_date - leave.start_date).days + 1 }} Tage
-              </span>
-            </td>
-            <td style="padding: 1rem;">
-              {% if leave.approved %}
-                <span class="badge" style="background-color: #059669;">✅ Erfasst</span>
-              {% else %}
-                <span class="badge" style="background-color: #d97706;">⏳ Ausstehend</span>
-              {% endif %}
-            </td>
-            <td style="padding: 1rem; text-align: center;">
-              <div style="display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap;">
-                {% if not leave.approved %}
-                  <a href="{{ url_for('approve_leave', leave_id=leave.id) }}" 
-                     class="btn btn-success" 
-                     style="padding: 0.5rem 1rem; font-size: 0.875rem;">
-                    <span style="margin-right: 0.25rem;">✅</span>Erfassen
+              </td>
+              <td>
+                <div class="action-group">
+                  {% if not leave.approved %}
+                    <a href="{{ url_for('approve_leave', leave_id=leave.id) }}" class="btn btn-success">
+                      <span aria-hidden="true">✅</span>
+                      Erfassen
+                    </a>
+                  {% endif %}
+                  <a href="{{ url_for('delete_leave', leave_id=leave.id) }}" class="btn btn-ghost" onclick="return confirm('Krankheitseintrag von {{ leave.employee.name }} wirklich löschen?')">
+                    <span aria-hidden="true">🗑️</span>
+                    Löschen
                   </a>
-                {% endif %}
-                <a href="{{ url_for('delete_leave', leave_id=leave.id) }}" 
-                   class="btn btn-outline-danger" 
-                   style="padding: 0.5rem 1rem; font-size: 0.875rem;"
-                   onclick="return confirm('Krankheitseintrag von {{ leave.employee.name }} wirklich löschen?')">
-                  <span style="margin-right: 0.25rem;">🗑️</span>Löschen
-                </a>
-              </div>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <div aria-hidden="true" class="empty-state-icon">😊</div>
+        <p>Es liegen aktuell keine Krankmeldungen vor.</p>
+      </div>
+      {% endif %}
     </div>
-    {% else %}
-    <div style="text-align: center; padding: 3rem 2rem; color: #64748b;">
-      <div style="font-size: 4rem; margin-bottom: 1rem;">😊</div>
-      <h3 style="margin-bottom: 0.5rem;">Keine Krankheitsmeldungen</h3>
-      <p style="margin-bottom: 0;">Es liegen aktuell keine Krankheitsmeldungen vor.</p>
-    </div>
-    {% endif %}
-  </div>
-</div>
+  </section>
 
-<!-- Genehmigte Abwesenheiten (ohne Krankheit) -->
-<div class="card">
-  <div class="card-header">
-    <h3 style="margin: 0; display: flex; align-items: center;">
-      <span style="margin-right: 0.75rem;">✅</span>
-      Genehmigte Abwesenheiten ({{ approved_leaves|length }})
-    </h3>
-  </div>
-  <div class="card-body" style="padding: 0;">
-    {% if approved_leaves %}
-    <div style="overflow-x: auto;">
-      <table class="table" style="margin: 0;">
-        <thead>
-          <tr>
-            <th style="padding: 1.5rem 1rem;">
-              <span style="margin-right: 0.5rem;">👤</span>Mitarbeiter
-            </th>
-            <th style="padding: 1.5rem 1rem;">
-              <span style="margin-right: 0.5rem;">📅</span>Zeitraum
-            </th>
-            <th style="padding: 1.5rem 1rem;">
-              <span style="margin-right: 0.5rem;">🏷️</span>Typ
-            </th>
-            <th style="padding: 1.5rem 1rem; text-align: center;">
-              <span style="margin-right: 0.5rem;">⚙️</span>Aktionen
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for leave in approved_leaves %}
-          <tr>
-            <td style="padding: 1rem; font-weight: 600;">{{ leave.employee.name }}</td>
-            <td style="padding: 1rem; font-weight: 500;">
-              {{ leave.start_date.strftime('%d.%m.%Y') }} – {{ leave.end_date.strftime('%d.%m.%Y') }}
-            </td>
-            <td style="padding: 1rem;">
-              <span class="badge" style="background-color: #059669;">{{ leave.leave_type }}</span>
-            </td>
-            <td style="padding: 1rem; text-align: center;">
-              <div style="display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap;">
-                <a href="{{ url_for('delete_leave', leave_id=leave.id) }}" 
-                   class="btn btn-outline-danger" 
-                   style="padding: 0.5rem 1rem; font-size: 0.875rem;"
-                   onclick="return confirm('Abwesenheit von {{ leave.employee.name }} wirklich löschen?')">
-                  <span style="margin-right: 0.25rem;">🗑️</span>Löschen
-                </a>
-              </div>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+  <section class="card leave-card">
+    <div class="card-header card-header-soft">
+      <div class="card-header-content">
+        <span class="card-header-icon" aria-hidden="true">✅</span>
+        <div>
+          <p class="card-eyebrow">Planbare Abwesenheiten</p>
+          <h2>Genehmigte Abwesenheiten</h2>
+        </div>
+      </div>
+      <span class="card-counter">{{ approved_leaves|length }} Einträge</span>
     </div>
-    {% else %}
-    <div style="text-align: center; padding: 3rem 2rem; color: #64748b;">
-      <div style="font-size: 4rem; margin-bottom: 1rem;">🏖️</div>
-      <h3 style="margin-bottom: 0.5rem;">Keine genehmigten Abwesenheiten</h3>
-      <p style="margin-bottom: 0;">Es wurden noch keine Abwesenheiten genehmigt.</p>
+    <div class="card-body">
+      {% if approved_leaves %}
+      <div class="table-scroll">
+        <table class="table-modern">
+          <thead>
+            <tr>
+              <th scope="col">Mitarbeiter</th>
+              <th scope="col">Zeitraum</th>
+              <th scope="col">Typ</th>
+              <th scope="col" class="text-center">Aktionen</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for leave in approved_leaves %}
+            <tr>
+              <td>
+                <span class="cell-primary">{{ leave.employee.name }}</span>
+              </td>
+              <td>
+                <span class="cell-primary">{{ leave.start_date.strftime('%d.%m.%Y') }} – {{ leave.end_date.strftime('%d.%m.%Y') }}</span>
+              </td>
+              <td>
+                <span class="badge badge-success">{{ leave.leave_type }}</span>
+              </td>
+              <td>
+                <div class="action-group">
+                  <a href="{{ url_for('delete_leave', leave_id=leave.id) }}" class="btn btn-ghost" onclick="return confirm('Abwesenheit von {{ leave.employee.name }} wirklich löschen?')">
+                    <span aria-hidden="true">🗑️</span>
+                    Löschen
+                  </a>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <div aria-hidden="true" class="empty-state-icon">🏖️</div>
+        <p>Es wurden noch keine Abwesenheiten genehmigt.</p>
+      </div>
+      {% endif %}
     </div>
-    {% endif %}
-  </div>
+  </section>
 </div>
 {% endblock %}
 
