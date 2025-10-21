@@ -390,6 +390,10 @@ def get_planning_insights(year: int = None, month: int = None, department_id: in
     
     total_remaining_hours = 0
     total_overtime_hours = 0
+    total_target_hours = 0
+    total_worked_hours = 0
+    assistant_count = 0
+    assistants_without_hours = 0
     
     for emp_id, data in hours_summary.items():
         employee = Employee.query.get(emp_id)
@@ -403,26 +407,57 @@ def get_planning_insights(year: int = None, month: int = None, department_id: in
         data['employee_name'] = employee.name
         data['department'] = employee.department.name if employee.department else 'Keine Abteilung'
         
-        total_remaining_hours += data['remaining_hours']
-        total_overtime_hours += data['overtime_hours']
-        
-        if data['remaining_hours'] > 20:  # Mehr als 20 Stunden übrig
+        remaining_hours = data.get('remaining_hours', 0) or 0
+        overtime_hours = data.get('overtime_hours', 0) or 0
+        target_hours = data.get('target_hours', 0) or 0
+        worked_hours = data.get('worked_hours', 0) or 0
+
+        total_remaining_hours += remaining_hours
+        total_overtime_hours += overtime_hours
+        total_target_hours += target_hours
+        total_worked_hours += worked_hours
+        assistant_count += 1
+        if worked_hours == 0:
+            assistants_without_hours += 1
+
+        data['remaining_hours'] = remaining_hours
+        data['overtime_hours'] = overtime_hours
+        data['target_hours'] = target_hours
+        data['worked_hours'] = worked_hours
+
+        if remaining_hours > 20:  # Mehr als 20 Stunden übrig
             underutilized.append(data)
-        elif data['overtime_hours'] > 10:  # Mehr als 10 Überstunden
+        elif overtime_hours > 10:  # Mehr als 10 Überstunden
             overutilized.append(data)
         else:
             balanced.append(data)
-    
+
     # Sortiere Listen
     underutilized.sort(key=lambda x: x['remaining_hours'], reverse=True)
     overutilized.sort(key=lambda x: x['overtime_hours'], reverse=True)
-    
+
+    avg_remaining_hours = (total_remaining_hours / assistant_count) if assistant_count else 0
+    avg_overtime_hours = (total_overtime_hours / assistant_count) if assistant_count else 0
+    coverage_rate = (total_worked_hours / total_target_hours * 100) if total_target_hours else 0
+    net_available_hours = total_remaining_hours - total_overtime_hours
+
     return {
         'underutilized': underutilized,
         'overutilized': overutilized,
         'balanced': balanced,
         'total_remaining_hours': total_remaining_hours,
         'total_overtime_hours': total_overtime_hours,
+        'total_target_hours': total_target_hours,
+        'total_worked_hours': total_worked_hours,
+        'assistant_count': assistant_count,
+        'assistants_without_hours': assistants_without_hours,
+        'underutilized_count': len(underutilized),
+        'overutilized_count': len(overutilized),
+        'balanced_count': len(balanced),
+        'avg_remaining_hours': avg_remaining_hours,
+        'avg_overtime_hours': avg_overtime_hours,
+        'coverage_rate': coverage_rate,
+        'net_available_hours': net_available_hours,
         'total_employees': len(hours_summary),
         'month': month,
         'year': year
