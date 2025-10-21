@@ -2463,6 +2463,19 @@ body {
   border-color: var(--secondary-color);
 }
 
+.btn-outline-secondary {
+  color: var(--secondary-color);
+  background-color: transparent;
+  border-color: rgba(100, 116, 139, 0.4);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-outline-secondary:hover {
+  color: var(--primary-color);
+  background-color: rgba(37, 99, 235, 0.12);
+  border-color: var(--primary-color);
+}
+
 .btn-lg {
   padding: 0.75rem 1.5rem;
   font-size: 1.125rem;
@@ -3925,6 +3938,188 @@ body {
 
 
 /* Spezifische Stile für die Dienstplanseite */
+.schedule-page .schedule-filter-card {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.08), rgba(14, 165, 233, 0.08));
+  border: 1px solid rgba(37, 99, 235, 0.18);
+  border-radius: var(--radius-lg);
+  padding: clamp(1.25rem, 2vw, 1.75rem);
+  box-shadow: var(--shadow-md);
+}
+
+.schedule-page .schedule-filter-card .row {
+  align-items: stretch;
+  row-gap: 1.5rem;
+}
+
+.schedule-page .filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.schedule-page .filter-field-label {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.schedule-page .filter-field-label span:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.schedule-page .filter-field-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.85rem;
+  background: rgba(37, 99, 235, 0.12);
+  color: var(--primary-color);
+  font-size: 1.35rem;
+}
+
+.schedule-page .filter-field-subtitle {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  letter-spacing: 0.02em;
+}
+
+.schedule-page .filter-period-control {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  background: var(--surface-color);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.schedule-page .filter-period-control:focus-within {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.2);
+}
+
+.schedule-page .filter-period-control .btn {
+  background: transparent;
+  color: var(--text-secondary);
+  border: none;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  padding: 0.65rem 0.9rem;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.schedule-page .filter-period-control .btn:hover {
+  background: rgba(37, 99, 235, 0.12);
+  color: var(--primary-color);
+  box-shadow: none;
+  transform: none;
+}
+
+.schedule-page .filter-period-control .btn:focus-visible {
+  outline: 2px solid rgba(37, 99, 235, 0.35);
+  outline-offset: -2px;
+}
+
+.schedule-page .filter-period-control .form-control {
+  border: none;
+  box-shadow: none;
+  text-align: center;
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--text-primary);
+  padding: 0.65rem 0.5rem;
+  min-width: 0;
+}
+
+.schedule-page .filter-period-control .form-control:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.schedule-page .filter-period-control input[type="month"] {
+  appearance: none;
+  -webkit-appearance: none;
+  background-color: transparent;
+}
+
+.schedule-page .filter-period-display {
+  margin-top: 0.5rem;
+  font-weight: 600;
+  color: var(--primary-color);
+  text-transform: capitalize;
+  letter-spacing: 0.02em;
+  font-size: 0.9rem;
+}
+
+.schedule-page .filter-select-wrapper {
+  position: relative;
+}
+
+.schedule-page .filter-select-wrapper .form-select {
+  padding-left: 2.75rem;
+  border-color: rgba(37, 99, 235, 0.2);
+  box-shadow: var(--shadow-sm);
+}
+
+.schedule-page .filter-select-icon {
+  position: absolute;
+  top: 50%;
+  left: 1rem;
+  transform: translateY(-50%);
+  font-size: 1.2rem;
+  color: var(--primary-color);
+  pointer-events: none;
+}
+
+.schedule-page .schedule-filter-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+.schedule-page .schedule-filter-actions .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.schedule-page .schedule-filter-actions .btn-primary {
+  padding-inline: 1.5rem;
+}
+
+.schedule-page .filter-action-text {
+  font-weight: 600;
+}
+
+@media (max-width: 767.98px) {
+  .schedule-page .schedule-filter-card {
+    padding: 1rem;
+  }
+
+  .schedule-page .schedule-filter-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .schedule-page .schedule-filter-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
 .schedule-page .container-fluid {
   padding-left: 0.5rem;
   padding-right: 0.5rem;

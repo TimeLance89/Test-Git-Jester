@@ -2,9 +2,11 @@
 {% block title %}Dienstplan{% endblock %}
 {% block content %}
 
+{% set month_names = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'] %}
+
 <div id="scheduleApp" class="container-fluid px-3" data-initial-view="{{ active_schedule_view or 'month' }}">
   <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
-    <h2 class="mb-0">Dienstplan für {{ month }}.{{ year }}</h2>
+    <h2 class="mb-0">Dienstplan für {{ month_names[month - 1] }} {{ year }}</h2>
     <div class="d-flex flex-wrap gap-2 align-items-center">
       <div class="btn-group" role="group" aria-label="Ansicht wechseln">
         <button type="button" class="btn btn-outline-primary" data-view="month">Monatsansicht</button>
@@ -16,42 +18,66 @@
     </div>
   </div>
 
-  <form method="get" class="row g-3 mb-4">
-    <div class="col-auto">
-      <label class="form-label" for="month">Monat</label>
-      <select class="form-select" id="month" name="month">
-        {% for m in range(1, 13) %}
-        <option value="{{ m }}" {% if m == month %}selected{% endif %}>{{ m }}</option>
-        {% endfor %}
-      </select>
+  <form method="get" class="schedule-filter-card mb-4" id="scheduleFilterForm">
+    <div class="row">
+      <div class="col-12 col-md-5">
+        <div class="filter-field">
+          <label class="filter-field-label" for="monthYear">
+            <span class="filter-field-icon" aria-hidden="true">📆</span>
+            <span>
+              Monat &amp; Jahr
+              <small class="filter-field-subtitle">Mit einem Klick durch die Monate navigieren</small>
+            </span>
+          </label>
+          <div class="filter-period-control" role="group" aria-label="Monat wechseln">
+            <button type="button" class="btn" id="periodPrev" aria-label="Vorheriger Monat">
+              <span aria-hidden="true">‹</span>
+            </button>
+            <input type="month" class="form-control" id="monthYear" name="month_year"
+                   value="{{ "%04d-%02d"|format(year, month) }}" />
+            <button type="button" class="btn" id="periodNext" aria-label="Nächster Monat">
+              <span aria-hidden="true">›</span>
+            </button>
+          </div>
+          <div class="filter-period-display" data-period-label aria-live="polite">
+            {{ month_names[month - 1] }} {{ year }}
+          </div>
+          <input type="hidden" name="month" id="hiddenMonth" value="{{ month }}" />
+          <input type="hidden" name="year" id="hiddenYear" value="{{ year }}" />
+        </div>
+      </div>
+      <div class="col-12 col-md-4">
+        <div class="filter-field">
+          <label class="filter-field-label" for="department">
+            <span class="filter-field-icon" aria-hidden="true">👥</span>
+            <span>
+              Abteilung
+              <small class="filter-field-subtitle">Optional nach Teams filtern</small>
+            </span>
+          </label>
+          <div class="filter-select-wrapper">
+            <span class="filter-select-icon" aria-hidden="true">🏢</span>
+            <select class="form-select" id="department" name="department">
+              <option value="">Alle</option>
+              {% for dept in departments %}
+              <option value="{{ dept.id }}" {% if dept.id == selected_department %}selected{% endif %}>{{ dept.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-md-3">
+        <div class="schedule-filter-actions">
+          <button type="submit" class="btn btn-primary">Aktualisieren</button>
+          {% if current_user and current_user.is_admin and not current_user.department_id %}
+          <button type="button" class="btn btn-outline-secondary" id="reorderGroupsBtn">
+            <span aria-hidden="true">⇅</span>
+            <span class="filter-action-text">Gruppen sortieren</span>
+          </button>
+          {% endif %}
+        </div>
+      </div>
     </div>
-    <div class="col-auto">
-      <label class="form-label" for="year">Jahr</label>
-      <select class="form-select" id="year" name="year">
-        {% for y in range(2020, 2030) %}
-        <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    <div class="col-auto">
-      <label class="form-label" for="department">Abteilung</label>
-      <select class="form-select" id="department" name="department">
-        <option value="">Alle</option>
-        {% for dept in departments %}
-        <option value="{{ dept.id }}" {% if dept.id == selected_department %}selected{% endif %}>{{ dept.name }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    <div class="col-auto d-flex align-items-end">
-      <button type="submit" class="btn btn-primary">Aktualisieren</button>
-    </div>
-    {% if current_user and current_user.is_admin and not current_user.department_id %}
-    <div class="col-auto d-flex align-items-end">
-      <button type="button" class="btn btn-secondary" id="reorderGroupsBtn">
-        <span>⇅</span> Gruppen sortieren
-      </button>
-    </div>
-    {% endif %}
   </form>
 
   {% set employee_col_width = 18 %}
@@ -479,6 +505,121 @@
 <script>
 // Drag & Drop Funktionalität für Gruppen-Sortierung
 document.addEventListener('DOMContentLoaded', function() {
+  const filterForm = document.getElementById('scheduleFilterForm');
+  const monthYearInput = document.getElementById('monthYear');
+  const hiddenMonthInput = document.getElementById('hiddenMonth');
+  const hiddenYearInput = document.getElementById('hiddenYear');
+  const periodLabel = document.querySelector('[data-period-label]');
+  const prevPeriodButton = document.getElementById('periodPrev');
+  const nextPeriodButton = document.getElementById('periodNext');
+
+  const formatPeriodLabel = (date) => {
+    try {
+      return new Intl.DateTimeFormat('de-DE', {
+        month: 'long',
+        year: 'numeric'
+      }).format(date);
+    } catch (error) {
+      return `${date.getMonth() + 1}.${date.getFullYear()}`;
+    }
+  };
+
+  const syncHiddenFields = () => {
+    if (!monthYearInput || !hiddenMonthInput || !hiddenYearInput) {
+      return;
+    }
+
+    const value = monthYearInput.value;
+    if (!value) {
+      return;
+    }
+
+    const [yearPart, monthPart] = value.split('-');
+    const parsedYear = Number.parseInt(yearPart, 10);
+    const parsedMonth = Number.parseInt(monthPart, 10);
+
+    if (!Number.isNaN(parsedYear)) {
+      hiddenYearInput.value = parsedYear;
+    }
+
+    if (!Number.isNaN(parsedMonth)) {
+      hiddenMonthInput.value = parsedMonth;
+    }
+
+    if (periodLabel && !Number.isNaN(parsedYear) && !Number.isNaN(parsedMonth)) {
+      const displayDate = new Date(parsedYear, parsedMonth - 1, 1);
+      periodLabel.textContent = formatPeriodLabel(displayDate);
+    }
+  };
+
+  const adjustMonth = (offset) => {
+    if (!monthYearInput) {
+      return;
+    }
+
+    const fallbackValue = () => {
+      const today = new Date();
+      const fallbackYear = hiddenYearInput ? Number.parseInt(hiddenYearInput.value, 10) : today.getFullYear();
+      const fallbackMonth = hiddenMonthInput ? Number.parseInt(hiddenMonthInput.value, 10) : today.getMonth() + 1;
+      const safeYear = Number.isNaN(fallbackYear) ? today.getFullYear() : fallbackYear;
+      const safeMonth = Number.isNaN(fallbackMonth) ? today.getMonth() + 1 : fallbackMonth;
+      return `${safeYear.toString().padStart(4, '0')}-${safeMonth.toString().padStart(2, '0')}`;
+    };
+
+    const currentValue = monthYearInput.value || fallbackValue();
+    const [yearPart, monthPart] = currentValue.split('-');
+    let yearNumber = Number.parseInt(yearPart, 10);
+    let monthNumber = Number.parseInt(monthPart, 10);
+
+    if (Number.isNaN(yearNumber) || Number.isNaN(monthNumber)) {
+      const today = new Date();
+      yearNumber = today.getFullYear();
+      monthNumber = today.getMonth() + 1;
+    }
+
+    monthNumber += offset;
+
+    while (monthNumber < 1) {
+      monthNumber += 12;
+      yearNumber -= 1;
+    }
+
+    while (monthNumber > 12) {
+      monthNumber -= 12;
+      yearNumber += 1;
+    }
+
+    const nextValue = `${yearNumber.toString().padStart(4, '0')}-${monthNumber.toString().padStart(2, '0')}`;
+    monthYearInput.value = nextValue;
+    syncHiddenFields();
+  };
+
+  if (monthYearInput) {
+    monthYearInput.addEventListener('change', syncHiddenFields);
+    monthYearInput.addEventListener('input', syncHiddenFields);
+    syncHiddenFields();
+  }
+
+  if (prevPeriodButton) {
+    prevPeriodButton.addEventListener('click', (event) => {
+      event.preventDefault();
+      adjustMonth(-1);
+    });
+  }
+
+  if (nextPeriodButton) {
+    nextPeriodButton.addEventListener('click', (event) => {
+      event.preventDefault();
+      adjustMonth(1);
+    });
+  }
+
+  if (filterForm) {
+    filterForm.addEventListener('submit', () => {
+      syncHiddenFields();
+    });
+  }
+
   const weekAssignments = {{ week_assignments|tojson|safe }};
   const viewButtons = document.querySelectorAll('[data-view]');
   const views = {
