@@ -155,6 +155,45 @@
   {% endif %}
 
   <section class="employees-board card">
+    <div class="employees-board-controls">
+      <form method="get" class="employees-search-form">
+        <label for="employee-search" class="filter-field search-field">
+          <span>Suchen</span>
+          <input
+            type="search"
+            id="employee-search"
+            name="q"
+            value="{{ search_query }}"
+            placeholder="Name, E-Mail oder Kürzel"
+            class="form-control form-control-sm"
+          >
+        </label>
+        <label for="employment-filter" class="filter-field">
+          <span>Anstellungsart</span>
+          <select
+            id="employment-filter"
+            name="position"
+            class="form-select form-select-sm"
+          >
+            <option value="">Alle</option>
+            <option value="Vollzeit" {% if selected_position == 'Vollzeit' %}selected{% endif %}>Vollzeit</option>
+            <option value="Teilzeit" {% if selected_position == 'Teilzeit' %}selected{% endif %}>Teilzeit</option>
+            <option value="Aushilfe" {% if selected_position == 'Aushilfe' %}selected{% endif %}>Aushilfe</option>
+          </select>
+        </label>
+        <input type="hidden" name="month" value="{{ current_month }}">
+        <input type="hidden" name="year" value="{{ current_year }}">
+        <div class="employees-search-form-actions">
+          <button type="submit" class="btn btn-primary btn-sm">Filtern</button>
+          {% if search_query or selected_position %}
+          <a
+            href="{{ url_for('employees', month=current_month, year=current_year) }}"
+            class="btn btn-link btn-sm"
+          >Zurücksetzen</a>
+          {% endif %}
+        </div>
+      </form>
+    </div>
     <header class="employees-board-header">
       <div class="board-header-text">
         <span class="board-icon">📋</span>
@@ -180,6 +219,8 @@
             {% endfor %}
           </select>
         </label>
+        <input type="hidden" name="q" value="{{ search_query }}">
+        <input type="hidden" name="position" value="{{ selected_position }}">
         <button type="submit" class="btn btn-primary btn-sm">Aktualisieren</button>
       </form>
     </header>
