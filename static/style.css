@@ -3389,18 +3389,23 @@ body {
   width: 90%;
   max-width: 600px;
   max-height: 90vh;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .modal-header {
   padding: 1.5rem;
   border-bottom: 1px solid var(--border-color);
   display: flex;
-  justify-content: between;
+  justify-content: space-between;
   align-items: center;
   background: linear-gradient(135deg, var(--primary-color) 0%, #3b82f6 100%);
   color: white;
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
 .modal-title {
@@ -3427,6 +3432,12 @@ body {
 
 .modal-body {
   padding: 1.5rem;
+  overflow-y: auto;
+  flex: 1 1 auto;
+}
+
+.modal.show .modal-dialog {
+  margin: auto;
 }
 
 /* Responsive Utilities für Dienstplan */
