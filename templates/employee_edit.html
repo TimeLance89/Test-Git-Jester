@@ -135,13 +135,13 @@
             <label for="email" class="form-label">
               <span style="margin-right: 0.5rem;">📧</span>E‑Mail
             </label>
-            <input type="email" class="form-control" id="email" name="email" value="{{ emp.email }}" />
+            <input type="email" class="form-control" id="email" name="email" value="{{ emp.email or '' }}" />
           </div>
           <div class="col-md-6">
             <label for="phone" class="form-label">
               <span style="margin-right: 0.5rem;">📱</span>Telefon
             </label>
-            <input type="text" class="form-control" id="phone" name="phone" value="{{ emp.phone }}" />
+            <input type="text" class="form-control" id="phone" name="phone" value="{{ emp.phone or '' }}" />
           </div>
         </div>
       </div>

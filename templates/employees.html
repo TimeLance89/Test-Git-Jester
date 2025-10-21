@@ -67,6 +67,34 @@
           <span class="insight-label">Überstunden</span>
           <span class="insight-value">{{ planning_insights.total_overtime_hours|round(1) }}h</span>
         </div>
+        <div class="insight-metric">
+          <span class="insight-label">Abdeckung</span>
+          <span class="insight-value">{{ planning_insights.coverage_rate|round(0) }}%</span>
+          <span class="insight-hint">von {{ planning_insights.total_target_hours|round(0) }}h Soll</span>
+        </div>
+        <div class="insight-metric">
+          <span class="insight-label">Ø Reststunden</span>
+          <span class="insight-value">{{ planning_insights.avg_remaining_hours|round(1) }}h</span>
+        </div>
+      </div>
+      <div class="insight-details">
+        <p>
+          <strong>{{ planning_insights.assistant_count }}</strong> Aushilfen insgesamt ·
+          <strong>{{ planning_insights.underutilized_count }}</strong> mit freien Kapazitäten ·
+          <strong>{{ planning_insights.overutilized_count }}</strong> mit Überstunden
+        </p>
+        <p>
+          Netto-Kapazität: <strong>{{ planning_insights.net_available_hours|round(1) }}h</strong>
+          ({{ planning_insights.total_remaining_hours|round(1) }}h frei −
+          {{ planning_insights.total_overtime_hours|round(1) }}h Überstunden)
+        </p>
+        <p>
+          Geleistet: {{ planning_insights.total_worked_hours|round(1) }}h · Ø Überstunden:
+          {{ planning_insights.avg_overtime_hours|round(1) }}h
+        </p>
+        {% if planning_insights.assistants_without_hours %}
+        <p>{{ planning_insights.assistants_without_hours }} Aushilfen haben noch keine genehmigten Einsätze in diesem Monat.</p>
+        {% endif %}
       </div>
     </article>
 
