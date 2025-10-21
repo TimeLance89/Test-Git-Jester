@@ -13,11 +13,13 @@ from __future__ import annotations
 
 import calendar
 import secrets
+from collections import Counter, defaultdict
 from datetime import date, datetime, timedelta
 from typing import Dict, List, Tuple
 import pandas as pd
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import or_, and_
+from sqlalchemy import or_, and_, func
+from sqlalchemy.orm import joinedload
 
 from flask import (
     Flask,
@@ -776,24 +778,314 @@ def create_app() -> Flask:
     @app.route("/")
     @login_required
     def index() -> str:
-        """Startseite: einfache Übersicht über die vorhandenen Daten."""
+        """Startseite mit interaktiver Übersicht über echte Teamdaten."""
         current_user = get_current_user()
-        
-        if current_user and current_user.department_id:
-            # Abteilungsadmin sieht nur Statistiken seiner Abteilung
-            employee_count = Employee.query.filter_by(department_id=current_user.department_id).count()
-            department_count = 1  # Nur die eigene Abteilung
-            
-            # Nur Abwesenheitsanträge der eigenen Abteilung
-            pending_leaves = db.session.query(Leave).join(Employee).filter(
-                Leave.approved == False,
-                Employee.department_id == current_user.department_id
-            ).count()
+        is_admin = bool(session.get("is_admin"))
+
+        department_id = current_user.department_id if current_user and current_user.department_id else None
+
+        if department_id:
+            # Abteilungsadmins und Mitarbeitende sehen nur Daten ihrer Abteilung
+            employee_count = Employee.query.filter_by(department_id=department_id).count()
+            department_count = 1
+            pending_leaves = (
+                db.session.query(Leave)
+                .join(Employee)
+                .filter(Leave.approved == False, Employee.department_id == department_id)
+                .count()
+            )
         else:
-            # Super-Admin sieht alle Statistiken
+            # Systemadmins erhalten die globale Sicht
             employee_count = Employee.query.count()
             department_count = Department.query.count()
             pending_leaves = Leave.query.filter_by(approved=False).count()
+
+        today = date.today()
+        week_dates = [today + timedelta(days=offset) for offset in range(7)]
+        week_start, week_end = week_dates[0], week_dates[-1]
+        weekday_short_names = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
+
+        shifts_query = Shift.query.filter(Shift.date >= week_start, Shift.date <= week_end)
+        leaves_query = Leave.query.filter(Leave.end_date >= week_start, Leave.start_date <= week_end)
+
+        if department_id:
+            shifts_query = shifts_query.join(Employee).filter(Employee.department_id == department_id)
+            leaves_query = leaves_query.join(Employee).filter(Employee.department_id == department_id)
+
+        shifts = (
+            shifts_query.options(joinedload(Shift.employee).joinedload(Employee.department)).all()
+        )
+        leaves = (
+            leaves_query.options(joinedload(Leave.employee).joinedload(Employee.department)).all()
+        )
+
+        approved_shifts = [shift for shift in shifts if shift.approved]
+
+        hours_by_day = {day: 0.0 for day in week_dates}
+        employees_by_day: Dict[date, set[int]] = {day: set() for day in week_dates}
+        scheduled_employee_hours: Dict[int, float] = defaultdict(float)
+        unique_employees_scheduled: set[int] = set()
+
+        for shift in approved_shifts:
+            hours_by_day[shift.date] = hours_by_day.get(shift.date, 0.0) + shift.hours
+            employees_by_day.setdefault(shift.date, set()).add(shift.employee_id)
+            unique_employees_scheduled.add(shift.employee_id)
+            scheduled_employee_hours[shift.employee_id] += shift.hours
+
+        employees_on_leave_by_day: Dict[date, set[int]] = {day: set() for day in week_dates}
+        leave_type_counter: Counter[str] = Counter()
+        leave_status_counter: Counter[str] = Counter()
+
+        for leave in leaves:
+            leave_type_counter[leave.leave_type] += 1
+            leave_status_counter["approved" if leave.approved else "pending"] += 1
+
+            current = max(leave.start_date, week_start)
+            last = min(leave.end_date, week_end)
+            while current <= last:
+                employees_on_leave_by_day.setdefault(current, set()).add(leave.employee_id)
+                current += timedelta(days=1)
+
+        team_capacity = []
+        total_hours = 0.0
+        for day in week_dates:
+            scheduled_count = len(employees_by_day.get(day, set()))
+            on_leave_count = len(employees_on_leave_by_day.get(day, set()))
+            available_count = max(employee_count - on_leave_count, 0)
+            hours = round(hours_by_day.get(day, 0.0), 2)
+            coverage = round((scheduled_count / available_count) * 100, 1) if available_count else 0.0
+
+            total_hours += hours
+
+            team_capacity.append(
+                {
+                    "date_iso": day.isoformat(),
+                    "date_label": f"{weekday_short_names[day.weekday()]} {day.strftime('%d.%m.')}",
+                    "hours": hours,
+                    "scheduled": scheduled_count,
+                    "on_leave": on_leave_count,
+                    "available": available_count,
+                    "coverage": coverage,
+                }
+            )
+
+        coverage_average = (
+            round(
+                sum(entry["coverage"] for entry in team_capacity) / len(team_capacity),
+                1,
+            )
+            if team_capacity
+            else 0.0
+        )
+
+        coverage_today = next(
+            (entry for entry in team_capacity if entry["date_iso"] == today.isoformat()),
+            None,
+        )
+
+        if coverage_today:
+            if coverage_today["available"] == 0 and coverage_today["scheduled"] == 0:
+                coverage_message = "Heute liegen keine Einsätze für das Team vor."
+            elif coverage_today["coverage"] >= 90:
+                coverage_message = "Starke Besetzung – alle Schichten sind nahezu vollständig gedeckt."
+            elif coverage_today["coverage"] >= 70:
+                coverage_message = "Gute Abdeckung. Behalte verbleibende Lücken im Blick."
+            else:
+                coverage_message = "Plane zusätzliche Einsätze, um offene Schichten zu schließen."
+        else:
+            coverage_message = "Für die aktuelle Woche wurden noch keine Einsätze geplant."
+
+        capacity_highlights = [
+            {
+                "date_label": entry["date_label"],
+                "coverage": entry["coverage"],
+                "scheduled": entry["scheduled"],
+                "available": entry["available"],
+            }
+            for entry in sorted(team_capacity, key=lambda item: item["coverage"])[:3]
+        ]
+
+        week_chart = {
+            "labels": [entry["date_label"] for entry in team_capacity],
+            "hours": [entry["hours"] for entry in team_capacity],
+            "scheduled": [entry["scheduled"] for entry in team_capacity],
+            "on_leave": [entry["on_leave"] for entry in team_capacity],
+        }
+
+        leave_status_overview = {
+            "approved": leave_status_counter.get("approved", 0),
+            "pending": leave_status_counter.get("pending", 0),
+        }
+
+        leave_type_breakdown = [
+            {"type": leave_type, "count": count}
+            for leave_type, count in sorted(
+                leave_type_counter.items(), key=lambda item: item[1], reverse=True
+            )
+        ]
+
+        department_distribution = []
+        if department_id:
+            department = Department.query.get(department_id)
+            department_distribution.append(
+                {
+                    "name": department.name if department else "Abteilung",
+                    "count": employee_count,
+                }
+            )
+        else:
+            department_counts = (
+                db.session.query(Department.name, func.count(Employee.id))
+                .outerjoin(Employee)
+                .group_by(Department.id)
+                .order_by(Department.name)
+                .all()
+            )
+            department_distribution = [
+                {"name": name or "Ohne Zuordnung", "count": count}
+                for name, count in department_counts
+            ]
+
+        employee_lookup = {}
+        for shift in approved_shifts:
+            if shift.employee:
+                employee_lookup[shift.employee_id] = shift.employee.name
+
+        top_contributors = [
+            {"name": employee_lookup.get(emp_id, "Mitarbeiter"), "hours": round(hours, 2)}
+            for emp_id, hours in sorted(
+                scheduled_employee_hours.items(), key=lambda item: item[1], reverse=True
+            )[:5]
+        ]
+
+        personal_week_overview = {"hours": 0.0, "shift_count": 0, "leave_days": 0, "pending_leaves": 0}
+        if current_user:
+            personal_week_shifts = [
+                shift for shift in approved_shifts if shift.employee_id == current_user.id
+            ]
+            personal_week_overview["hours"] = round(
+                sum(shift.hours for shift in personal_week_shifts),
+                1,
+            )
+            personal_week_overview["shift_count"] = len(personal_week_shifts)
+            personal_week_overview["leave_days"] = sum(
+                1 for employees in employees_on_leave_by_day.values() if current_user.id in employees
+            )
+            personal_week_overview["pending_leaves"] = sum(
+                1 for leave in leaves if leave.employee_id == current_user.id and not leave.approved
+            )
+
+        upcoming_events = []
+        for shift in approved_shifts:
+            event_title = shift.shift_type or "Einsatz"
+            event_employee = (
+                shift.employee.short_code
+                or shift.employee.name
+                if shift.employee
+                else "Unbekannt"
+            )
+            event_department = (
+                shift.employee.department.name
+                if shift.employee and shift.employee.department
+                else None
+            )
+            upcoming_events.append(
+                (
+                    shift.date,
+                    {
+                        "type": "shift",
+                        "title": event_title,
+                        "employee": event_employee,
+                        "hours": round(shift.hours, 2),
+                        "department": event_department,
+                    },
+                )
+            )
+
+        for leave in leaves:
+            event_department = (
+                leave.employee.department.name
+                if leave.employee and leave.employee.department
+                else None
+            )
+            upcoming_events.append(
+                (
+                    leave.start_date,
+                    {
+                        "type": "leave",
+                        "title": leave.leave_type,
+                        "employee": leave.employee.name if leave.employee else "Unbekannt",
+                        "approved": bool(leave.approved),
+                        "start": leave.start_date.strftime("%d.%m."),
+                        "end": leave.end_date.strftime("%d.%m."),
+                        "department": event_department,
+                    },
+                )
+            )
+
+        upcoming_events = [
+            {
+                **data,
+                "date": event_date.isoformat(),
+                "date_label": event_date.strftime("%d.%m.%Y"),
+            }
+            for event_date, data in sorted(upcoming_events, key=lambda item: item[0])[:6]
+        ]
+
+        next_shift_query = Shift.query.filter(Shift.date >= today, Shift.approved == True)
+        if current_user and not is_admin:
+            next_shift_query = next_shift_query.filter(Shift.employee_id == current_user.id)
+        elif department_id:
+            next_shift_query = next_shift_query.join(Employee).filter(Employee.department_id == department_id)
+
+        next_shift = next_shift_query.order_by(Shift.date.asc(), Shift.id.asc()).first()
+        next_shift_info = None
+        if next_shift:
+            next_shift_info = {
+                "title": next_shift.shift_type or "Einsatz",
+                "hours": round(next_shift.hours, 2),
+                "date_label": next_shift.date.strftime("%d.%m.%Y"),
+                "employee": next_shift.employee.name if next_shift.employee else None,
+                "department": (
+                    next_shift.employee.department.name
+                    if next_shift.employee and next_shift.employee.department
+                    else None
+                ),
+                "is_personal": current_user is not None and next_shift.employee_id == current_user.id,
+            }
+
+        next_pending_leave_query = Leave.query.filter_by(approved=False)
+        if department_id:
+            next_pending_leave_query = next_pending_leave_query.join(Employee).filter(
+                Employee.department_id == department_id
+            )
+        next_pending_leave = next_pending_leave_query.order_by(Leave.start_date.asc()).first()
+        next_pending_leave_info = None
+        if next_pending_leave:
+            next_pending_leave_info = {
+                "employee": next_pending_leave.employee.name if next_pending_leave.employee else None,
+                "date_range": (
+                    f"{next_pending_leave.start_date.strftime('%d.%m.%Y')} – "
+                    f"{next_pending_leave.end_date.strftime('%d.%m.%Y')}"
+                ),
+                "type": next_pending_leave.leave_type,
+            }
+
+        approval_window_start = today - timedelta(days=30)
+        approval_window_end = today + timedelta(days=30)
+        approval_query = Leave.query.filter(
+            Leave.start_date >= approval_window_start,
+            Leave.start_date <= approval_window_end,
+        )
+        if department_id:
+            approval_query = approval_query.join(Employee).filter(Employee.department_id == department_id)
+        approval_leaves = approval_query.all()
+        approval_rate = None
+        if approval_leaves:
+            approved_count = sum(1 for leave in approval_leaves if leave.approved)
+            approval_rate = round((approved_count / len(approval_leaves)) * 100, 1)
+
+        week_window_label = f"{week_start.strftime('%d.%m.%Y')} – {week_end.strftime('%d.%m.%Y')}"
 
         return render_template(
             "index.html",
@@ -801,6 +1093,24 @@ def create_app() -> Flask:
             department_count=department_count,
             pending_leaves=pending_leaves,
             current_user=current_user,
+            team_capacity=team_capacity,
+            week_chart=week_chart,
+            leave_status_overview=leave_status_overview,
+            leave_type_breakdown=leave_type_breakdown,
+            department_distribution=department_distribution,
+            coverage_average=coverage_average,
+            coverage_today=coverage_today,
+            coverage_message=coverage_message,
+            capacity_highlights=capacity_highlights,
+            total_hours=round(total_hours, 1),
+            unique_employees=len(unique_employees_scheduled),
+            personal_week_overview=personal_week_overview,
+            top_contributors=top_contributors,
+            upcoming_events=upcoming_events,
+            next_shift_info=next_shift_info,
+            next_pending_leave=next_pending_leave_info,
+            approval_rate=approval_rate,
+            week_window_label=week_window_label,
         )
 
     @app.route("/login", methods=["GET", "POST"])

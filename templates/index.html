@@ -4,31 +4,7 @@
 {% set is_admin = session.get('is_admin') %}
 {% set is_system_admin = is_admin and (current_user and not current_user.department_id) %}
 {% set current_user_id = current_user.id if current_user else None %}
-{% set total_employees = employee_count or 0 %}
-{% set pending_ratio = (pending_leaves / (total_employees if total_employees else 1)) * 100 %}
-{% if total_employees == 0 %}
-  {% set pending_ratio = 0 %}
-{% endif %}
-{% set pending_ratio = ([pending_ratio, 100] | min) %}
-{% set pending_ratio = ([pending_ratio, 0] | max) %}
-{% set coverage_score = 100 - pending_ratio %}
-{% set coverage_score = ([coverage_score, 100] | min) %}
-{% set coverage_score = ([coverage_score, 0] | max) %}
-{% set available_people = total_employees - pending_leaves %}
-{% set available_people = ([available_people, 0] | max) %}
-{% set available_people = ([available_people, total_employees] | min) %}
-{% if coverage_score > 75 %}
-  {% set focus_score = 92 %}
-  {% set satisfaction_score = 88 %}
-{% elif coverage_score > 50 %}
-  {% set focus_score = 84 %}
-  {% set satisfaction_score = 82 %}
-{% else %}
-  {% set focus_score = 71 %}
-  {% set satisfaction_score = 76 %}
-{% endif %}
-{% set response_speed = 'unter 24 Stunden' if is_admin else 'innerhalb von 2 Tagen' %}
-{% set highlight_statement = 'Einsätze bleiben stabil. Plane Feinjustierungen in den Stoßzeiten.' if coverage_score > 65 else 'Plane zusätzliche Ressourcen für Stoßzeiten und gleiche Engpässe aktiv aus.' %}
+{% set team_size = employee_count or 0 %}
 <div class="dashboard-page">
   <section class="dashboard-hero">
     <div class="dashboard-hero-main">
@@ -36,7 +12,7 @@
         {% if is_system_admin %}
           Systemadministration
         {% elif is_admin %}
-          Teamleitung & Planung
+          Teamleitung &amp; Planung
         {% else %}
           Mitarbeiterbereich
         {% endif %}
@@ -44,11 +20,25 @@
       <h1>Hallo {{ current_user.name if current_user else 'Team' }} 👋</h1>
       <p class="hero-subtitle">
         {% if is_admin %}
-          Behalte Ressourcen, offene Anträge und die Produktivität deines Teams im Blick. Von hier aus erreichst du alle wichtigen Tools für eine moderne Einsatzplanung.
+          Der aktuelle Überblick über echte Einsätze, Abwesenheiten und Kapazitäten für die nächsten sieben Tage.
         {% else %}
-          Dein persönliches Cockpit für Schichten, Urlaubsanträge und Team-News. Mit wenigen Klicks bist du vorbereitet auf die kommende Woche.
+          Behalte deine Schichten, Teamabwesenheiten und Freigaben live im Blick.
         {% endif %}
       </p>
+      <div class="hero-metrics" role="list">
+        <div class="hero-metric" role="listitem">
+          <span class="hero-metric-label">Geplante Stunden (7 Tage)</span>
+          <span class="hero-metric-value" data-count-to="{{ total_hours }}">0</span>
+        </div>
+        <div class="hero-metric" role="listitem">
+          <span class="hero-metric-label">Eingesetzte Personen</span>
+          <span class="hero-metric-value" data-count-to="{{ unique_employees }}">0</span>
+        </div>
+        <div class="hero-metric" role="listitem">
+          <span class="hero-metric-label">Ø Abdeckung</span>
+          <span class="hero-metric-value" data-count-to="{{ coverage_average }}">0</span><span class="hero-metric-suffix">%</span>
+        </div>
+      </div>
       <div class="dashboard-hero-actions">
         <a class="hero-action primary" href="{{ url_for('schedule') }}">
           <span class="hero-action-icon">📅</span>
@@ -59,18 +49,15 @@
             <span class="hero-action-icon">📝</span>
             Anträge prüfen
           </a>
-        {% else %}
-          <a class="hero-action" href="{{ url_for('leave_form') }}">
-            <span class="hero-action-icon">📝</span>
-            Urlaub beantragen
-          </a>
-        {% endif %}
-        {% if is_admin %}
           <a class="hero-action" href="{{ url_for('employees') }}">
             <span class="hero-action-icon">👥</span>
             Team verwalten
           </a>
         {% else %}
+          <a class="hero-action" href="{{ url_for('leave_form') }}">
+            <span class="hero-action-icon">📝</span>
+            Urlaub beantragen
+          </a>
           <a class="hero-action" href="{{ url_for('employee_hours_overview') }}">
             <span class="hero-action-icon">⏱️</span>
             Meine Stunden
@@ -82,14 +69,23 @@
       <div class="hero-highlight">
         <div class="highlight-icon">⚡</div>
         <div>
-          <p class="highlight-title">Nächste Schritte</p>
-          <p class="highlight-text">
-            {% if is_admin %}
-              {{ pending_leaves }} offene Abwesenheitsanträge warten auf deine Entscheidung.
-            {% else %}
-              Checke deinen Einsatzplan und sichere dir rechtzeitig freie Tage.
-            {% endif %}
-          </p>
+          {% if next_shift_info %}
+            <p class="highlight-title">{{ 'Mein nächster Einsatz' if next_shift_info.is_personal else 'Nächster Einsatz' }}</p>
+            <p class="highlight-text">
+              {{ next_shift_info.title }} • {{ next_shift_info.hours }} Std am {{ next_shift_info.date_label }}
+              {% if is_admin and next_shift_info.employee %}– {{ next_shift_info.employee }}{% endif %}
+              {% if next_shift_info.department %}<br />{{ next_shift_info.department }}{% endif %}
+            </p>
+          {% elif next_pending_leave %}
+            <p class="highlight-title">Offener Abwesenheitsantrag</p>
+            <p class="highlight-text">
+              {{ next_pending_leave.type }} von {{ next_pending_leave.employee or 'Unbekannt' }}<br />
+              Zeitraum: {{ next_pending_leave.date_range }}
+            </p>
+          {% else %}
+            <p class="highlight-title">Aktueller Hinweis</p>
+            <p class="highlight-text">Keine offenen Anträge oder geplanten Einsätze im Zeitraum {{ week_window_label }}.</p>
+          {% endif %}
         </div>
       </div>
       {% if current_user and current_user.department %}
@@ -104,9 +100,14 @@
       <div class="hero-meta-card">
         <p class="meta-label">Organisation</p>
         <p class="meta-value">Alle Standorte</p>
-        <p class="meta-support">Vollständige Systemübersicht aktiv</p>
+        <p class="meta-support">Globale Systemübersicht aktiv</p>
       </div>
       {% endif %}
+      <div class="hero-meta-card">
+        <p class="meta-label">Auswertungszeitraum</p>
+        <p class="meta-value">{{ week_window_label }}</p>
+        <p class="meta-support">Alle Kennzahlen basieren auf genehmigten Einsätzen und Abwesenheiten.</p>
+      </div>
     </div>
   </section>
 
@@ -118,9 +119,9 @@
         <p class="kpi-value">{{ employee_count }}</p>
         <p class="kpi-helper">
           {% if is_admin %}
-            Verfügbarkeit & Einsatzbereitschaft im Blick behalten
+            Teamgröße im aktuellen Verantwortungsbereich
           {% else %}
-            Kolleginnen und Kollegen im aktuellen Team
+            Kolleginnen und Kollegen in deiner Abteilung
           {% endif %}
         </p>
       </div>
@@ -132,19 +133,13 @@
     <article class="kpi-card kpi-departments">
       <div class="kpi-icon">🏢</div>
       <div class="kpi-content">
-        <p class="kpi-label">
-          {% if is_admin %}
-            Abteilungen gesamt
-          {% else %}
-            Einsatzbereich
-          {% endif %}
-        </p>
+        <p class="kpi-label">Abteilungen sichtbar</p>
         <p class="kpi-value">{{ department_count }}</p>
         <p class="kpi-helper">
           {% if is_admin %}
-            Struktur & Verantwortlichkeiten optimal ausbalancieren
+            Struktur der Organisation im Blick behalten
           {% else %}
-            Überblick über deinen Einsatzkontext
+            Dein Einsatzbereich innerhalb der Organisation
           {% endif %}
         </p>
       </div>
@@ -158,19 +153,13 @@
     <article class="kpi-card kpi-leaves">
       <div class="kpi-icon">📋</div>
       <div class="kpi-content">
-        <p class="kpi-label">
-          {% if is_admin %}
-            Offene Anträge
-          {% else %}
-            Eigene Anträge
-          {% endif %}
-        </p>
+        <p class="kpi-label">Offene Abwesenheiten</p>
         <p class="kpi-value">{{ pending_leaves }}</p>
         <p class="kpi-helper">
           {% if is_admin %}
-            Koordiniere Urlaube & Abwesenheiten ohne Medienbrüche
+            Anträge warten auf Rückmeldung im betrachteten Zeitraum
           {% else %}
-            Bleibe informiert über den Status deiner Urlaubsplanung
+            Offene Anträge in deinem Team
           {% endif %}
         </p>
       </div>
@@ -180,60 +169,118 @@
       <a class="kpi-link" href="{{ url_for('leave_form') }}">Neuen Antrag stellen →</a>
       {% endif %}
     </article>
+
+    <article class="kpi-card kpi-coverage">
+      <div class="kpi-icon">📊</div>
+      <div class="kpi-content">
+        <p class="kpi-label">Ø Abdeckung (7 Tage)</p>
+        <p class="kpi-value">{{ coverage_average }}%</p>
+        <p class="kpi-helper">{{ coverage_message }}</p>
+      </div>
+    </article>
   </section>
 
-  <section class="dashboard-actions" aria-label="Schnellzugriffe">
-    {% if is_admin %}
-    <article class="action-card">
-      <div class="action-icon">🤖</div>
-      <div class="action-content">
-        <h3>Auto-Schichten</h3>
-        <p>Erzeuge Vorschläge für optimale Dienstpläne – abgestimmt auf Kapazitäten und Prioritäten.</p>
-      </div>
-      <a class="action-link" href="{{ url_for('auto_schedule_form') }}">Jetzt planen</a>
-    </article>
-    <article class="action-card">
-      <div class="action-icon">⚙️</div>
-      <div class="action-content">
-        <h3>Produktivität steuern</h3>
-        <p>Lege Kennzahlen pro Abteilung fest und vergleiche Soll- und Ist-Stunden.</p>
-      </div>
-      <a class="action-link" href="{{ url_for('productivity_settings') }}">Einstellungen öffnen</a>
-    </article>
-    <article class="action-card">
-      <div class="action-icon">📈</div>
-      <div class="action-content">
-        <h3>Monatsreport</h3>
-        <p>Auswertungen und Trends für transparente Kommunikation mit Stakeholdern.</p>
-      </div>
-      <a class="action-link" href="{{ url_for('monthly_report') }}">Bericht ansehen</a>
-    </article>
-    {% else %}
-    <article class="action-card">
-      <div class="action-icon">🗓️</div>
-      <div class="action-content">
-        <h3>Meine Schichten</h3>
-        <p>Plane deine Woche und behalte Früh-, Spät- und Sonderdienste im Blick.</p>
-      </div>
-      <a class="action-link" href="{{ url_for('schedule') }}">Zum Dienstplan</a>
-    </article>
-    <article class="action-card">
-      <div class="action-icon">🏖️</div>
-      <div class="action-content">
-        <h3>Abwesenheit melden</h3>
-        <p>Stelle Urlaubsanträge oder informiere dein Team über geplante Abwesenheiten.</p>
-      </div>
-      <a class="action-link" href="{{ url_for('leave_form') }}">Antrag stellen</a>
-    </article>
-    <article class="action-card">
-      <div class="action-icon">💬</div>
-      <div class="action-content">
-        <h3>Profil & Kontakt</h3>
-        <p>Aktualisiere deine Erreichbarkeit und finde die richtigen Ansprechpartner.</p>
-      </div>
-      <a class="action-link" href="{{ url_for('employee_profile', emp_id=current_user_id) }}">Profil öffnen</a>
-    </article>
-    {% endif %}
+  <section class="dashboard-analytics" aria-label="Datenvisualisierung">
+    <div class="analytics-grid">
+      <article class="analytics-card chart-card wide">
+        <header class="analytics-header">
+          <div>
+            <p class="analytics-eyebrow">Teamkapazität</p>
+            <h2>Geplante Stunden &amp; Besetzung</h2>
+          </div>
+          <p class="analytics-helper">Zeitraum {{ week_window_label }}</p>
+        </header>
+        <canvas id="weekHoursChart" role="img" aria-label="Geplante Stunden und eingesetzte Personen"></canvas>
+        <ul class="chart-legend" aria-hidden="true">
+          <li><span class="legend-dot is-hours"></span><span>Stunden gesamt</span></li>
+          <li><span class="legend-dot is-people"></span><span>Eingesetzte Personen</span></li>
+          <li><span class="legend-dot is-leave"></span><span>Team in Abwesenheit</span></li>
+        </ul>
+      </article>
+
+      <article class="analytics-card activity-card">
+        <header class="analytics-header">
+          <div>
+            <p class="analytics-eyebrow">Timeline</p>
+            <h2>Nächste Ereignisse</h2>
+          </div>
+        </header>
+        <ul class="activity-list">
+          {% if upcoming_events %}
+            {% for event in upcoming_events %}
+            <li class="activity-item activity-{{ event.type }}">
+              <div class="activity-meta">
+                <span class="activity-date">{{ event.date_label }}</span>
+                <span class="activity-type">{% if event.type == 'shift' %}Einsatz{% else %}Abwesenheit{% endif %}</span>
+              </div>
+              <p class="activity-title">
+                {% if event.type == 'shift' %}
+                  {{ event.employee }} – {{ event.title }}
+                {% else %}
+                  {{ event.employee }} – {{ event.title }}
+                {% endif %}
+              </p>
+              <p class="activity-subtitle">
+                {% if event.type == 'shift' %}
+                  {{ event.hours }} Std{% if event.department %} • {{ event.department }}{% endif %}
+                {% else %}
+                  {{ event.start }} – {{ event.end }} • {{ 'Genehmigt' if event.approved else 'Offen' }}{% if event.department %} • {{ event.department }}{% endif %}
+                {% endif %}
+              </p>
+            </li>
+            {% endfor %}
+          {% else %}
+            <li class="activity-empty">Keine Ereignisse im Zeitraum {{ week_window_label }}.</li>
+          {% endif %}
+        </ul>
+      </article>
+
+      <article class="analytics-card chart-card">
+        <header class="analytics-header">
+          <div>
+            <p class="analytics-eyebrow">Abwesenheiten</p>
+            <h2>Statusübersicht</h2>
+          </div>
+        </header>
+        <div class="chart-wrapper">
+          <canvas id="leaveStatusChart" role="img" aria-label="Status genehmigt vs. offen"></canvas>
+          {% if leave_status_overview.approved == 0 and leave_status_overview.pending == 0 %}
+          <p class="chart-empty">Keine Abwesenheiten im ausgewählten Zeitraum.</p>
+          {% endif %}
+        </div>
+        <ul class="chart-stats">
+          <li>Genehmigt: {{ leave_status_overview.approved }}</li>
+          <li>Offen: {{ leave_status_overview.pending }}</li>
+          {% if approval_rate is not none %}
+          <li>Freigaberate (30 Tage): {{ approval_rate }}%</li>
+          {% endif %}
+        </ul>
+      </article>
+
+      <article class="analytics-card chart-card">
+        <header class="analytics-header">
+          <div>
+            <p class="analytics-eyebrow">Teamstruktur</p>
+            <h2>Verteilung nach Abteilung</h2>
+          </div>
+        </header>
+        <div class="chart-wrapper">
+          <canvas id="departmentChart" role="img" aria-label="Mitarbeitende nach Abteilung"></canvas>
+          {% if department_distribution | sum(attribute='count') == 0 %}
+          <p class="chart-empty">Keine Mitarbeitenden zugeordnet.</p>
+          {% endif %}
+        </div>
+        <ul class="chart-stats">
+          {% if department_distribution %}
+            {% for entry in department_distribution %}
+            <li>{{ entry.name }}: {{ entry.count }}</li>
+            {% endfor %}
+          {% else %}
+            <li>Keine Abteilungsdaten verfügbar.</li>
+          {% endif %}
+        </ul>
+      </article>
+    </div>
   </section>
 
   <section class="dashboard-panels">
@@ -241,65 +288,44 @@
       <header class="panel-header">
         <div>
           <p class="panel-eyebrow">Aktuelles</p>
-          <h2>{% if is_admin %}Prioritäten heute{% else %}Meine nächsten Schritte{% endif %}</h2>
+          <h2>Prioritäten heute</h2>
         </div>
       </header>
       <ul class="panel-list">
         <li>
           <span class="status-dot {% if pending_leaves > 0 %}status-warning{% else %}status-success{% endif %}"></span>
           <div>
-            <p class="list-title">
-              {% if is_admin %}
-                Offene Abwesenheiten
-              {% else %}
-                Urlaubsstatus prüfen
-              {% endif %}
-            </p>
-            <p class="list-subtitle">
-              {% if is_admin %}
-                {{ pending_leaves }} Anträge warten auf Rückmeldung
-              {% else %}
-                Bleibe informiert: {{ pending_leaves }} Anträge noch in Bearbeitung
-              {% endif %}
-            </p>
+            <p class="list-title">Offene Abwesenheiten</p>
+            <p class="list-subtitle">{{ pending_leaves }} Anträge warten auf Freigabe.</p>
           </div>
           <a class="panel-link" href="{{ url_for('leave_requests') if is_admin else url_for('leave_form') }}">
-            {% if is_admin %}Ansehen{% else %}Status anzeigen{% endif %}
+            {% if is_admin %}Bearbeiten{% else %}Status prüfen{% endif %}
           </a>
         </li>
         <li>
           <span class="status-dot status-info"></span>
           <div>
-            <p class="list-title">Dienstplan aktualisieren</p>
-            <p class="list-subtitle">
-              {% if is_admin %}
-                Prüfe Engpässe und gleiche Kapazitäten über Abteilungen hinweg aus
-              {% else %}
-                Sichere dir Wunschschichten frühzeitig und bleibe flexibel
-              {% endif %}
-            </p>
+            <p class="list-title">Geplante Stunden</p>
+            <p class="list-subtitle">{{ total_hours }} Stunden in den nächsten sieben Tagen.</p>
           </div>
           <a class="panel-link" href="{{ url_for('schedule') }}">Öffnen</a>
         </li>
-        {% if is_admin %}
         <li>
           <span class="status-dot status-neutral"></span>
           <div>
-            <p class="list-title">Teamkommunikation</p>
-            <p class="list-subtitle">Informiere Kolleg:innen über Änderungen und neue Prioritäten</p>
+            <p class="list-title">Eigene Woche</p>
+            <p class="list-subtitle">
+              {% if personal_week_overview.shift_count > 0 %}
+                {{ personal_week_overview.shift_count }} Schichten • {{ personal_week_overview.hours }} Std • {{ personal_week_overview.leave_days }} Tage Abwesenheit
+              {% else %}
+                Keine genehmigten Einsätze für dich in den nächsten sieben Tagen.
+              {% endif %}
+            </p>
           </div>
-          <a class="panel-link" href="{{ url_for('shift_requests_overview') }}">Übersicht</a>
+          <a class="panel-link" href="{{ url_for('employee_hours_overview') if not is_admin else url_for('schedule') }}">
+            {% if is_admin %}Teamstunden{% else %}Meine Übersicht{% endif %}
+          </a>
         </li>
-        {% else %}
-        <li>
-          <span class="status-dot status-neutral"></span>
-          <div>
-            <p class="list-title">Profil aktualisieren</p>
-            <p class="list-subtitle">Halte Telefonnummer und bevorzugte Einsatzzeiten aktuell</p>
-          </div>
-          <a class="panel-link" href="{{ url_for('employee_profile', emp_id=current_user_id) }}">Bearbeiten</a>
-        </li>
-        {% endif %}
       </ul>
     </article>
 
@@ -307,48 +333,38 @@
       <header class="panel-header">
         <div>
           <p class="panel-eyebrow">Insights</p>
-          <h2>{% if is_admin %}Team & Ressourcen{% else %}Wissenswertes{% endif %}</h2>
+          <h2>Trends aus echten Daten</h2>
         </div>
       </header>
       <div class="insight-grid">
         <div class="insight-card">
-          <p class="insight-label">Auslastung</p>
-          <p class="insight-value">
-            {% if employee_count > 0 %}
-              {{ 'Hoch' if pending_leaves / (employee_count or 1) > 0.2 else 'Stabil' }}
-            {% else %}
-              Keine Daten
-            {% endif %}
-          </p>
-          <p class="insight-text">
-            {% if is_admin %}
-              Nutze Kapazitätsdaten, um Engpässe frühzeitig zu erkennen und gegenzusteuern.
-            {% else %}
-              Plane Urlaub abgestimmt auf Team-Kapazitäten für eine faire Verteilung.
-            {% endif %}
-          </p>
+          <p class="insight-label">Ø Abdeckung</p>
+          <p class="insight-value">{{ coverage_average }}%</p>
+          <p class="insight-text">{{ coverage_message }}</p>
         </div>
         <div class="insight-card">
-          <p class="insight-label">Fokus dieser Woche</p>
-          <p class="insight-value">{{ 'Planung optimieren' if is_admin else 'Transparente Kommunikation' }}</p>
-          <p class="insight-text">
-            {% if is_admin %}
-              Stimme dich mit Teamleitungen ab und halte Stakeholder mit Berichten auf dem Laufenden.
-            {% else %}
-              Teile frühzeitig Verfügbarkeiten und tausche dich mit deinem Team zu Schichten aus.
-            {% endif %}
-          </p>
+          <p class="insight-label">Top-Einsätze</p>
+          {% if top_contributors %}
+          <ul class="insight-list">
+            {% for contributor in top_contributors %}
+            <li>{{ contributor.name }} • {{ contributor.hours }} Std</li>
+            {% endfor %}
+          </ul>
+          {% else %}
+          <p class="insight-text">Keine Einsätze im Zeitraum geplant.</p>
+          {% endif %}
         </div>
         <div class="insight-card">
-          <p class="insight-label">Tipps</p>
-          <p class="insight-value">Proaktiv handeln</p>
-          <p class="insight-text">
-            {% if is_admin %}
-              Nutze Auto-Schichten als Ausgangspunkt und individualisiere Einsätze für Spitzenzeiten.
-            {% else %}
-              Prüfe den Dienstplan regelmäßig, um spontane Änderungen nicht zu verpassen.
-            {% endif %}
-          </p>
+          <p class="insight-label">Abwesenheiten nach Typ</p>
+          {% if leave_type_breakdown %}
+          <ul class="insight-list">
+            {% for entry in leave_type_breakdown[:3] %}
+            <li>{{ entry.type }}: {{ entry.count }}</li>
+            {% endfor %}
+          </ul>
+          {% else %}
+          <p class="insight-text">Keine Abwesenheiten gemeldet.</p>
+          {% endif %}
         </div>
       </div>
     </article>
@@ -361,215 +377,140 @@
         <h2>Puls der Organisation</h2>
         <p class="pulse-description">
           {% if is_admin %}
-            Interaktive Kennzahlen unterstützen dich bei Entscheidungen zu Kapazitäten, Stimmung und offenen Aufgaben.
+            Alle Kennzahlen basieren auf realen Einsätzen und genehmigten Abwesenheiten der kommenden Woche.
           {% else %}
-            Behalte deine Einsätze, Verfügbarkeiten und die Stimmung im Team im Blick – alles live aktualisiert.
+            Sieh sofort, wie viele Kolleg:innen eingeplant sind und welche Anträge noch offen sind.
           {% endif %}
         </p>
       </div>
       <div class="pulse-filters" role="group" aria-label="Darstellung wählen">
         <button class="pulse-filter is-active" type="button" data-target="pulse-capacity">Kapazität</button>
         <button class="pulse-filter" type="button" data-target="pulse-availability">Verfügbarkeit</button>
-        <button class="pulse-filter" type="button" data-target="pulse-sentiment">Teamgefühl</button>
+        <button class="pulse-filter" type="button" data-target="pulse-leave">Abwesenheiten</button>
       </div>
     </header>
     <div class="pulse-panels">
       <article class="pulse-panel is-active" id="pulse-capacity">
         <div class="pulse-metric">
-          <span class="pulse-metric-label">Abgedeckte Schichten</span>
+          <span class="pulse-metric-label">Ø Abdeckung (7 Tage)</span>
           <div class="pulse-metric-value-wrapper">
-            <span class="pulse-metric-value" data-count-to="{{ coverage_score|round(0, 'floor')|int }}">0</span>
+            <span class="pulse-metric-value" data-count-to="{{ coverage_average }}">0</span>
             <span class="pulse-metric-unit">%</span>
           </div>
-          <p class="pulse-metric-hint">{{ highlight_statement }}</p>
-          <div class="pulse-progress" style="--progress: {{ coverage_score|round(0, 'floor')|int }}%">
+          <p class="pulse-metric-hint">{{ coverage_message }}</p>
+          <div class="pulse-progress" style="--progress: {{ coverage_average }}%">
             <div class="pulse-progress-fill"></div>
           </div>
         </div>
         <ul class="pulse-highlights">
+          {% for highlight in capacity_highlights %}
           <li>
-            <span class="status-dot {% if pending_leaves > 0 %}status-warning{% else %}status-success{% endif %}"></span>
+            <span class="status-dot {% if highlight.coverage >= 80 %}status-success{% elif highlight.coverage >= 60 %}status-info{% else %}status-warning{% endif %}"></span>
             <div>
-              <p class="pulse-highlight-title">
-                {% if is_admin %}
-                  {{ pending_leaves }} offene Anträge
-                {% else %}
-                  {{ pending_leaves }} offene Rückmeldungen
-                {% endif %}
-              </p>
-              <p class="pulse-highlight-text">
-                {% if is_admin %}
-                  Priorisiere Freigaben, um Engpässe frühzeitig zu entschärfen.
-                {% else %}
-                  Bleibe proaktiv: Halte dein Team über Wunschschichten und Anträge auf dem Laufenden.
-                {% endif %}
-              </p>
+              <p class="pulse-highlight-title">{{ highlight.date_label }}</p>
+              <p class="pulse-highlight-text">{{ highlight.scheduled }} von {{ highlight.available }} Personen eingeplant ({{ highlight.coverage }}%).</p>
             </div>
           </li>
-          <li>
-            <span class="status-dot status-info"></span>
-            <div>
-              <p class="pulse-highlight-title">Fokus-Index</p>
-              <p class="pulse-highlight-value">
-                <span data-count-to="{{ focus_score|int }}">0</span>
-                <span class="pulse-highlight-unit">%</span>
-              </p>
-              <p class="pulse-highlight-text">
-                {% if is_admin %}
-                  Nutze Kapazitätsdaten, um Teams zielgerichtet für anstehende Projekte auszurichten.
-                {% else %}
-                  Stimme Wünsche frühzeitig mit deiner Leitung ab und sichere dir Wunschschichten.
-                {% endif %}
-              </p>
-            </div>
-          </li>
-          <li>
-            <span class="status-dot status-neutral"></span>
-            <div>
-              <p class="pulse-highlight-title">Reaktionszeit</p>
-              <p class="pulse-highlight-value">{{ response_speed }}</p>
-              <p class="pulse-highlight-text">
-                {% if is_admin %}
-                  Transparente Rückmeldungen schaffen Vertrauen im Team.
-                {% else %}
-                  Teile Updates, damit Entscheidungen schneller getroffen werden können.
-                {% endif %}
-              </p>
-            </div>
-          </li>
+          {% endfor %}
         </ul>
       </article>
       <article class="pulse-panel" id="pulse-availability">
         <div class="pulse-split">
           <div class="pulse-tile">
-            <p class="pulse-tile-eyebrow">Verfügbarkeit</p>
+            <p class="pulse-tile-eyebrow">Heutige Verfügbarkeit</p>
             <h3>
-              <span data-count-to="{{ available_people|int }}">0</span>
-              <span class="pulse-tile-separator">/</span>
-              {{ total_employees }}
+              {% if coverage_today %}
+              <span data-count-to="{{ coverage_today.available }}">0</span>
+              {% else %}
+              <span>0</span>
+              {% endif %}
             </h3>
             <p class="pulse-tile-text">
-              {% if is_admin %}
-                Mitarbeitende sind aktuell einsatzbereit. Plane Vertretungen für Abwesenheiten rechtzeitig ein.
+              {% if coverage_today %}
+                {{ coverage_today.scheduled }} Personen eingeplant, {{ coverage_today.on_leave }} in Abwesenheit.
               {% else %}
-                Kolleg:innen stehen für Schichttausch bereit – nutze ruhige Zeiten für Abstimmungen.
+                Keine Einsätze für heute vorhanden.
               {% endif %}
             </p>
           </div>
           <div class="pulse-tile">
-            <p class="pulse-tile-eyebrow">Aktivität</p>
+            <p class="pulse-tile-eyebrow">Team im Urlaub (7 Tage)</p>
             <h3>
-              {% if total_employees %}
-              <span data-count-to="{{ pending_ratio|round(0, 'floor')|int }}">0</span><span class="pulse-tile-unit">%</span>
-              {% else %}
-              <span>0</span><span class="pulse-tile-unit">%</span>
-              {% endif %}
+              <span data-count-to="{{ leave_status_overview.approved + leave_status_overview.pending }}">0</span>
             </h3>
-            <p class="pulse-tile-text">
-              {% if is_admin %}
-                Anteil der Teammitglieder mit offenen Abwesenheiten in dieser Woche.
-              {% else %}
-                Zeigt, wie viele Anfragen aktuell bearbeitet werden und wie dynamisch die Planung ist.
-              {% endif %}
-            </p>
+            <p class="pulse-tile-text">Summe aller Abwesenheiten im Zeitraum.</p>
           </div>
         </div>
         <ul class="pulse-checklist">
+          {% for entry in team_capacity[:3] %}
           <li>
-            <span class="status-dot status-success"></span>
+            <span class="status-dot {% if entry.coverage >= 80 %}status-success{% elif entry.coverage >= 60 %}status-info{% else %}status-warning{% endif %}"></span>
             <div>
-              <p class="pulse-highlight-title">Schichtabdeckung prüfen</p>
-              <p class="pulse-highlight-text">
-                {% if is_admin %}
-                  Gleiche Kapazitäten zwischen Abteilungen aus und dokumentiere Anpassungen transparent.
-                {% else %}
-                  Aktualisiere deine Einsatzzeiten, um verlässliche Übersichten für die Leitung zu ermöglichen.
-                {% endif %}
-              </p>
+              <p class="pulse-highlight-title">{{ entry.date_label }}</p>
+              <p class="pulse-highlight-text">{{ entry.scheduled }} Personen eingeplant • {{ entry.on_leave }} in Abwesenheit • {{ entry.hours }} Std.</p>
             </div>
           </li>
-          <li>
-            <span class="status-dot status-info"></span>
-            <div>
-              <p class="pulse-highlight-title">Kommunikation synchronisieren</p>
-              <p class="pulse-highlight-text">
-                {% if is_admin %}
-                  Informiere Teams über aktuelle Prioritäten und bestätigte Änderungen unmittelbar im System.
-                {% else %}
-                  Nutze Chat und Kommentare, um schnelle Rückfragen zu klären.
-                {% endif %}
-              </p>
-            </div>
-          </li>
+          {% endfor %}
         </ul>
       </article>
-      <article class="pulse-panel" id="pulse-sentiment">
+      <article class="pulse-panel" id="pulse-leave">
         <div class="pulse-split pulse-sentiment-grid">
           <div class="pulse-tile">
-            <p class="pulse-tile-eyebrow">Teamzufriedenheit</p>
+            <p class="pulse-tile-eyebrow">Genehmigte Anträge</p>
+            <h3><span data-count-to="{{ leave_status_overview.approved }}">0</span></h3>
+            <p class="pulse-tile-text">Echte Freigaben im Zeitraum {{ week_window_label }}.</p>
+          </div>
+          <div class="pulse-tile">
+            <p class="pulse-tile-eyebrow">Offene Anträge</p>
+            <h3><span data-count-to="{{ leave_status_overview.pending }}">0</span></h3>
+            <p class="pulse-tile-text">Noch zu prüfende Abwesenheiten.</p>
+          </div>
+          <div class="pulse-tile">
+            <p class="pulse-tile-eyebrow">Freigaberate (30 Tage)</p>
             <h3>
-              <span data-count-to="{{ satisfaction_score|int }}">0</span>
-              <span class="pulse-tile-unit">%</span>
+              {% if approval_rate is not none %}
+              <span data-count-to="{{ approval_rate }}">0</span><span class="pulse-tile-unit">%</span>
+              {% else %}
+              <span>–</span>
+              {% endif %}
             </h3>
-            <p class="pulse-tile-text">
-              {% if is_admin %}
-                Hohe Zufriedenheit entsteht durch transparente Dienstpläne und schnelle Genehmigungen.
-              {% else %}
-                Teile Feedback zu Schichten und melde Wünsche frühzeitig, um das Stimmungsbild zu stärken.
-              {% endif %}
-            </p>
+            <p class="pulse-tile-text">Verhältnis genehmigter Anträge im letzten Monat.</p>
           </div>
           <div class="pulse-tile">
-            <p class="pulse-tile-eyebrow">Highlights</p>
-            <ul class="pulse-mini-list">
-              <li>
-                <span>💡</span>
-                <div>
-                  <p>Arbeitsbelastung</p>
-                  <p class="pulse-mini-text">
-                    {% if coverage_score > 70 %}
-                      Gleichmäßig verteilt – perfekter Zeitpunkt für Optimierungen.
-                    {% else %}
-                      Engpässe sichtbar – plane zusätzliche Unterstützung.
-                    {% endif %}
-                  </p>
-                </div>
-              </li>
-              <li>
-                <span>🤝</span>
-                <div>
-                  <p>Teamspirit</p>
-                  <p class="pulse-mini-text">
-                    {% if is_admin %}
-                      Gemeinsame Reviews stärken Vertrauen und Transparenz.
-                    {% else %}
-                      Kurze Abstimmungen vor Dienstbeginn halten alle informiert.
-                    {% endif %}
-                  </p>
-                </div>
-              </li>
-            </ul>
-          </div>
-          <div class="pulse-tile">
-            <p class="pulse-tile-eyebrow">Empfehlung</p>
-            <p class="pulse-recommendation">
-              {% if is_admin %}
-                Nutze regelmäßige Check-ins, um Feedback zur Planung einzuholen und Trends früh zu erkennen.
-              {% else %}
-                Teile Verbesserungsvorschläge direkt über das Portal – deine Stimme gestaltet den Plan aktiv mit.
-              {% endif %}
-            </p>
+            <p class="pulse-tile-eyebrow">Eigene Anträge offen</p>
+            <h3><span data-count-to="{{ personal_week_overview.pending_leaves }}">0</span></h3>
+            <p class="pulse-tile-text">Noch nicht bestätigte Abwesenheiten für dich.</p>
           </div>
         </div>
       </article>
     </div>
   </section>
 </div>
+
+<script id="dashboard-data" type="application/json">
+  {{ {
+    "weekChart": week_chart,
+    "leaveStatus": leave_status_overview,
+    "departmentDistribution": department_distribution,
+    "teamCapacity": team_capacity
+  } | tojson }}
+</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" integrity="sha384-Tw1Y9qsK0kGugHgdGXN53BJ38qRAjPR9U1FVLtZL1NVr7DiIP9N6byN1Nsx3RpMB" crossorigin="anonymous"></script>
 <script>
   document.addEventListener('DOMContentLoaded', () => {
     const filters = document.querySelectorAll('.pulse-filter');
     const panels = document.querySelectorAll('.pulse-panel');
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    const datasetElement = document.getElementById('dashboard-data');
+    let dashboardData = null;
+    if (datasetElement) {
+      try {
+        dashboardData = JSON.parse(datasetElement.textContent);
+      } catch (error) {
+        console.warn('Dashboard-Daten konnten nicht geparst werden.', error);
+      }
+    }
 
     const formatNumber = (value) => {
       if (Number.isNaN(value)) {
@@ -665,7 +606,165 @@
         animatePanel(targetPanel);
       });
     });
+
+    if (dashboardData && window.Chart) {
+      const { weekChart, leaveStatus, departmentDistribution } = dashboardData;
+
+      const hoursCanvas = document.getElementById('weekHoursChart');
+      if (hoursCanvas) {
+        new Chart(hoursCanvas, {
+          type: 'bar',
+          data: {
+            labels: weekChart.labels,
+            datasets: [
+              {
+                type: 'bar',
+                label: 'Stunden gesamt',
+                data: weekChart.hours,
+                backgroundColor: 'rgba(37, 99, 235, 0.25)',
+                borderColor: 'rgba(37, 99, 235, 0.6)',
+                borderWidth: 1.5,
+                borderRadius: 6,
+              },
+              {
+                type: 'line',
+                label: 'Eingesetzte Personen',
+                data: weekChart.scheduled,
+                borderColor: '#2563eb',
+                backgroundColor: '#2563eb',
+                tension: 0.35,
+                fill: false,
+                yAxisID: 'y1',
+              },
+              {
+                type: 'line',
+                label: 'Abwesenheiten',
+                data: weekChart.on_leave,
+                borderColor: '#dc2626',
+                backgroundColor: '#dc2626',
+                tension: 0.35,
+                fill: false,
+                borderDash: [6, 4],
+                yAxisID: 'y1',
+              }
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+              mode: 'index',
+              intersect: false,
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                title: {
+                  display: true,
+                  text: 'Stunden',
+                },
+                grid: {
+                  color: 'rgba(148, 163, 184, 0.25)',
+                }
+              },
+              y1: {
+                beginAtZero: true,
+                position: 'right',
+                title: {
+                  display: true,
+                  text: 'Personen',
+                },
+                grid: {
+                  drawOnChartArea: false,
+                }
+              }
+            },
+            plugins: {
+              legend: {
+                display: false,
+              },
+              tooltip: {
+                callbacks: {
+                  label: (context) => {
+                    if (context.dataset.label === 'Stunden gesamt') {
+                      return `${context.dataset.label}: ${formatNumber(context.parsed.y)} Std`;
+                    }
+                    return `${context.dataset.label}: ${context.parsed.y}`;
+                  },
+                },
+              },
+            },
+          },
+        });
+      }
+
+      const leaveStatusCanvas = document.getElementById('leaveStatusChart');
+      if (leaveStatusCanvas && (leaveStatus.approved > 0 || leaveStatus.pending > 0)) {
+        new Chart(leaveStatusCanvas, {
+          type: 'doughnut',
+          data: {
+            labels: ['Genehmigt', 'Offen'],
+            datasets: [
+              {
+                data: [leaveStatus.approved, leaveStatus.pending],
+                backgroundColor: ['rgba(5, 150, 105, 0.85)', 'rgba(217, 119, 6, 0.85)'],
+                borderWidth: 0,
+              }
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'bottom',
+              },
+            },
+          },
+        });
+      }
+
+      const departmentCanvas = document.getElementById('departmentChart');
+      const hasDepartmentData = Array.isArray(departmentDistribution) && departmentDistribution.some((entry) => entry.count > 0);
+      if (departmentCanvas && hasDepartmentData) {
+        new Chart(departmentCanvas, {
+          type: 'doughnut',
+          data: {
+            labels: departmentDistribution.map((entry) => entry.name),
+            datasets: [
+              {
+                data: departmentDistribution.map((entry) => entry.count),
+                backgroundColor: [
+                  'rgba(37, 99, 235, 0.8)',
+                  'rgba(14, 165, 233, 0.8)',
+                  'rgba(99, 102, 241, 0.8)',
+                  'rgba(16, 185, 129, 0.8)',
+                  'rgba(217, 119, 6, 0.8)',
+                  'rgba(236, 72, 153, 0.8)'
+                ],
+                borderWidth: 0,
+              }
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'bottom',
+              },
+            },
+          },
+        });
+      }
+    }
+
+    document.querySelectorAll('[data-count-to]').forEach((element) => {
+      if (element.closest('.pulse-panel')) {
+        return;
+      }
+      animateCounter(element);
+    });
   });
 </script>
 {% endblock %}
-
