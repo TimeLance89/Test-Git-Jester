@@ -2,7 +2,7 @@
 {% set super_admins = users | selectattr('is_admin') | selectattr('department_id', 'equalto', None) | list %}
 {% set department_admins = users | selectattr('is_admin') | rejectattr('department_id', 'equalto', None) | list %}
 {% set employees = users | rejectattr('is_admin') | list %}
-{% block title %}Benutzerverwaltung - Dienstplaner{% endblock %}
+{% block title %}Benutzerverwaltung - Xerxes{% endblock %}
 {% block content %}
 <section class="user-management-page">
   <header class="page-header">

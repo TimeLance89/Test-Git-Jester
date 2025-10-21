@@ -1,71 +1,71 @@
 {% extends "layout.html" %}
-{% block title %}Anmelden - Dienstplaner{% endblock %}
+{% block title %}Anmelden - Xerxes{% endblock %}
 {% block content %}
-<div class="auth-page">
-  <div class="auth-backdrop" aria-hidden="true">
-    <div class="backdrop-gradient"></div>
-    <div class="backdrop-glow glow-1"></div>
-    <div class="backdrop-glow glow-2"></div>
-    <div class="backdrop-grid"></div>
+<div class="xerxes-auth" role="main">
+  <div class="xerxes-auth__background" aria-hidden="true">
+    <div class="xerxes-orb xerxes-orb--one"></div>
+    <div class="xerxes-orb xerxes-orb--two"></div>
+    <div class="xerxes-mesh"></div>
   </div>
 
-  <section class="auth-card" aria-labelledby="auth-heading">
-    <div class="auth-showcase">
-      <div class="brand-chip" aria-hidden="true">
-        <span class="brand-dot"></span>
-        Dienstplaner
+  <div class="xerxes-auth__card" aria-labelledby="xerxes-auth-heading">
+    <aside class="xerxes-auth__brand">
+      <div class="xerxes-logo" aria-hidden="true">
+        <span>X</span>
       </div>
-      <h1 class="showcase-title" id="auth-heading">Willkommen zurück</h1>
-      <p class="showcase-subtitle">
-        Planen Sie Teams, koordinieren Sie Schichten und behalten Sie Ihre wichtigsten Kennzahlen jederzeit im Blick.
-      </p>
-      <ul class="showcase-features">
+      <div class="xerxes-brand__intro">
+        <p class="xerxes-brand__kicker">Xerxes Control Center</p>
+        <h1 id="xerxes-auth-heading">Willkommen in Ihrem Planungscockpit</h1>
+        <p class="xerxes-brand__text">
+          Koordinieren Sie Teams, Einsätze und Freigaben mit einer Oberfläche,
+          die für moderne Bereichsleitungen entwickelt wurde.
+        </p>
+      </div>
+      <ul class="xerxes-brand__benefits">
         <li>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17L4 12"/></svg>
-          Sicheres &amp; DSGVO-konformes Login
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12L9 17L20 6"/></svg>
+          Echtzeit-Überblick über offene Vorgänge
         </li>
         <li>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17L4 12"/></svg>
-          Modernes Dashboard für Ihr Team
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12L9 17L20 6"/></svg>
+          Automatisierte Benachrichtigungen für Ihr Team
         </li>
         <li>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17L4 12"/></svg>
-          Schneller Zugriff auf alle Funktionen
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12L9 17L20 6"/></svg>
+          DSGVO-konforme Benutzerverwaltung
         </li>
       </ul>
-    </div>
+    </aside>
 
-    <div class="auth-panel" role="presentation">
-      <header class="panel-header">
-        <div class="panel-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24"><path d="M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2ZM21 9V7L15 4L13 5V11C13 12.1 12.1 13 11 13S9 12.1 9 13V7.5L7 8.5C6.4 8.8 6 9.4 6 10V16H4V10C4 8.9 4.4 7.8 5.2 7L9 4.4C9.6 4 10.3 3.9 11 4.2L15 6.2C15.6 6.5 16 7.1 16 7.8V9H21Z"/></svg>
-        </div>
-        <div>
-          <h2 class="panel-title">Anmeldung</h2>
-          <p class="panel-description">Melden Sie sich mit Ihren Zugangsdaten an.</p>
-        </div>
+    <section class="xerxes-auth__form" aria-labelledby="xerxes-form-heading">
+      <header class="xerxes-form__header">
+        <p class="xerxes-form__kicker">Sicherer Zugang</p>
+        <h2 id="xerxes-form-heading">Melden Sie sich bei Xerxes an</h2>
+        <p class="xerxes-form__subtext">
+          Nutzen Sie Ihre persönlichen Zugangsdaten, um das Xerxes Dashboard zu öffnen.
+        </p>
       </header>
 
-      <form method="post" action="{{ url_for('login', next=request.args.get('next')) }}" class="auth-form">
-        <label class="input-field">
-          <span class="input-label">Benutzername</span>
-          <span class="input-wrapper">
+      <form method="post" action="{{ url_for('login', next=request.args.get('next')) }}" class="xerxes-form">
+        <div class="xerxes-input">
+          <label for="username">Benutzername</label>
+          <div class="xerxes-input__field">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12ZM12 14C9.33 14 4 15.34 4 18V20H20V18C20 15.34 14.67 14 12 14Z"/></svg>
             <input
               type="text"
               id="username"
               name="username"
               autocomplete="username"
-              placeholder="z.B. G01"
+              placeholder="z.B. g.mueller"
               required
             />
-          </span>
-        </label>
+          </div>
+        </div>
 
-        <label class="input-field">
-          <span class="input-label">Passwort</span>
-          <span class="input-wrapper">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8H17V6C17 3.24 14.76 1 12 1S7 3.24 7 6V8H6C4.9 8 4 8.9 4 10V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V10C20 8.9 19.1 8 18 8ZM12 17C10.9 17 10 16.1 10 15S10.9 13 12 13S14 13.9 14 15S13.1 17 12 17ZM15.1 8H8.9V6C8.9 4.29 10.29 2.9 12 2.9S15.1 4.29 15.1 6V8Z"/></svg>
+        <div class="xerxes-input">
+          <label for="password">Passwort</label>
+          <div class="xerxes-input__field">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 8H7V6C7 3.79 8.79 2 11 2C13.21 2 15 3.79 15 6V8H17C18.1 8 19 8.9 19 10V20C19 21.1 18.1 22 17 22H7C5.9 22 5 21.1 5 20V10C5 8.9 5.9 8 7 8H17ZM13 16.17V14H11V16.17C10.41 16.58 10 17.26 10 18C10 19.1 10.9 20 12 20C13.1 20 14 19.1 14 18C14 17.26 13.59 16.58 13 16.17Z"/></svg>
             <input
               type="password"
               id="password"
@@ -74,261 +74,239 @@
               placeholder="Ihr Passwort"
               required
             />
-          </span>
-        </label>
+          </div>
+        </div>
 
-        <button type="submit" class="auth-button">
+        <button type="submit" class="xerxes-button">
           <span>Anmelden</span>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12H20M20 12L14 6M20 12L14 18"/></svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12H19M19 12L13 6M19 12L13 18"/></svg>
         </button>
       </form>
 
-      <footer class="panel-footer">
-        <p>Sicherer Zugang zu Xerxes System.</p>
+      <footer class="xerxes-form__footer">
+        <p>Sicherer Zugriff auf das Xerxes Planungssystem.</p>
+        <p class="xerxes-form__support">Benötigen Sie Hilfe? Wenden Sie sich an Ihre Systemadministration.</p>
       </footer>
-    </div>
-  </section>
+    </section>
+  </div>
 </div>
 
 <style>
-.auth-page {
+.xerxes-auth {
   position: relative;
   min-height: calc(100vh - 96px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 3rem 1.5rem;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  display: grid;
+  place-items: center;
+  padding: 3rem 1.5rem 4rem;
   color: #0f172a;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
-.auth-backdrop {
+.xerxes-auth__background {
   position: absolute;
   inset: 0;
+  background: radial-gradient(circle at top left, rgba(79, 70, 229, 0.35), transparent 55%),
+              radial-gradient(circle at bottom right, rgba(14, 165, 233, 0.3), transparent 45%),
+              linear-gradient(135deg, #050919 0%, #0b1125 100%);
   overflow: hidden;
-  background: radial-gradient(circle at top left, rgba(59, 130, 246, 0.25), transparent 55%),
-              radial-gradient(circle at bottom right, rgba(16, 185, 129, 0.2), transparent 45%),
-              linear-gradient(160deg, #0f172a 0%, #1f2937 100%);
 }
 
-.backdrop-gradient {
+.xerxes-orb {
   position: absolute;
-  inset: 0;
-  opacity: 0.5;
-  background: conic-gradient(from 180deg at 50% 50%, rgba(59, 130, 246, 0.4), rgba(147, 51, 234, 0.25), rgba(16, 185, 129, 0.35), rgba(59, 130, 246, 0.4));
-  filter: blur(80px);
-  transform: scale(1.2);
-  animation: rotateGradient 20s linear infinite;
-}
-
-.backdrop-glow {
-  position: absolute;
-  width: 380px;
-  height: 380px;
-  border-radius: 50%;
-  filter: blur(60px);
+  width: 420px;
+  height: 420px;
+  border-radius: 999px;
+  filter: blur(100px);
   opacity: 0.6;
 }
 
-.glow-1 {
-  top: -120px;
+.xerxes-orb--one {
+  top: -140px;
   left: -80px;
-  background: rgba(59, 130, 246, 0.35);
+  background: rgba(167, 139, 250, 0.55);
 }
 
-.glow-2 {
+.xerxes-orb--two {
   bottom: -160px;
-  right: -40px;
-  background: rgba(129, 140, 248, 0.3);
+  right: -120px;
+  background: rgba(56, 189, 248, 0.5);
 }
 
-.backdrop-grid {
+.xerxes-mesh {
   position: absolute;
   inset: 0;
-  background-image: linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-                    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-image: linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
   background-size: 60px 60px;
-  opacity: 0.4;
   mask-image: radial-gradient(circle, rgba(255, 255, 255, 0.9), transparent 70%);
+  opacity: 0.5;
 }
 
-@keyframes rotateGradient {
-  0% { transform: scale(1.2) rotate(0deg); }
-  100% { transform: scale(1.2) rotate(360deg); }
-}
-
-.auth-card {
+.xerxes-auth__card {
   position: relative;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  max-width: 960px;
+  grid-template-columns: minmax(280px, 1.05fr) minmax(320px, 0.95fr);
+  max-width: 980px;
   width: 100%;
-  background: rgba(255, 255, 255, 0.98);
   border-radius: 28px;
-  box-shadow: 0 30px 60px -35px rgba(15, 23, 42, 0.65), 0 18px 40px -24px rgba(14, 116, 144, 0.35);
   overflow: hidden;
-  border: 1px solid rgba(148, 163, 184, 0.15);
+  box-shadow: 0 35px 80px -40px rgba(15, 23, 42, 0.8), 0 25px 45px -35px rgba(59, 130, 246, 0.5);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: rgba(15, 23, 42, 0.1);
   backdrop-filter: blur(24px);
 }
 
-.auth-showcase {
-  position: relative;
-  padding: 3.5rem 3rem;
-  background: linear-gradient(160deg, rgba(37, 99, 235, 0.92), rgba(79, 70, 229, 0.85));
+.xerxes-auth__brand {
+  background: linear-gradient(160deg, rgba(37, 99, 235, 0.9), rgba(124, 58, 237, 0.88));
   color: #f8fafc;
+  padding: 3.2rem 3rem;
   display: flex;
   flex-direction: column;
   gap: 2rem;
+  position: relative;
 }
 
-.auth-showcase::after {
+.xerxes-auth__brand::after {
   content: "";
   position: absolute;
-  inset: 20% -20% -20% 40%;
-  background: radial-gradient(circle at top, rgba(248, 250, 252, 0.45), transparent 60%);
-  opacity: 0.75;
+  inset: 30% -10% -15% 45%;
+  background: radial-gradient(circle at top, rgba(248, 250, 252, 0.55), transparent 60%);
   pointer-events: none;
+  opacity: 0.7;
 }
 
-.brand-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.6rem;
-  padding: 0.35rem 0.9rem;
-  border-radius: 999px;
-  background: rgba(15, 23, 42, 0.55);
+.xerxes-logo {
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  background: rgba(15, 23, 42, 0.3);
+  font-size: 1.85rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  box-shadow: inset 0 0 0 1px rgba(248, 250, 252, 0.2), 0 18px 40px -20px rgba(15, 23, 42, 0.85);
+}
+
+.xerxes-brand__kicker {
+  margin: 0;
   font-size: 0.85rem;
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
+  color: rgba(241, 245, 249, 0.75);
 }
 
-.brand-dot {
-  width: 0.6rem;
-  height: 0.6rem;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #38bdf8, #f472b6);
-  box-shadow: 0 0 0.75rem rgba(56, 189, 248, 0.8);
-}
-
-.showcase-title {
-  font-size: clamp(2.1rem, 3vw, 2.8rem);
+.xerxes-auth__brand h1 {
+  margin: 0;
+  font-size: clamp(2rem, 3vw, 2.8rem);
   font-weight: 700;
   letter-spacing: -0.03em;
-  margin: 0;
 }
 
-.showcase-subtitle {
-  font-size: 1.05rem;
-  line-height: 1.8;
-  color: rgba(248, 250, 252, 0.9);
+.xerxes-brand__text {
   margin: 0;
+  font-size: 1rem;
+  line-height: 1.75;
+  color: rgba(226, 232, 240, 0.92);
 }
 
-.showcase-features {
+.xerxes-brand__benefits {
   list-style: none;
-  padding: 0;
   margin: 0;
+  padding: 0;
   display: grid;
-  gap: 1rem;
+  gap: 1.1rem;
   position: relative;
   z-index: 1;
 }
 
-.showcase-features li {
+.xerxes-brand__benefits li {
   display: flex;
   align-items: center;
-  gap: 0.9rem;
-  padding: 0.85rem 1rem;
+  gap: 0.85rem;
+  padding: 0.95rem 1.1rem;
   border-radius: 16px;
   background: rgba(15, 23, 42, 0.35);
-  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.2);
   font-weight: 500;
-  line-height: 1.5;
 }
 
-.showcase-features svg {
+.xerxes-brand__benefits svg {
   width: 22px;
   height: 22px;
-  stroke: #a5b4fc;
+  stroke: #c7d2fe;
   stroke-width: 2.2;
   fill: none;
 }
 
-.auth-panel {
+.xerxes-auth__form {
+  background: rgba(248, 250, 252, 0.96);
+  padding: 3.25rem 3rem;
   display: flex;
   flex-direction: column;
-  gap: 2rem;
-  padding: 3.5rem 3rem;
-  background: rgba(255, 255, 255, 0.9);
+  gap: 2.25rem;
 }
 
-.panel-header {
-  display: flex;
-  gap: 1.25rem;
-  align-items: center;
-}
-
-.panel-icon {
-  width: 56px;
-  height: 56px;
-  border-radius: 16px;
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(129, 140, 248, 0.35));
+.xerxes-form__header {
   display: grid;
-  place-items: center;
-  color: #2563eb;
+  gap: 0.65rem;
 }
 
-.panel-icon svg {
-  width: 28px;
-  height: 28px;
-  fill: currentColor;
-}
-
-.panel-title {
+.xerxes-form__kicker {
   margin: 0;
-  font-size: 1.75rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: #3b82f6;
+}
+
+.xerxes-form__header h2 {
+  margin: 0;
+  font-size: 1.9rem;
   font-weight: 700;
   color: #0f172a;
 }
 
-.panel-description {
-  margin: 0.25rem 0 0;
+.xerxes-form__subtext {
+  margin: 0;
   color: #475569;
-  font-size: 0.95rem;
+  line-height: 1.7;
 }
 
-.auth-form {
+.xerxes-form {
   display: grid;
   gap: 1.5rem;
 }
 
-.input-field {
+.xerxes-input {
   display: grid;
-  gap: 0.75rem;
-  font-size: 0.95rem;
-  color: #0f172a;
+  gap: 0.6rem;
+}
+
+.xerxes-input label {
   font-weight: 600;
-}
-
-.input-label {
+  font-size: 0.95rem;
   letter-spacing: 0.01em;
+  color: #0f172a;
 }
 
-.input-wrapper {
+.xerxes-input__field {
   display: grid;
   grid-template-columns: auto 1fr;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.9rem 1.1rem;
-  border-radius: 16px;
+  gap: 0.8rem;
+  padding: 0.95rem 1.1rem;
+  border-radius: 18px;
   border: 1px solid rgba(148, 163, 184, 0.45);
-  background: rgba(248, 250, 252, 0.85);
+  background: rgba(255, 255, 255, 0.9);
   box-shadow: inset 0 1px 2px rgba(148, 163, 184, 0.2);
   transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
 
-.input-wrapper svg {
+.xerxes-input__field svg {
   width: 22px;
   height: 22px;
   fill: none;
@@ -336,7 +314,7 @@
   stroke-width: 1.8;
 }
 
-.input-wrapper input {
+.xerxes-input__field input {
   border: none;
   background: transparent;
   font: inherit;
@@ -344,41 +322,39 @@
   color: #0f172a;
 }
 
-.input-wrapper input::placeholder {
+.xerxes-input__field input::placeholder {
   color: #94a3b8;
 }
 
-.input-wrapper input:focus-visible {
+.xerxes-input__field input:focus-visible {
   outline: none;
 }
 
-.input-field:focus-within .input-wrapper {
-  border-color: rgba(59, 130, 246, 0.75);
-  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
+.xerxes-input:focus-within .xerxes-input__field {
+  border-color: rgba(37, 99, 235, 0.8);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14);
   transform: translateY(-1px);
 }
 
-.auth-button {
-  margin-top: 0.5rem;
+.xerxes-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.75rem;
-  width: 100%;
-  padding: 0.95rem 1.2rem;
+  padding: 1rem 1.2rem;
   border-radius: 18px;
   border: none;
   font-size: 1.05rem;
   font-weight: 600;
   letter-spacing: 0.01em;
   color: #f8fafc;
-  background: linear-gradient(135deg, #2563eb, #6366f1);
-  box-shadow: 0 20px 40px -20px rgba(37, 99, 235, 0.7);
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  box-shadow: 0 22px 45px -25px rgba(79, 70, 229, 0.85);
   cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.auth-button svg {
+.xerxes-button svg {
   width: 22px;
   height: 22px;
   stroke: currentColor;
@@ -386,107 +362,103 @@
   fill: none;
 }
 
-.auth-button:hover {
+.xerxes-button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 24px 45px -20px rgba(37, 99, 235, 0.75);
+  box-shadow: 0 26px 48px -24px rgba(79, 70, 229, 0.9);
 }
 
-.auth-button:active {
+.xerxes-button:active {
   transform: translateY(0);
 }
 
-.panel-footer {
+.xerxes-form__footer {
+  border-top: 1px solid rgba(226, 232, 240, 0.85);
+  padding-top: 1.5rem;
   font-size: 0.9rem;
   color: #64748b;
-  text-align: center;
-  border-top: 1px solid rgba(226, 232, 240, 0.8);
-  padding-top: 1.25rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.xerxes-form__support {
+  margin: 0;
+  color: #94a3b8;
 }
 
 @media (max-width: 1024px) {
-  .auth-card {
+  .xerxes-auth__card {
     grid-template-columns: 1fr;
     max-width: 560px;
   }
 
-  .auth-showcase {
-    padding: 3rem 2.5rem;
+  .xerxes-auth__brand {
+    padding: 2.75rem 2.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.25);
+    gap: 1.75rem;
   }
 
-  .auth-showcase::after {
-    display: none;
+  .xerxes-auth__form {
+    padding: 2.75rem 2.5rem 3rem;
   }
 }
 
-@media (max-width: 680px) {
-  .auth-page {
+@media (max-width: 640px) {
+  .xerxes-auth {
     padding: 2.5rem 1rem 3.5rem;
   }
 
-  .auth-card {
+  .xerxes-auth__card {
     border-radius: 22px;
   }
 
-  .auth-showcase {
-    border-bottom: 1px solid rgba(255, 255, 255, 0.25);
-    gap: 1.6rem;
+  .xerxes-auth__brand {
+    padding: 2.5rem 1.8rem;
   }
 
-  .auth-panel {
-    padding: 2.5rem 1.75rem 2.75rem;
-  }
-
-  .panel-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .panel-icon {
-    width: 48px;
-    height: 48px;
+  .xerxes-auth__form {
+    padding: 2.5rem 1.8rem 2.75rem;
   }
 }
 
 @media (prefers-color-scheme: dark) {
-  .auth-card {
-    background: rgba(15, 23, 42, 0.82);
-    border-color: rgba(148, 163, 184, 0.15);
-  }
-
-  .auth-panel {
-    background: rgba(15, 23, 42, 0.85);
+  .xerxes-auth__form {
+    background: rgba(15, 23, 42, 0.88);
     color: #e2e8f0;
   }
 
-  .panel-title {
+  .xerxes-form__header h2 {
     color: #e2e8f0;
   }
 
-  .panel-description {
-    color: #94a3b8;
+  .xerxes-form__subtext {
+    color: #cbd5f5;
   }
 
-  .input-field {
+  .xerxes-input label {
     color: #e2e8f0;
   }
 
-  .input-wrapper {
-    background: rgba(30, 41, 59, 0.9);
+  .xerxes-input__field {
+    background: rgba(30, 41, 59, 0.85);
     border-color: rgba(71, 85, 105, 0.65);
-    box-shadow: inset 0 1px 1px rgba(15, 23, 42, 0.6);
+    box-shadow: inset 0 1px 1px rgba(15, 23, 42, 0.65);
   }
 
-  .input-wrapper input {
-    color: #e2e8f0;
+  .xerxes-input__field input {
+    color: #f1f5f9;
   }
 
-  .input-wrapper input::placeholder {
+  .xerxes-input__field input::placeholder {
     color: #94a3b8;
   }
 
-  .panel-footer {
-    border-color: rgba(71, 85, 105, 0.65);
+  .xerxes-form__footer {
+    border-color: rgba(71, 85, 105, 0.6);
     color: #94a3b8;
+  }
+
+  .xerxes-form__support {
+    color: #7c8aa6;
   }
 }
 </style>
