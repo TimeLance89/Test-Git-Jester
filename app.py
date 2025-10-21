@@ -12,6 +12,7 @@ vereinfachen.
 from __future__ import annotations
 
 import calendar
+import secrets
 from datetime import date, datetime, timedelta
 from typing import Dict, List, Tuple
 import pandas as pd
@@ -257,6 +258,7 @@ def calculate_employee_hours_summary(employee_id: int, year: int = None, month: 
     # Hole Mitarbeiter-Daten
     employee = Employee.query.get(employee_id)
     target_hours = employee.monthly_hours or 0
+    tracks_overtime = ((employee.position or "").lower() == "aushilfe") if employee else False
     
     # Berechne anteilige Soll-Stunden basierend auf vergangenen Arbeitstagen
     if year == today.year and month == today.month:
@@ -292,10 +294,10 @@ def calculate_employee_hours_summary(employee_id: int, year: int = None, month: 
             
         # Für Reststunden: Verwende die vollen Monatsstunden minus bereits geleistete
         remaining_hours = max(0, target_hours - worked_hours)
-        if employee.monthly_hours and employee.monthly_hours >= 160:
-            overtime_hours = 0
-        else:
+        if tracks_overtime:
             overtime_hours = max(0, worked_hours - proportional_target)
+        else:
+            overtime_hours = 0
         
         # Fortschritt basierend auf anteiligen Soll-Stunden
         completion_percentage = (worked_hours / proportional_target * 100) if proportional_target > 0 else 0
@@ -321,7 +323,7 @@ def calculate_employee_hours_summary(employee_id: int, year: int = None, month: 
     else:
         # Für vergangene/zukünftige Monate: Normale Berechnung
         remaining_hours = max(0, target_hours - worked_hours)
-        overtime_hours = max(0, worked_hours - target_hours)
+        overtime_hours = max(0, worked_hours - target_hours) if tracks_overtime else 0
         completion_percentage = (worked_hours / target_hours * 100) if target_hours > 0 else 0
 
         return {
@@ -580,7 +582,7 @@ def create_app() -> Flask:
     app = Flask(__name__)
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///planner.db"
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-    app.config["SECRET_KEY"] = "dienstplan-geheim"
+    app.config["SECRET_KEY"] = secrets.token_hex(32)
 
     init_db(app)
 
