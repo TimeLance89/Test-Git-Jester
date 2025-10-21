@@ -784,21 +784,39 @@ def create_app() -> Flask:
 
         department_id = current_user.department_id if current_user and current_user.department_id else None
 
-        if department_id:
-            # Abteilungsadmins und Mitarbeitende sehen nur Daten ihrer Abteilung
-            employee_count = Employee.query.filter_by(department_id=department_id).count()
-            department_count = 1
-            pending_leaves = (
-                db.session.query(Leave)
-                .join(Employee)
-                .filter(Leave.approved == False, Employee.department_id == department_id)
-                .count()
-            )
+        if is_admin:
+            if department_id:
+                # Abteilungsadmins erhalten Kennzahlen für ihren Verantwortungsbereich
+                employee_count = Employee.query.filter_by(department_id=department_id).count()
+                department_count = 1
+                pending_leaves = (
+                    db.session.query(Leave)
+                    .join(Employee)
+                    .filter(Leave.approved == False, Employee.department_id == department_id)
+                    .count()
+                )
+            else:
+                # Systemadmins erhalten die globale Sicht
+                employee_count = Employee.query.count()
+                department_count = Department.query.count()
+                pending_leaves = Leave.query.filter_by(approved=False).count()
         else:
-            # Systemadmins erhalten die globale Sicht
-            employee_count = Employee.query.count()
-            department_count = Department.query.count()
-            pending_leaves = Leave.query.filter_by(approved=False).count()
+            # Mitarbeitende erhalten nur persönliche Kennzahlen
+            if department_id:
+                employee_count = Employee.query.filter_by(department_id=department_id).count()
+                department_count = 1
+            else:
+                employee_count = Employee.query.count()
+                department_count = Department.query.count()
+
+            pending_leaves = (
+                Leave.query.filter(
+                    Leave.employee_id == current_user.id,
+                    Leave.approved == False,
+                ).count()
+                if current_user
+                else 0
+            )
 
         today = date.today()
         week_dates = [today + timedelta(days=offset) for offset in range(7)]
@@ -808,7 +826,10 @@ def create_app() -> Flask:
         shifts_query = Shift.query.filter(Shift.date >= week_start, Shift.date <= week_end)
         leaves_query = Leave.query.filter(Leave.end_date >= week_start, Leave.start_date <= week_end)
 
-        if department_id:
+        if not is_admin and current_user:
+            shifts_query = shifts_query.filter(Shift.employee_id == current_user.id)
+            leaves_query = leaves_query.filter(Leave.employee_id == current_user.id)
+        elif department_id:
             shifts_query = shifts_query.join(Employee).filter(Employee.department_id == department_id)
             leaves_query = leaves_query.join(Employee).filter(Employee.department_id == department_id)
 
@@ -996,6 +1017,7 @@ def create_app() -> Flask:
                         "type": "shift",
                         "title": event_title,
                         "employee": event_employee,
+                        "employee_id": shift.employee_id,
                         "hours": round(shift.hours, 2),
                         "department": event_department,
                     },
@@ -1015,6 +1037,7 @@ def create_app() -> Flask:
                         "type": "leave",
                         "title": leave.leave_type,
                         "employee": leave.employee.name if leave.employee else "Unbekannt",
+                        "employee_id": leave.employee_id,
                         "approved": bool(leave.approved),
                         "start": leave.start_date.strftime("%d.%m."),
                         "end": leave.end_date.strftime("%d.%m."),
@@ -1022,6 +1045,13 @@ def create_app() -> Flask:
                     },
                 )
             )
+
+        if not is_admin and current_user:
+            upcoming_events = [
+                (event_date, data)
+                for event_date, data in upcoming_events
+                if data.get("employee_id") == current_user.id
+            ]
 
         upcoming_events = [
             {
@@ -1055,7 +1085,11 @@ def create_app() -> Flask:
             }
 
         next_pending_leave_query = Leave.query.filter_by(approved=False)
-        if department_id:
+        if not is_admin and current_user:
+            next_pending_leave_query = next_pending_leave_query.filter(
+                Leave.employee_id == current_user.id
+            )
+        elif department_id:
             next_pending_leave_query = next_pending_leave_query.join(Employee).filter(
                 Employee.department_id == department_id
             )
@@ -1077,7 +1111,9 @@ def create_app() -> Flask:
             Leave.start_date >= approval_window_start,
             Leave.start_date <= approval_window_end,
         )
-        if department_id:
+        if not is_admin and current_user:
+            approval_query = approval_query.filter(Leave.employee_id == current_user.id)
+        elif department_id:
             approval_query = approval_query.join(Employee).filter(Employee.department_id == department_id)
         approval_leaves = approval_query.all()
         approval_rate = None
@@ -1086,6 +1122,26 @@ def create_app() -> Flask:
             approval_rate = round((approved_count / len(approval_leaves)) * 100, 1)
 
         week_window_label = f"{week_start.strftime('%d.%m.%Y')} – {week_end.strftime('%d.%m.%Y')}"
+
+        personal_day_overview = []
+        if current_user and not is_admin:
+            for entry in team_capacity:
+                status = "free"
+                description = "Keine Einsätze geplant."
+                if entry["scheduled"] > 0:
+                    status = "shift"
+                    description = f"{entry['hours']} Std eingeplant."
+                elif entry["on_leave"] > 0:
+                    status = "leave"
+                    description = "Als abwesend markiert."
+
+                personal_day_overview.append(
+                    {
+                        "date_label": entry["date_label"],
+                        "status": status,
+                        "description": description,
+                    }
+                )
 
         return render_template(
             "index.html",
@@ -1111,6 +1167,7 @@ def create_app() -> Flask:
             next_pending_leave=next_pending_leave_info,
             approval_rate=approval_rate,
             week_window_label=week_window_label,
+            personal_day_overview=personal_day_overview,
         )
 
     @app.route("/login", methods=["GET", "POST"])

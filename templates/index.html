@@ -3,7 +3,6 @@
 {% block content %}
 {% set is_admin = session.get('is_admin') %}
 {% set is_system_admin = is_admin and (current_user and not current_user.department_id) %}
-{% set current_user_id = current_user.id if current_user else None %}
 {% set team_size = employee_count or 0 %}
 <div class="dashboard-page">
   <section class="dashboard-hero">
@@ -26,6 +25,7 @@
         {% endif %}
       </p>
       <div class="hero-metrics" role="list">
+        {% if is_admin %}
         <div class="hero-metric" role="listitem">
           <span class="hero-metric-label">Geplante Stunden (7 Tage)</span>
           <span class="hero-metric-value" data-count-to="{{ total_hours }}">0</span>
@@ -38,6 +38,20 @@
           <span class="hero-metric-label">Ø Abdeckung</span>
           <span class="hero-metric-value" data-count-to="{{ coverage_average }}">0</span><span class="hero-metric-suffix">%</span>
         </div>
+        {% else %}
+        <div class="hero-metric" role="listitem">
+          <span class="hero-metric-label">Meine Stunden (7 Tage)</span>
+          <span class="hero-metric-value" data-count-to="{{ personal_week_overview.hours }}">0</span>
+        </div>
+        <div class="hero-metric" role="listitem">
+          <span class="hero-metric-label">Teamgröße</span>
+          <span class="hero-metric-value" data-count-to="{{ team_size }}">0</span>
+        </div>
+        <div class="hero-metric" role="listitem">
+          <span class="hero-metric-label">Offene Anträge</span>
+          <span class="hero-metric-value" data-count-to="{{ pending_leaves }}">0</span>
+        </div>
+        {% endif %}
       </div>
       <div class="dashboard-hero-actions">
         <a class="hero-action primary" href="{{ url_for('schedule') }}">
@@ -112,22 +126,15 @@
   </section>
 
   <section class="dashboard-kpis" aria-label="Kennzahlen">
+    {% if is_admin %}
     <article class="kpi-card kpi-employees">
       <div class="kpi-icon">👥</div>
       <div class="kpi-content">
         <p class="kpi-label">Aktive Mitarbeitende</p>
         <p class="kpi-value">{{ employee_count }}</p>
-        <p class="kpi-helper">
-          {% if is_admin %}
-            Teamgröße im aktuellen Verantwortungsbereich
-          {% else %}
-            Kolleginnen und Kollegen in deiner Abteilung
-          {% endif %}
-        </p>
+        <p class="kpi-helper">Teamgröße im aktuellen Verantwortungsbereich</p>
       </div>
-      {% if is_admin %}
       <a class="kpi-link" href="{{ url_for('employees') }}">Team organisieren →</a>
-      {% endif %}
     </article>
 
     <article class="kpi-card kpi-departments">
@@ -135,19 +142,9 @@
       <div class="kpi-content">
         <p class="kpi-label">Abteilungen sichtbar</p>
         <p class="kpi-value">{{ department_count }}</p>
-        <p class="kpi-helper">
-          {% if is_admin %}
-            Struktur der Organisation im Blick behalten
-          {% else %}
-            Dein Einsatzbereich innerhalb der Organisation
-          {% endif %}
-        </p>
+        <p class="kpi-helper">Struktur der Organisation im Blick behalten</p>
       </div>
-      {% if is_admin %}
       <a class="kpi-link" href="{{ url_for('departments') }}">Bereiche verwalten →</a>
-      {% else %}
-      <a class="kpi-link" href="{{ url_for('employee_profile', emp_id=current_user_id) }}">Profil ansehen →</a>
-      {% endif %}
     </article>
 
     <article class="kpi-card kpi-leaves">
@@ -155,19 +152,9 @@
       <div class="kpi-content">
         <p class="kpi-label">Offene Abwesenheiten</p>
         <p class="kpi-value">{{ pending_leaves }}</p>
-        <p class="kpi-helper">
-          {% if is_admin %}
-            Anträge warten auf Rückmeldung im betrachteten Zeitraum
-          {% else %}
-            Offene Anträge in deinem Team
-          {% endif %}
-        </p>
+        <p class="kpi-helper">Anträge warten auf Rückmeldung im betrachteten Zeitraum</p>
       </div>
-      {% if is_admin %}
       <a class="kpi-link" href="{{ url_for('leave_requests') }}">Anträge bearbeiten →</a>
-      {% else %}
-      <a class="kpi-link" href="{{ url_for('leave_form') }}">Neuen Antrag stellen →</a>
-      {% endif %}
     </article>
 
     <article class="kpi-card kpi-coverage">
@@ -178,10 +165,42 @@
         <p class="kpi-helper">{{ coverage_message }}</p>
       </div>
     </article>
+    {% else %}
+    <article class="kpi-card kpi-hours">
+      <div class="kpi-icon">⏱️</div>
+      <div class="kpi-content">
+        <p class="kpi-label">Bestätigte Stunden (7 Tage)</p>
+        <p class="kpi-value">{{ personal_week_overview.hours }}</p>
+        <p class="kpi-helper">Deine genehmigten Einsätze in dieser Woche.</p>
+      </div>
+      <a class="kpi-link" href="{{ url_for('employee_hours_overview') }}">Meine Übersicht →</a>
+    </article>
+
+    <article class="kpi-card kpi-shifts">
+      <div class="kpi-icon">🗓️</div>
+      <div class="kpi-content">
+        <p class="kpi-label">Geplante Schichten</p>
+        <p class="kpi-value">{{ personal_week_overview.shift_count }}</p>
+        <p class="kpi-helper">Anzahl deiner bestätigten Einsätze.</p>
+      </div>
+      <a class="kpi-link" href="{{ url_for('schedule') }}">Dienstplan ansehen →</a>
+    </article>
+
+    <article class="kpi-card kpi-leaves">
+      <div class="kpi-icon">📋</div>
+      <div class="kpi-content">
+        <p class="kpi-label">Offene Anträge</p>
+        <p class="kpi-value">{{ pending_leaves }}</p>
+        <p class="kpi-helper">Noch nicht freigegebene Abwesenheiten.</p>
+      </div>
+      <a class="kpi-link" href="{{ url_for('leave_form') }}">Status prüfen →</a>
+    </article>
+    {% endif %}
   </section>
 
   <section class="dashboard-analytics" aria-label="Datenvisualisierung">
     <div class="analytics-grid">
+      {% if is_admin %}
       <article class="analytics-card chart-card wide">
         <header class="analytics-header">
           <div>
@@ -280,6 +299,89 @@
           {% endif %}
         </ul>
       </article>
+      {% else %}
+      <article class="analytics-card activity-card wide">
+        <header class="analytics-header">
+          <div>
+            <p class="analytics-eyebrow">Meine Timeline</p>
+            <h2>Nächste Ereignisse</h2>
+          </div>
+        </header>
+        <ul class="activity-list">
+          {% if upcoming_events %}
+            {% for event in upcoming_events %}
+            <li class="activity-item activity-{{ event.type }}">
+              <div class="activity-meta">
+                <span class="activity-date">{{ event.date_label }}</span>
+                <span class="activity-type">{% if event.type == 'shift' %}Einsatz{% else %}Abwesenheit{% endif %}</span>
+              </div>
+              <p class="activity-title">
+                {% if event.type == 'shift' %}
+                  {{ event.title }}
+                {% else %}
+                  {{ event.title }}
+                {% endif %}
+              </p>
+              <p class="activity-subtitle">
+                {% if event.type == 'shift' %}
+                  {{ event.hours }} Std{% if event.department %} • {{ event.department }}{% endif %}
+                {% else %}
+                  {{ event.start }} – {{ event.end }} • {{ 'Genehmigt' if event.approved else 'Offen' }}
+                {% endif %}
+              </p>
+            </li>
+            {% endfor %}
+          {% else %}
+            <li class="activity-empty">Keine persönlichen Ereignisse im Zeitraum {{ week_window_label }}.</li>
+          {% endif %}
+        </ul>
+      </article>
+
+      <article class="analytics-card personal-week-card">
+        <header class="analytics-header">
+          <div>
+            <p class="analytics-eyebrow">Wochenplanung</p>
+            <h2>Meine Einsätze</h2>
+          </div>
+        </header>
+        <ul class="activity-list">
+          {% if personal_day_overview %}
+            {% for entry in personal_day_overview %}
+            <li class="activity-item activity-{{ entry.status }}">
+              <div class="activity-meta">
+                <span class="activity-date">{{ entry.date_label }}</span>
+                <span class="activity-type">
+                  {% if entry.status == 'shift' %}Einsatz{% elif entry.status == 'leave' %}Abwesend{% else %}Frei{% endif %}
+                </span>
+              </div>
+              <p class="activity-title">{{ entry.description }}</p>
+            </li>
+            {% endfor %}
+          {% else %}
+            <li class="activity-empty">Für die kommende Woche sind noch keine Einsätze geplant.</li>
+          {% endif %}
+        </ul>
+      </article>
+
+      <article class="analytics-card chart-card">
+        <header class="analytics-header">
+          <div>
+            <p class="analytics-eyebrow">Abwesenheiten</p>
+            <h2>Mein Status</h2>
+          </div>
+        </header>
+        <div class="chart-wrapper">
+          {% if leave_status_overview.approved == 0 and leave_status_overview.pending == 0 %}
+          <p class="chart-empty">Keine Abwesenheiten im ausgewählten Zeitraum.</p>
+          {% endif %}
+        </div>
+        <ul class="chart-stats">
+          <li>Genehmigt: {{ leave_status_overview.approved }}</li>
+          <li>Offen: {{ leave_status_overview.pending }}</li>
+          <li>Geplante Tage (7 Tage): {{ personal_week_overview.leave_days }}</li>
+        </ul>
+      </article>
+      {% endif %}
     </div>
   </section>
 
@@ -295,8 +397,14 @@
         <li>
           <span class="status-dot {% if pending_leaves > 0 %}status-warning{% else %}status-success{% endif %}"></span>
           <div>
-            <p class="list-title">Offene Abwesenheiten</p>
-            <p class="list-subtitle">{{ pending_leaves }} Anträge warten auf Freigabe.</p>
+            <p class="list-title">{% if is_admin %}Offene Abwesenheiten{% else %}Meine offenen Anträge{% endif %}</p>
+            <p class="list-subtitle">
+              {% if is_admin %}
+                {{ pending_leaves }} Anträge warten auf Freigabe.
+              {% else %}
+                {{ pending_leaves }} deiner Anträge sind noch in Prüfung.
+              {% endif %}
+            </p>
           </div>
           <a class="panel-link" href="{{ url_for('leave_requests') if is_admin else url_for('leave_form') }}">
             {% if is_admin %}Bearbeiten{% else %}Status prüfen{% endif %}
@@ -305,15 +413,21 @@
         <li>
           <span class="status-dot status-info"></span>
           <div>
-            <p class="list-title">Geplante Stunden</p>
-            <p class="list-subtitle">{{ total_hours }} Stunden in den nächsten sieben Tagen.</p>
+            <p class="list-title">{% if is_admin %}Geplante Stunden{% else %}Meine Stunden{% endif %}</p>
+            <p class="list-subtitle">
+              {% if is_admin %}
+                {{ total_hours }} Stunden in den nächsten sieben Tagen.
+              {% else %}
+                {{ personal_week_overview.hours }} Stunden in den nächsten sieben Tagen.
+              {% endif %}
+            </p>
           </div>
           <a class="panel-link" href="{{ url_for('schedule') }}">Öffnen</a>
         </li>
         <li>
           <span class="status-dot status-neutral"></span>
           <div>
-            <p class="list-title">Eigene Woche</p>
+            <p class="list-title">{% if is_admin %}Eigene Woche{% else %}Meine Woche{% endif %}</p>
             <p class="list-subtitle">
               {% if personal_week_overview.shift_count > 0 %}
                 {{ personal_week_overview.shift_count }} Schichten • {{ personal_week_overview.hours }} Std • {{ personal_week_overview.leave_days }} Tage Abwesenheit
@@ -329,6 +443,7 @@
       </ul>
     </article>
 
+    {% if is_admin %}
     <article class="dashboard-panel accent">
       <header class="panel-header">
         <div>
@@ -368,8 +483,39 @@
         </div>
       </div>
     </article>
+    {% else %}
+    <article class="dashboard-panel accent">
+      <header class="panel-header">
+        <div>
+          <p class="panel-eyebrow">Mein Fokus</p>
+          <h2>Aktuelle Hinweise</h2>
+        </div>
+      </header>
+      <div class="insight-grid">
+        <div class="insight-card">
+          <p class="insight-label">Nächster Einsatz</p>
+          {% if next_shift_info %}
+          <p class="insight-text">{{ next_shift_info.title }} am {{ next_shift_info.date_label }}{% if next_shift_info.hours %} • {{ next_shift_info.hours }} Std{% endif %}</p>
+          {% else %}
+          <p class="insight-text">Noch keine Einsätze geplant.</p>
+          {% endif %}
+        </div>
+        <div class="insight-card">
+          <p class="insight-label">Offene Anträge</p>
+          <p class="insight-value">{{ personal_week_overview.pending_leaves }}</p>
+          <p class="insight-text">Noch nicht freigegebene Abwesenheiten.</p>
+        </div>
+        <div class="insight-card">
+          <p class="insight-label">Abwesenheitstage (7 Tage)</p>
+          <p class="insight-value">{{ personal_week_overview.leave_days }}</p>
+          <p class="insight-text">Geplante Tage ohne Einsatz im Zeitraum.</p>
+        </div>
+      </div>
+    </article>
+    {% endif %}
   </section>
 
+  {% if is_admin %}
   <section class="dashboard-pulse" aria-label="Team Pulse">
     <header class="pulse-header">
       <div>
@@ -485,6 +631,7 @@
       </article>
     </div>
   </section>
+  {% endif %}
 </div>
 
 <script id="dashboard-data" type="application/json">
