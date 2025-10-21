@@ -804,26 +804,46 @@ def create_app() -> Flask:
         month = request.args.get('month', type=int) or today.month
         year = request.args.get('year', type=int) or today.year
         
+        search_query = (request.args.get("q") or "").strip()
+        position_filter = (request.args.get("position") or "").strip()
+        valid_positions = {"Vollzeit", "Teilzeit", "Aushilfe"}
+        if position_filter not in valid_positions:
+            position_filter = ""
+
         # Abteilungsbasierte Filterung
         current_user = get_current_user()
         if current_user and current_user.department_id:
             # Nur Mitarbeiter der eigenen Abteilung anzeigen
-            employees = Employee.query.filter_by(department_id=current_user.department_id).order_by(Employee.name).all()
+            employee_query = Employee.query.filter_by(department_id=current_user.department_id)
             departments = Department.query.filter_by(id=current_user.department_id).all()
         else:
             # Super-Admin ohne Abteilung sieht alle
-            employees = Employee.query.order_by(Employee.name).all()
+            employee_query = Employee.query
             departments = Department.query.order_by(Department.name).all()
-        
+
+        if search_query:
+            like_pattern = f"%{search_query}%"
+            employee_query = employee_query.filter(
+                or_(
+                    Employee.name.ilike(like_pattern),
+                    Employee.email.ilike(like_pattern),
+                    Employee.short_code.ilike(like_pattern),
+                )
+            )
+
+        if position_filter:
+            employee_query = employee_query.filter(Employee.position == position_filter)
+
+        employees = employee_query.order_by(Employee.name).all()
+
         # Berechne Reststunden für alle Mitarbeiter (abteilungsbasiert)
-        current_user = get_current_user()
         user_dept_id = current_user.department_id if current_user else None
-        
+
         hours_summary = get_all_employees_hours_summary(year, month, user_dept_id)
-        
+
         # Generiere Planungshilfen (abteilungsbasiert)
         planning_insights = get_planning_insights(year, month, user_dept_id)
-        
+
         return render_template(
             "employees.html",
             employees=employees,
@@ -832,6 +852,8 @@ def create_app() -> Flask:
             planning_insights=planning_insights,
             current_month=month,
             current_year=year,
+            search_query=search_query,
+            selected_position=position_filter,
         )
 
     @app.route("/berichte/monat")
