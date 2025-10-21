@@ -8,7 +8,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{% block title %}Einsatzplaner{% endblock %}</title>
+    <title>{% block title %}Xerxes{% endblock %}</title>
     
     <!-- Google Fonts für moderne Typografie -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -19,7 +19,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
     
     <!-- Meta Tags für bessere SEO -->
-    <meta name="description" content="Moderner Dienstplaner für effiziente Mitarbeiterverwaltung">
+    <meta name="description" content="Xerxes – modernes Control Center für effiziente Personalplanung">
     <meta name="theme-color" content="#2563eb">
   </head>
   <body class="{{ 'schedule-page' if request.endpoint == 'schedule' else '' }}">
@@ -27,7 +27,7 @@
       <div class="navbar-left">
         <a class="navbar-brand" href="{{ url_for('index') }}">
           <span aria-hidden="true">📋</span>
-          <span class="navbar-brand-text">Dienstplaner</span>
+          <span class="navbar-brand-text">Xerxes</span>
         </a>
         {% if session.get('user_id') %}
         <button class="nav-toggle" type="button" aria-expanded="false" aria-label="Menü öffnen">

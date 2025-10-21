@@ -582,6 +582,44 @@ def _create_notification(recipient_id: int, message: str, link: str | None = Non
     db.session.add(notification)
 
 
+def _build_shift_request_message(employee: Employee, shift_date: date) -> str:
+    """Erstellt eine konsistente Meldung für neue Einsatzanträge."""
+
+    display_date = shift_date.strftime("%d.%m.%Y")
+    return f"{employee.name} hat einen Einsatz am {display_date} eingereicht."
+
+
+def _build_leave_request_message(
+    employee: Employee,
+    leave_type: str,
+    start_date: date,
+    end_date: date,
+) -> str:
+    """Erstellt eine konsistente Meldung für neue Abwesenheitsanträge."""
+
+    if start_date == end_date:
+        date_range = start_date.strftime("%d.%m.%Y")
+    else:
+        date_range = (
+            f"{start_date.strftime('%d.%m.%Y')} bis {end_date.strftime('%d.%m.%Y')}"
+        )
+    return f"{employee.name} hat {leave_type} für {date_range} beantragt."
+
+
+def _clear_request_notifications(message: str, link: str | None = None) -> None:
+    """Entfernt Benachrichtigungen zu erledigten Vorgängen für andere Leitungen."""
+
+    if not message:
+        return
+
+    query = Notification.query.filter(Notification.message == message)
+
+    if link is not None:
+        query = query.filter(Notification.link == link)
+
+    query.delete(synchronize_session=False)
+
+
 def notify_admins_of_request(employee: Employee, message: str, link: str | None = None) -> None:
     """Informiert alle relevanten Administratoren über einen neuen Antrag."""
 
@@ -1531,9 +1569,7 @@ def create_app() -> Flask:
         db.session.add(new_shift)
 
         if not new_shift.approved:
-            message = (
-                f"{employee.name} hat einen Einsatz am {shift_date.strftime('%d.%m.%Y')} eingereicht."
-            )
+            message = _build_shift_request_message(employee, shift_date)
             notify_admins_of_request(
                 employee,
                 message,
@@ -1681,6 +1717,9 @@ def create_app() -> Flask:
         """Genehmigt einen Einsatz."""
         shift = Shift.query.get_or_404(shift_id)
         shift.approved = True
+        request_message = _build_shift_request_message(shift.employee, shift.date)
+        request_link = url_for("shift_requests_overview")
+        _clear_request_notifications(request_message, request_link)
         message = f"Dein Einsatz am {shift.date.strftime('%d.%m.%Y')} wurde genehmigt."
         notify_employee(
             shift.employee_id,
@@ -1696,6 +1735,9 @@ def create_app() -> Flask:
     def decline_shift(shift_id: int) -> str:
         """Lehnt einen Einsatz ab (löscht ihn)."""
         shift = Shift.query.get_or_404(shift_id)
+        request_message = _build_shift_request_message(shift.employee, shift.date)
+        request_link = url_for("shift_requests_overview")
+        _clear_request_notifications(request_message, request_link)
         shift_date = shift.date
         db.session.delete(shift)
         db.session.commit()
@@ -1913,13 +1955,12 @@ def create_app() -> Flask:
             )
 
             if not is_approved:
-                if start_date == end_date:
-                    date_range = start_date.strftime('%d.%m.%Y')
-                else:
-                    date_range = (
-                        f"{start_date.strftime('%d.%m.%Y')} bis {end_date.strftime('%d.%m.%Y')}"
-                    )
-                message = f"{employee.name} hat {leave_type} für {date_range} beantragt."
+                message = _build_leave_request_message(
+                    employee,
+                    leave_type,
+                    start_date,
+                    end_date,
+                )
                 notify_admins_of_request(
                     employee,
                     message,
@@ -2067,6 +2108,14 @@ def create_app() -> Flask:
         """Genehmigt einen Abwesenheitsantrag."""
         leave = Leave.query.get_or_404(leave_id)
         leave.approved = True
+        request_message = _build_leave_request_message(
+            leave.employee,
+            leave.leave_type,
+            leave.start_date,
+            leave.end_date,
+        )
+        request_link = url_for("leave_requests")
+        _clear_request_notifications(request_message, request_link)
         if leave.start_date == leave.end_date:
             date_range = leave.start_date.strftime('%d.%m.%Y')
         else:
@@ -2088,6 +2137,14 @@ def create_app() -> Flask:
     def decline_leave(leave_id: int) -> str:
         """Lehnt einen Abwesenheitsantrag ab (löscht ihn)."""
         leave = Leave.query.get_or_404(leave_id)
+        request_message = _build_leave_request_message(
+            leave.employee,
+            leave.leave_type,
+            leave.start_date,
+            leave.end_date,
+        )
+        request_link = url_for("leave_requests")
+        _clear_request_notifications(request_message, request_link)
         db.session.delete(leave)
         db.session.commit()
         flash("Antrag abgelehnt und gelöscht.", "info")
