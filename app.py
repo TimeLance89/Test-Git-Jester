@@ -749,6 +749,9 @@ def _execute_automation(automation: ApprovalAutomation) -> str:
 
     approved_shifts = 0
     approved_leaves = 0
+    created_schedule_shifts = 0
+    skipped_schedule_shifts = 0
+    schedule_month_label: str | None = None
 
     shift_link = url_for("shift_requests_overview")
     leave_link = url_for("leave_requests")
@@ -790,14 +793,41 @@ def _execute_automation(automation: ApprovalAutomation) -> str:
             )
             approved_leaves += 1
 
+    if automation.automation_type == "auto_schedule_position":
+        if not automation.target_position:
+            return "Keine Zielgruppe für die Auto-Schicht-Automatisierung hinterlegt."
+
+        reference_dt = automation.next_run or datetime.now()
+        target_year = reference_dt.year
+        target_month = reference_dt.month
+
+        result = create_default_shifts_for_employee_position(
+            automation.target_position,
+            target_year,
+            target_month,
+        )
+
+        created_schedule_shifts = result.get("total_created", 0)
+        skipped_schedule_shifts = result.get("total_skipped", 0)
+        schedule_month_label = datetime(target_year, target_month, 1).strftime("%m.%Y")
+
     summary_parts = []
     if approved_shifts:
-        summary_parts.append(f"{approved_shifts} Einsätze")
+        summary_parts.append(f"{approved_shifts} Einsätze freigegeben")
     if approved_leaves:
-        summary_parts.append(f"{approved_leaves} Abwesenheiten")
+        summary_parts.append(f"{approved_leaves} Abwesenheiten genehmigt")
+
+    if schedule_month_label is not None:
+        schedule_part = f"{created_schedule_shifts} Schichten erstellt"
+        if skipped_schedule_shifts:
+            schedule_part += f", {skipped_schedule_shifts} übersprungen"
+        if not created_schedule_shifts and not skipped_schedule_shifts:
+            schedule_part = "Keine Schichten erstellt"
+        schedule_part += f" ({automation.target_position}, Monat {schedule_month_label})"
+        summary_parts.append(schedule_part)
 
     if summary_parts:
-        summary_text = ", ".join(summary_parts) + " automatisch freigegeben"
+        summary_text = " · ".join(summary_parts)
         admin_message = f"Automation '{automation.name}' hat {summary_text}."
         admins = Employee.query.filter(Employee.is_admin.is_(True)).all()
         for admin in admins:
@@ -871,6 +901,7 @@ AUTOMATION_TYPE_CHOICES = [
     ("approve_shifts", "Einsätze automatisch freigeben"),
     ("approve_leaves", "Abwesenheiten automatisch genehmigen"),
     ("approve_all", "Einsätze & Abwesenheiten gemeinsam freigeben"),
+    ("auto_schedule_position", "Schichten für Mitarbeitergruppe automatisch planen"),
 ]
 
 SCHEDULE_CHOICES = [
@@ -3095,6 +3126,21 @@ def create_app() -> Flask:
 
         automations = ApprovalAutomation.query.order_by(ApprovalAutomation.created_at.desc()).all()
 
+        position_rows = (
+            Employee.query.with_entities(Employee.position)
+            .filter(Employee.position.isnot(None), Employee.position != "")
+            .distinct()
+            .order_by(Employee.position.asc())
+            .all()
+        )
+        positions = []
+        seen_positions = set()
+        for row in position_rows:
+            value = (row[0] or "").strip()
+            if value and value not in seen_positions:
+                positions.append(value)
+                seen_positions.add(value)
+
         active_count = sum(1 for automation in automations if automation.is_active)
         next_runs = [automation.next_run for automation in automations if automation.next_run]
         upcoming_run = min(next_runs) if next_runs else None
@@ -3113,6 +3159,7 @@ def create_app() -> Flask:
             type_labels=type_labels,
             schedule_labels=schedule_labels,
             weekday_map=weekday_map,
+            positions=positions,
         )
 
     @app.route("/settings/automatisierte-freigaben/anlegen", methods=["POST"])
@@ -3126,6 +3173,7 @@ def create_app() -> Flask:
         run_time_raw = request.form.get("run_time")
         once_date_raw = request.form.get("once_date")
         selected_days = request.form.getlist("days_of_week")
+        target_position = (request.form.get("target_position") or "").strip()
 
         if not name:
             flash("Bitte vergeben Sie einen Namen für die Automatisierung.", "danger")
@@ -3183,6 +3231,28 @@ def create_app() -> Flask:
                 flash("Der nächste Ausführungstermin konnte nicht berechnet werden.", "danger")
                 return redirect(url_for("automated_approvals"))
 
+        if automation_type == "auto_schedule_position":
+            if not target_position:
+                flash("Bitte wählen Sie die gewünschte Mitarbeitergruppe aus.", "danger")
+                return redirect(url_for("automated_approvals"))
+
+            position_rows = (
+                Employee.query.with_entities(Employee.position)
+                .filter(Employee.position.isnot(None), Employee.position != "")
+                .distinct()
+                .all()
+            )
+            valid_positions = {
+                (row[0] or "").strip()
+                for row in position_rows
+                if (row[0] or "").strip()
+            }
+            if target_position not in valid_positions:
+                flash("Die ausgewählte Mitarbeitergruppe ist ungültig.", "danger")
+                return redirect(url_for("automated_approvals"))
+        else:
+            target_position = None
+
         automation = ApprovalAutomation(
             name=name,
             automation_type=automation_type,
@@ -3191,6 +3261,7 @@ def create_app() -> Flask:
             days_of_week=days_value,
             next_run=next_run,
             is_active=True,
+            target_position=target_position,
         )
 
         db.session.add(automation)

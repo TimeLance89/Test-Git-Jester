@@ -224,6 +224,7 @@ class ApprovalAutomation(db.Model):
     schedule_type = db.Column(db.String(20), nullable=False, default="daily")
     run_time = db.Column(db.Time, nullable=True)
     days_of_week = db.Column(db.String(50), nullable=True)
+    target_position = db.Column(db.String(120), nullable=True)
     next_run = db.Column(db.DateTime, nullable=True)
     last_run = db.Column(db.DateTime, nullable=True)
     last_run_summary = db.Column(db.String(255), nullable=True)
@@ -260,6 +261,13 @@ def _upgrade_schema_if_needed() -> None:
         # Tabelle existiert (noch) nicht – nichts zu tun.
         return
 
+    try:
+        automation_columns = {
+            col["name"] for col in inspector.get_columns("approval_automation")
+        }
+    except (NoSuchTableError, OperationalError):
+        automation_columns = set()
+
     column_statements = {
         "short_code": ["ALTER TABLE employee ADD COLUMN short_code VARCHAR(20)"],
         "username": ["ALTER TABLE employee ADD COLUMN username VARCHAR(120)"],
@@ -271,15 +279,27 @@ def _upgrade_schema_if_needed() -> None:
         ],
     }
 
+    automation_column_statements = {
+        "target_position": [
+            "ALTER TABLE approval_automation ADD COLUMN target_position VARCHAR(120)"
+        ]
+    }
+
     missing_columns = [
         stmts for column, stmts in column_statements.items() if column not in employee_columns
     ]
 
-    if not missing_columns:
+    missing_automation_columns = [
+        stmts
+        for column, stmts in automation_column_statements.items()
+        if column not in automation_columns
+    ]
+
+    if not missing_columns and not missing_automation_columns:
         return
 
     with engine.begin() as connection:
-        for statements in missing_columns:
+        for statements in missing_columns + missing_automation_columns:
             for statement in statements:
                 try:
                     connection.execute(text(statement))
