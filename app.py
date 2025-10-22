@@ -498,6 +498,28 @@ def admin_required(view):
         return view(*args, **kwargs)
     return wrapped
 
+
+def super_admin_required(view):
+    """Stellt sicher, dass nur Systemadministratoren Zugriff erhalten."""
+
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        if not session.get("user_id"):
+            return redirect(url_for("login", next=request.path))
+
+        current_user = get_current_user()
+        is_super_admin = bool(
+            current_user and current_user.is_admin and not current_user.department_id
+        )
+
+        if not is_super_admin:
+            flash("Nur Systemadministratoren können diesen Bereich öffnen.", "danger")
+            return redirect(url_for("index"))
+
+        return view(*args, **kwargs)
+
+    return wrapped
+
 def get_current_user():
     """Gibt den aktuell angemeldeten Benutzer zurück."""
     user_id = session.get("user_id")
@@ -2667,7 +2689,7 @@ def create_app() -> Flask:
         return redirect(url_for("leave_requests"))
 
     @app.route("/produktivitaet")
-    @admin_required
+    @super_admin_required
     def productivity_settings() -> str:
         """Zeigt die Produktivitätseinstellungen an."""
         departments = Department.query.order_by(Department.name).all()
@@ -2686,7 +2708,7 @@ def create_app() -> Flask:
         )
 
     @app.route("/produktivitaet/speichern", methods=["POST"])
-    @admin_required
+    @super_admin_required
     def save_productivity_settings() -> str:
         """Speichert die Produktivitätseinstellungen."""
         try:
@@ -2735,6 +2757,120 @@ def create_app() -> Flask:
             flash(f"Fehler beim Speichern: {str(e)}", "danger")
         
         return redirect(url_for("productivity_settings"))
+
+    @app.route("/settings")
+    @super_admin_required
+    def system_settings() -> str:
+        """Übersichtsseite für künftige globale Einstellungen."""
+
+        quick_actions = [
+            {
+                "id": "sync-policies",
+                "icon": "🔄",
+                "title": "Richtlinien synchronisieren",
+                "description": "Aktualisiert Berechtigungen systemweit in wenigen Sekunden.",
+            },
+            {
+                "id": "refresh-cache",
+                "icon": "🧹",
+                "title": "Systemcache bereinigen",
+                "description": "Löscht temporäre Daten und startet Hintergrunddienste sanft neu.",
+            },
+            {
+                "id": "export-audit",
+                "icon": "📄",
+                "title": "Änderungsprotokoll exportieren",
+                "description": "Bereitet einen vollständigen Audit-Report für das Compliance-Team vor.",
+            },
+        ]
+
+        focus_areas = [
+            {
+                "icon": "🛡️",
+                "title": "Sicherheitsrichtlinien",
+                "description": "Zugriffs- und Rollenmodelle verwalten sowie Mehrfaktorauthentifizierung steuern.",
+                "badge": "Stabil",
+            },
+            {
+                "icon": "🔔",
+                "title": "Benachrichtigungen",
+                "description": "Globale Eskalationspfade und Zustelloptionen für kritische Hinweise konfigurieren.",
+                "badge": "Beta",
+            },
+            {
+                "icon": "📦",
+                "title": "Integrationen",
+                "description": "Schnittstellen zu HR- und Zeiterfassungssystemen verwalten und testen.",
+                "badge": "In Planung",
+            },
+        ]
+
+        maintenance_notes = [
+            {
+                "icon": "🗄️",
+                "title": "Datenbank-Optimierung",
+                "window": "Jeden Sonntag · 02:00 – 03:00 Uhr",
+                "impact": "Kurzzeitige Leseunterbrechungen möglich",
+            },
+            {
+                "icon": "☁️",
+                "title": "Cloud-Sicherung",
+                "window": "Täglich · 01:30 Uhr",
+                "impact": "Automatische Sicherung aller Kernmodule",
+            },
+            {
+                "icon": "🧪",
+                "title": "Funktions-Sandbox",
+                "window": "Mittwochs · 21:00 – 22:00 Uhr",
+                "impact": "Neue Features werden ohne Produktivdaten getestet",
+            },
+        ]
+
+        roadmap = [
+            {
+                "icon": "🧭",
+                "title": "Self-Service Portale",
+                "description": "Ermöglicht Mitarbeitenden eigene Einstellungen wie Sprache und Benachrichtigungen.",
+                "quarter": "Q3 2024",
+            },
+            {
+                "icon": "🤖",
+                "title": "Automatisierte Freigaben",
+                "description": "Genehmigungsprozesse für wiederkehrende Abläufe beschleunigen.",
+                "quarter": "Q4 2024",
+            },
+            {
+                "icon": "📊",
+                "title": "Erweiterte Auswertungen",
+                "description": "Konsolidierte Reports für Vorstand und Betriebsrat vorbereiten.",
+                "quarter": "Q1 2025",
+            },
+        ]
+
+        audit_notes = [
+            "Tägliche Sicherung der Audit-Logs im revisionssicheren Speicher.",
+            "Export als CSV und PDF vorbereitet, Freigabe in Kürze verfügbar.",
+            "Benachrichtigungen bei ungewöhnlichen Anmeldeversuchen werden ausgebaut.",
+        ]
+
+        stats = [
+            {"label": "Aktive Module", "value": len(focus_areas)},
+            {"label": "Geplante Erweiterungen", "value": len(roadmap)},
+            {"label": "Automatisierungen", "value": len(quick_actions)},
+        ]
+
+        last_updated = datetime.now()
+
+        return render_template(
+            "settings.html",
+            quick_actions=quick_actions,
+            focus_areas=focus_areas,
+            maintenance_notes=maintenance_notes,
+            roadmap=roadmap,
+            audit_notes=audit_notes,
+            stats=stats,
+            last_updated=last_updated,
+        )
 
     @app.route("/auto-schedule")
     @admin_required

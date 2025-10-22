@@ -23,6 +23,7 @@
     <meta name="theme-color" content="#2563eb">
   </head>
   <body class="{{ 'schedule-page' if request.endpoint == 'schedule' else '' }}">
+    {% set is_super_admin = session.get('is_admin') and not session.get('department_id') %}
     <nav class="navbar">
       <div class="navbar-left">
         <a class="navbar-brand" href="{{ url_for('index') }}">
@@ -89,16 +90,34 @@
               <span class="nav-icon" aria-hidden="true">🏢</span>
               <span>Abteilungen</span>
             </a>
-            {% if not session.get('department_id') %}
+            {% if is_super_admin %}
             <a href="{{ url_for('user_management') }}">
               <span class="nav-icon" aria-hidden="true">🛠️</span>
               <span>Benutzerverwaltung</span>
             </a>
+            <div class="nav-dropdown" data-nav-dropdown>
+              <button
+                class="nav-dropdown-trigger"
+                type="button"
+                aria-haspopup="true"
+                aria-expanded="false"
+              >
+                <span class="nav-icon" aria-hidden="true">⚙️</span>
+                <span>Produktivität</span>
+                <span class="nav-dropdown-caret" aria-hidden="true">▾</span>
+              </button>
+              <div class="nav-dropdown-menu" role="menu">
+                <a href="{{ url_for('productivity_settings') }}" role="menuitem">
+                  <span class="nav-icon" aria-hidden="true">📊</span>
+                  <span>Produktivität</span>
+                </a>
+                <a href="{{ url_for('system_settings') }}" role="menuitem">
+                  <span class="nav-icon" aria-hidden="true">🛠️</span>
+                  <span>Systemeinstellungen</span>
+                </a>
+              </div>
+            </div>
             {% endif %}
-            <a href="{{ url_for('productivity_settings') }}">
-              <span class="nav-icon" aria-hidden="true">⚙️</span>
-              <span>Produktivität</span>
-            </a>
           </div>
         </div>
         <div class="nav-group">
@@ -225,6 +244,17 @@
     
     <!-- Moderne JavaScript-Verbesserungen -->
     <script>
+      const navDropdowns = Array.from(document.querySelectorAll('[data-nav-dropdown]'));
+      const closeAllDropdowns = () => {
+        navDropdowns.forEach(dropdown => {
+          dropdown.removeAttribute('data-open');
+          const trigger = dropdown.querySelector('.nav-dropdown-trigger');
+          if (trigger) {
+            trigger.setAttribute('aria-expanded', 'false');
+          }
+        });
+      };
+
       const navToggle = document.querySelector('.nav-toggle');
       const navLinks = document.querySelector('.nav-links');
 
@@ -232,6 +262,7 @@
         const closeMenu = () => {
           navToggle.setAttribute('aria-expanded', 'false');
           navLinks.removeAttribute('data-nav-open');
+          closeAllDropdowns();
         };
 
         navToggle.addEventListener('click', () => {
@@ -256,11 +287,81 @@
           if (window.innerWidth > 1200) {
             navLinks.removeAttribute('data-nav-open');
             navToggle.setAttribute('aria-expanded', 'false');
+            closeAllDropdowns();
           }
         };
 
         handleResize();
         window.addEventListener('resize', handleResize);
+      }
+
+      if (navDropdowns.length) {
+        navDropdowns.forEach(dropdown => {
+          const trigger = dropdown.querySelector('.nav-dropdown-trigger');
+          if (!trigger) {
+            return;
+          }
+
+          dropdown.addEventListener('mouseenter', () => {
+            if (window.innerWidth > 1200) {
+              closeAllDropdowns();
+              dropdown.setAttribute('data-open', '');
+              trigger.setAttribute('aria-expanded', 'true');
+            }
+          });
+
+          dropdown.addEventListener('mouseleave', () => {
+            if (window.innerWidth > 1200) {
+              dropdown.removeAttribute('data-open');
+              trigger.setAttribute('aria-expanded', 'false');
+            }
+          });
+
+          dropdown.addEventListener('focusin', () => {
+            closeAllDropdowns();
+            dropdown.setAttribute('data-open', '');
+            trigger.setAttribute('aria-expanded', 'true');
+          });
+
+          dropdown.addEventListener('focusout', event => {
+            if (!dropdown.contains(event.relatedTarget)) {
+              dropdown.removeAttribute('data-open');
+              trigger.setAttribute('aria-expanded', 'false');
+            }
+          });
+
+          trigger.addEventListener('click', event => {
+            if (window.innerWidth > 1200) {
+              return;
+            }
+            event.preventDefault();
+            const isOpen = dropdown.hasAttribute('data-open');
+            closeAllDropdowns();
+            if (!isOpen) {
+              dropdown.setAttribute('data-open', '');
+              trigger.setAttribute('aria-expanded', 'true');
+            }
+          });
+
+          dropdown.querySelectorAll('a').forEach(link => {
+            link.addEventListener('click', () => {
+              closeAllDropdowns();
+            });
+          });
+        });
+
+        document.addEventListener('click', event => {
+          const clickedInside = navDropdowns.some(dropdown => dropdown.contains(event.target));
+          if (!clickedInside) {
+            closeAllDropdowns();
+          }
+        });
+
+        window.addEventListener('resize', () => {
+          if (window.innerWidth > 1200) {
+            closeAllDropdowns();
+          }
+        });
       }
 
       const notificationWrapper = document.querySelector('.notification-wrapper');
