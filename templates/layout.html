@@ -117,6 +117,11 @@
                 </a>
               </div>
             </div>
+            {% else %}
+            <a href="{{ url_for('productivity_settings') }}">
+              <span class="nav-icon" aria-hidden="true">📊</span>
+              <span>Produktivität</span>
+            </a>
             {% endif %}
           </div>
         </div>
