@@ -2765,15 +2765,6 @@ def create_app() -> Flask:
 
         quick_actions = [
             {
-                "id": "automated-approvals",
-                "icon": "🤖",
-                "title": "Automatisierte Freigaben",
-                "description": "Planen Sie Freigaben an definierten Zeitpunkten.",
-                "href": "#automatisierte-freigaben",
-                "hint": "Jetzt planen",
-                "tooltip": "Bereich Automatisierte Freigaben öffnen",
-            },
-            {
                 "id": "sync-policies",
                 "icon": "🔄",
                 "title": "Richtlinien synchronisieren",
@@ -2835,82 +2826,6 @@ def create_app() -> Flask:
             },
         ]
 
-        automation_templates = [
-            {
-                "id": "daily-ops",
-                "title": "Tägliche Routinefreigabe",
-                "description": "Standardfreigaben für den Tagesstart werden automatisch 20 Minuten vor Schichtbeginn erteilt.",
-                "default_time": "07:30",
-                "options": [
-                    {"value": "weekday", "label": "Montag – Freitag"},
-                    {"value": "weekend", "label": "Samstag & Sonntag"},
-                    {"value": "custom", "label": "Benutzerdefiniertes Fenster"},
-                ],
-                "frequency_hint": "Empfohlen für alle operativen Bereiche mit festen Frühschichten.",
-            },
-            {
-                "id": "shift-change",
-                "title": "Freigabe zum Schichtwechsel",
-                "description": "Überträgt Verantwortlichkeiten automatisch 30 Minuten vor dem hinterlegten Übergabezeitpunkt.",
-                "default_time": "14:30",
-                "options": [
-                    {"value": "early", "label": "Früh → Spät (13:30 Uhr)"},
-                    {"value": "late", "label": "Spät → Nacht (21:30 Uhr)"},
-                    {"value": "custom", "label": "Eigene Übergabezeit"},
-                ],
-                "frequency_hint": "Ideal für Teams mit mehrstufigem Schichtmodell.",
-            },
-            {
-                "id": "month-end",
-                "title": "Monatsabschluss",
-                "description": "Bereitet Freigaben für Abrechnungen und Controlling am letzten Arbeitstag des Monats vor.",
-                "default_time": "17:45",
-                "options": [
-                    {"value": "last-working-day", "label": "Letzter Werktag"},
-                    {"value": "first-day", "label": "Erster Werktag Folgemonat"},
-                    {"value": "custom", "label": "Benutzerdefiniert"},
-                ],
-                "frequency_hint": "Synchronisiert sich mit den bestehenden Exportläufen.",
-            },
-        ]
-
-        automation_schedule = [
-            {
-                "label": "Frühschicht-Freigabe",
-                "time": "06:15 Uhr",
-                "next_run": "Heute · 06:15 Uhr",
-                "status": "Aktiv",
-                "status_class": "is-active",
-            },
-            {
-                "label": "Wochenendbesetzung",
-                "time": "08:00 Uhr",
-                "next_run": "Samstag · 08:00 Uhr",
-                "status": "Aktiv",
-                "status_class": "is-active",
-            },
-            {
-                "label": "Monatsabschluss",
-                "time": "18:00 Uhr",
-                "next_run": "Letzter Werktag · 18:00 Uhr",
-                "status": "In Prüfung",
-                "status_class": "is-draft",
-            },
-            {
-                "label": "Ad-hoc Projekte",
-                "time": "12:30 Uhr",
-                "next_run": "Nach Bedarf · manuell bestätigt",
-                "status": "Geplant",
-                "status_class": "is-paused",
-            },
-        ]
-
-        automation_notes = [
-            "Freigaben werden nur ausgeführt, wenn alle Pflichtdaten vollständig vorliegen.",
-            "Zeitpläne berücksichtigen Abwesenheiten sowie bereits genehmigte Vertretungen automatisch.",
-            "Eine Exportfunktion für durchgeführte Freigaben befindet sich in Vorbereitung.",
-        ]
-
         roadmap = [
             {
                 "icon": "🧭",
@@ -2941,7 +2856,7 @@ def create_app() -> Flask:
         stats = [
             {"label": "Aktive Module", "value": len(focus_areas)},
             {"label": "Geplante Erweiterungen", "value": len(roadmap)},
-            {"label": "Automatisierungen aktiv", "value": len(automation_schedule)},
+            {"label": "Automatisierungen", "value": len(quick_actions)},
         ]
 
         last_updated = datetime.now()
@@ -2955,9 +2870,6 @@ def create_app() -> Flask:
             audit_notes=audit_notes,
             stats=stats,
             last_updated=last_updated,
-            automation_templates=automation_templates,
-            automation_schedule=automation_schedule,
-            automation_notes=automation_notes,
         )
 
     @app.route("/auto-schedule")
