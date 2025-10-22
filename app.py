@@ -2689,7 +2689,7 @@ def create_app() -> Flask:
         return redirect(url_for("leave_requests"))
 
     @app.route("/produktivitaet")
-    @super_admin_required
+    @admin_required
     def productivity_settings() -> str:
         """Zeigt die Produktivitätseinstellungen an."""
         departments = Department.query.order_by(Department.name).all()
@@ -2708,7 +2708,7 @@ def create_app() -> Flask:
         )
 
     @app.route("/produktivitaet/speichern", methods=["POST"])
-    @super_admin_required
+    @admin_required
     def save_productivity_settings() -> str:
         """Speichert die Produktivitätseinstellungen."""
         try:
