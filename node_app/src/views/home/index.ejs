@@ -1,0 +1,37 @@
+<%- include('../partials/page-header', {
+  title,
+  description: 'Überblick über Mitarbeiter, Abteilungen und geplante Schichten.'
+}) %>
+
+<div class="row g-4">
+  <div class="col-md-4">
+    <div class="summary-card">
+      <h3 class="summary-card__title">Mitarbeiter</h3>
+      <p class="summary-card__value"><%= stats.employees %></p>
+      <p class="summary-card__hint text-muted">Aktiv gepflegte Profile</p>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="summary-card">
+      <h3 class="summary-card__title">Abteilungen</h3>
+      <p class="summary-card__value"><%= stats.departments %></p>
+      <p class="summary-card__hint text-muted">Organisatorische Einheiten</p>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="summary-card">
+      <h3 class="summary-card__title">Schichten (Monat)</h3>
+      <p class="summary-card__value"><%= stats.shifts %></p>
+      <p class="summary-card__hint text-muted">Geplante Einsätze im aktuellen Monat</p>
+    </div>
+  </div>
+</div>
+
+<div class="mt-5">
+  <h3>Nächste Schritte</h3>
+  <ul>
+    <li>Lege Abteilungen an und ordne Mitarbeiter zu.</li>
+    <li>Pflege Mitarbeiterprofile inklusive Arbeitszeitmodellen.</li>
+    <li>Plane Schichten und behalte den Überblick über die Auslastung.</li>
+  </ul>
+</div>
