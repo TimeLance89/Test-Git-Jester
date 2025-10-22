@@ -33,20 +33,128 @@
     </div>
     <div class="settings-quick-grid">
       {% for action in quick_actions %}
-      <button
-        type="button"
+      {% set is_link = action.href is defined and action.href %}
+      {% set hint = action.hint if action.hint is defined else "Demnächst" %}
+      {% if is_link %}
+      <a
+        href="{{ action.href }}"
         class="settings-quick-action"
         data-action="{{ action.id }}"
-        title="Funktion wird in Kürze verfügbar sein"
+        title="{{ action.tooltip if action.tooltip is defined else action.title }}"
       >
         <span class="settings-quick-icon" aria-hidden="true">{{ action.icon }}</span>
         <span class="settings-quick-content">
           <span class="settings-quick-title">{{ action.title }}</span>
           <span class="settings-quick-description">{{ action.description }}</span>
         </span>
-        <span class="settings-quick-hint">Demnächst</span>
+        <span class="settings-quick-hint">{{ hint }}</span>
+      </a>
+      {% else %}
+      <button
+        type="button"
+        class="settings-quick-action"
+        data-action="{{ action.id }}"
+        title="{{ action.tooltip if action.tooltip is defined else "Funktion wird in Kürze verfügbar sein" }}"
+      >
+        <span class="settings-quick-icon" aria-hidden="true">{{ action.icon }}</span>
+        <span class="settings-quick-content">
+          <span class="settings-quick-title">{{ action.title }}</span>
+          <span class="settings-quick-description">{{ action.description }}</span>
+        </span>
+        <span class="settings-quick-hint">{{ hint }}</span>
       </button>
+      {% endif %}
       {% endfor %}
+    </div>
+  </section>
+
+  <section
+    class="settings-automations"
+    id="automatisierte-freigaben"
+    aria-labelledby="automated-approvals-heading"
+  >
+    <div class="settings-section-header">
+      <span class="settings-eyebrow">Automatisierte Freigaben</span>
+      <h2 id="automated-approvals-heading">Freigaben planen und delegieren</h2>
+      <p>
+        Richten Sie wiederkehrende Genehmigungen über flexible Zeitfenster ein und behalten Sie anstehende
+        Ausführungen im Blick. Alle Einstellungen bleiben bis zur Produktivsetzung als Entwurf gespeichert.
+      </p>
+    </div>
+    <div class="settings-automations-grid">
+      <article class="automation-card automation-card--planner">
+        <header class="automation-card-header">
+          <div>
+            <h3>Freigabepläne definieren</h3>
+            <p>Wählen Sie Zeitfenster und Startzeiten für automatisierte Freigaben.</p>
+          </div>
+        </header>
+        <form class="automation-form" aria-describedby="automation-form-hint">
+          {% for template in automation_templates %}
+          <fieldset class="automation-template">
+            <legend>{{ template.title }}</legend>
+            <p class="automation-template-description">{{ template.description }}</p>
+            <div class="automation-template-controls">
+              <label for="{{ template.id }}-window">
+                Zeitfenster
+                <select id="{{ template.id }}-window" name="{{ template.id }}-window">
+                  {% for option in template.options %}
+                  <option value="{{ option.value }}">{{ option.label }}</option>
+                  {% endfor %}
+                </select>
+              </label>
+              <label for="{{ template.id }}-time">
+                Startzeit
+                <input
+                  type="time"
+                  id="{{ template.id }}-time"
+                  name="{{ template.id }}-time"
+                  value="{{ template.default_time }}"
+                />
+              </label>
+            </div>
+            {% if template.frequency_hint %}
+            <p class="automation-template-hint">{{ template.frequency_hint }}</p>
+            {% endif %}
+            <div class="automation-template-actions">
+              <button type="button" class="automation-template-save">Zeitplan vormerken</button>
+            </div>
+          </fieldset>
+          {% endfor %}
+          <p id="automation-form-hint" class="automation-form-hint">
+            Konfigurationen werden mit dem Start der Automatisierten Freigaben dauerhaft gespeichert.
+          </p>
+        </form>
+      </article>
+
+      <article class="automation-card automation-card--schedule">
+        <header class="automation-card-header">
+          <div>
+            <h3>Geplante Ausführungen</h3>
+            <p>Überblick über vorbereitete und aktive Freigabeautomationen.</p>
+          </div>
+        </header>
+        <ul class="automation-schedule">
+          {% for item in automation_schedule %}
+          <li>
+            <span class="automation-schedule-time">{{ item.time }}</span>
+            <div class="automation-schedule-meta">
+              <span class="automation-schedule-label">{{ item.label }}</span>
+              <span class="automation-schedule-next">{{ item.next_run }}</span>
+            </div>
+            <span class="automation-schedule-status {{ item.status_class }}">{{ item.status }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+        <div class="automation-notes">
+          <h4>Hinweise</h4>
+          <ul>
+            {% for note in automation_notes %}
+            <li>{{ note }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </article>
     </div>
   </section>
 
