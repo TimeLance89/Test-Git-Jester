@@ -1,0 +1,92 @@
+<div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between mb-4">
+  <div>
+    <h2 class="mb-0">Dienstplan <small class="text-muted"><%= monthLabel %> <%= year %></small></h2>
+  </div>
+  <div class="mt-3 mt-md-0 d-flex gap-2">
+    <a class="btn btn-outline-secondary" href="/schedule?month=<%= navigation.previous.month %>&year=<%= navigation.previous.year %>">
+      &laquo; <%= getMonthName(navigation.previous.month) %>
+    </a>
+    <a class="btn btn-outline-secondary" href="/schedule?month=<%= navigation.next.month %>&year=<%= navigation.next.year %>">
+      <%= getMonthName(navigation.next.month) %> &raquo;
+    </a>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-7">
+    <%- include('../partials/errors', { errors }) %>
+    <% const dates = Object.keys(shiftsByDate).sort(); %>
+    <% if (!dates.length) { %>
+      <div class="alert alert-info">Für diesen Monat sind noch keine Schichten geplant.</div>
+    <% } else { %>
+      <% dates.forEach(dateKey => { %>
+        <section class="shift-day mb-4">
+          <header class="shift-day__header">
+            <h3><%= new Date(dateKey).toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: '2-digit' }) %></h3>
+            <span class="text-muted"><%= new Date(dateKey).toLocaleDateString('de-DE') %></span>
+          </header>
+          <ul class="list-group">
+            <% shiftsByDate[dateKey].forEach(shift => { %>
+              <li class="list-group-item d-flex justify-content-between align-items-center">
+                <div>
+                  <strong><%= shift.employeeName %></strong>
+                  <div class="text-muted small">
+                    <%= shift.startTime %> – <%= shift.endTime %>
+                  </div>
+                </div>
+                <form method="post" action="/schedule/shifts/<%= shift.id %>/delete" class="ms-3">
+                  <input type="hidden" name="month" value="<%= month %>" />
+                  <input type="hidden" name="year" value="<%= year %>" />
+                  <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Schicht wirklich löschen?');">
+                    Entfernen
+                  </button>
+                </form>
+              </li>
+            <% }); %>
+          </ul>
+        </section>
+      <% }); %>
+    <% } %>
+  </div>
+  <div class="col-lg-5">
+    <div class="card p-4">
+      <h3 class="h5">Neue Schicht planen</h3>
+      <form method="post" action="/schedule/shifts" class="mt-3">
+        <input type="hidden" name="month" value="<%= month %>" />
+        <input type="hidden" name="year" value="<%= year %>" />
+        <div class="mb-3">
+          <label for="employee_id" class="form-label">Mitarbeiter *</label>
+          <select class="form-select" id="employee_id" name="employee_id" required>
+            <option value="">Bitte auswählen</option>
+            <% employees.forEach(employee => { %>
+              <option value="<%= employee.id %>" <%= formValues.employeeId == employee.id ? 'selected' : '' %>>
+                <%= employee.name %>
+              </option>
+            <% }); %>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label for="shift_date" class="form-label">Datum *</label>
+          <input type="date" class="form-control" id="shift_date" name="shift_date" required value="<%= formValues.shiftDate %>" />
+        </div>
+        <div class="row">
+          <div class="col">
+            <label for="start_time" class="form-label">Start *</label>
+            <input type="time" class="form-control" id="start_time" name="start_time" required value="<%= formValues.startTime %>" />
+          </div>
+          <div class="col">
+            <label for="end_time" class="form-label">Ende *</label>
+            <input type="time" class="form-control" id="end_time" name="end_time" required value="<%= formValues.endTime %>" />
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary mt-3">Schicht speichern</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<%
+  function getMonthName(monthNumber) {
+    return new Date(2020, monthNumber - 1, 1).toLocaleDateString('de-DE', { month: 'short' });
+  }
+%>

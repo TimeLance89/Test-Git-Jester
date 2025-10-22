@@ -1,0 +1,51 @@
+<%- include('../partials/page-header', {
+  title,
+  actions: [{ label: 'Mitarbeiter anlegen', href: '/employees/new' }]
+}) %>
+
+<% if (!employees.length) { %>
+  <div class="alert alert-info">Es sind noch keine Mitarbeiter angelegt.</div>
+<% } else { %>
+  <div class="table-responsive">
+    <table class="table align-middle">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>E-Mail</th>
+          <th>Beschäftigungsart</th>
+          <th class="text-end">Stunden/Monat</th>
+          <th>Abteilung</th>
+          <th class="text-end">Aktionen</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% employees.forEach(employee => { %>
+          <tr>
+            <td>
+              <strong><%= employee.name %></strong><br />
+              <small class="text-muted">#<%= employee.id %></small>
+            </td>
+            <td><%= employee.email || '–' %></td>
+            <td>
+              <% if (employee.employmentType === 'full_time') { %>
+                Vollzeit
+              <% } else { %>
+                Teilzeit
+              <% } %>
+            </td>
+            <td class="text-end"><%= employee.hoursPerMonth != null ? employee.hoursPerMonth : '–' %></td>
+            <td><%= employee.departmentName || '–' %></td>
+            <td class="text-end">
+              <a class="btn btn-sm btn-outline-primary" href="/employees/<%= employee.id %>/edit">Bearbeiten</a>
+              <form method="post" action="/employees/<%= employee.id %>/delete" class="d-inline">
+                <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Mitarbeiter wirklich löschen?');">
+                  Löschen
+                </button>
+              </form>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+<% } %>
