@@ -213,6 +213,27 @@ class Notification(db.Model):
         return f"<Notification to={self.recipient_id} read={self.is_read}>"
 
 
+class ApprovalAutomation(db.Model):
+    """Zeitgesteuerte Automatisierungen für Genehmigungsprozesse."""
+
+    __tablename__ = "approval_automation"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), nullable=False)
+    automation_type = db.Column(db.String(50), nullable=False)
+    schedule_type = db.Column(db.String(20), nullable=False, default="daily")
+    run_time = db.Column(db.Time, nullable=True)
+    days_of_week = db.Column(db.String(50), nullable=True)
+    next_run = db.Column(db.DateTime, nullable=True)
+    last_run = db.Column(db.DateTime, nullable=True)
+    last_run_summary = db.Column(db.String(255), nullable=True)
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def __repr__(self) -> str:
+        return f"<ApprovalAutomation {self.name} active={self.is_active}>"
+
 def _upgrade_schema_if_needed() -> None:
     """Erweitert ältere SQLite-Datenbanken um neue Spalten.
 
