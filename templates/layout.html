@@ -1,0 +1,495 @@
+{#
+    Modernes Basislayout für alle Seiten.
+    Dieses Template definiert das Grundgerüst der HTML‑Seiten mit
+    zeitgemäßem Design und modernen Schriften.
+#}
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% block title %}Xerxes{% endblock %}</title>
+    
+    <!-- Google Fonts für moderne Typografie -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Eigene CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+    
+    <!-- Meta Tags für bessere SEO -->
+    <meta name="description" content="Xerxes – modernes Control Center für effiziente Personalplanung">
+    <meta name="theme-color" content="#2563eb">
+  </head>
+  <body class="{{ 'schedule-page' if request.endpoint == 'schedule' else '' }}">
+    {% set is_super_admin = session.get('is_admin') and not session.get('department_id') %}
+    <nav class="navbar">
+      <div class="navbar-left">
+        <a class="navbar-brand" href="{{ url_for('index') }}">
+          <span aria-hidden="true">📋</span>
+          <span class="navbar-brand-text">Xerxes</span>
+        </a>
+        {% if session.get('user_id') %}
+        <button class="nav-toggle" type="button" aria-expanded="false" aria-label="Menü öffnen">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+        {% endif %}
+      </div>
+      {% if session.get('user_id') %}
+      <div class="nav-links">
+        <div class="nav-group">
+          <span class="nav-group-title">Planung</span>
+          <div class="nav-group-items">
+            <a href="{{ url_for('schedule') }}">
+              <span class="nav-icon" aria-hidden="true">📅</span>
+              <span>Dienstplan</span>
+            </a>
+            {% if session.get('is_admin') %}
+            <a href="{{ url_for('auto_schedule_form') }}">
+              <span class="nav-icon" aria-hidden="true">🤖</span>
+              <span>Auto-Schichten</span>
+            </a>
+            <a href="{{ url_for('blocked_days') }}">
+              <span class="nav-icon" aria-hidden="true">🚫</span>
+              <span>Gesperrte Tage</span>
+            </a>
+            {% endif %}
+          </div>
+        </div>
+        {% if session.get('is_admin') %}
+        <div class="nav-group">
+          <span class="nav-group-title">Anträge</span>
+          <div class="nav-group-items">
+            <a href="{{ url_for('leave_requests') }}">
+              <span class="nav-icon" aria-hidden="true">🏖️</span>
+              <span>Abwesenheiten</span>
+              {% if pending_leaves_count > 0 %}
+                <span class="nav-badge">{{ pending_leaves_count }}</span>
+              {% endif %}
+            </a>
+            <a href="{{ url_for('shift_requests_overview') }}">
+              <span class="nav-icon" aria-hidden="true">⏰</span>
+              <span>Offene Einsätze</span>
+              {% if pending_shifts_count > 0 %}
+                <span class="nav-badge">{{ pending_shifts_count }}</span>
+              {% endif %}
+            </a>
+          </div>
+        </div>
+        <div class="nav-group">
+          <span class="nav-group-title">Verwaltung</span>
+          <div class="nav-group-items">
+            <a href="{{ url_for('employees') }}">
+              <span class="nav-icon" aria-hidden="true">👥</span>
+              <span>Mitarbeiter</span>
+            </a>
+            <a href="{{ url_for('departments') }}">
+              <span class="nav-icon" aria-hidden="true">🏢</span>
+              <span>Abteilungen</span>
+            </a>
+            {% if is_super_admin %}
+            <a href="{{ url_for('user_management') }}">
+              <span class="nav-icon" aria-hidden="true">🛠️</span>
+              <span>Benutzerverwaltung</span>
+            </a>
+            <div class="nav-dropdown" data-nav-dropdown>
+              <button
+                class="nav-dropdown-trigger"
+                type="button"
+                aria-haspopup="true"
+                aria-expanded="false"
+              >
+                <span class="nav-icon" aria-hidden="true">⚙️</span>
+                <span>Produktivität</span>
+                <span class="nav-dropdown-caret" aria-hidden="true">▾</span>
+              </button>
+              <div class="nav-dropdown-menu" role="menu">
+                <a href="{{ url_for('productivity_settings') }}" role="menuitem">
+                  <span class="nav-icon" aria-hidden="true">📊</span>
+                  <span>Produktivität</span>
+                </a>
+                <a href="{{ url_for('system_settings') }}" role="menuitem">
+                  <span class="nav-icon" aria-hidden="true">🛠️</span>
+                  <span>Systemeinstellungen</span>
+                </a>
+              </div>
+            </div>
+            {% else %}
+            <a href="{{ url_for('productivity_settings') }}">
+              <span class="nav-icon" aria-hidden="true">📊</span>
+              <span>Produktivität</span>
+            </a>
+            {% endif %}
+          </div>
+        </div>
+        <div class="nav-group">
+          <span class="nav-group-title">Auswertungen</span>
+          <div class="nav-group-items">
+            <a href="{{ url_for('monthly_report') }}">
+              <span class="nav-icon" aria-hidden="true">📈</span>
+              <span>Monatsbericht</span>
+            </a>
+          </div>
+        </div>
+        {% else %}
+        <div class="nav-group">
+          <span class="nav-group-title">Übersicht</span>
+          <div class="nav-group-items">
+            <a href="{{ url_for('schedule') }}">
+              <span class="nav-icon" aria-hidden="true">📅</span>
+              <span>Dienstplan</span>
+            </a>
+            <a href="{{ url_for('employee_hours_overview') }}">
+              <span class="nav-icon" aria-hidden="true">📊</span>
+              <span>Meine Stunden</span>
+            </a>
+            <a href="{{ url_for('leave_form') }}">
+              <span class="nav-icon" aria-hidden="true">📝</span>
+              <span>Abwesenheit beantragen</span>
+            </a>
+          </div>
+        </div>
+        {% endif %}
+        <div class="nav-actions">
+          <div class="notification-wrapper" data-mark-read-url="{{ url_for('mark_notifications_read') }}">
+            <button class="notification-button" type="button" aria-label="Benachrichtigungen" data-unread="{{ unread_notifications_count }}">
+              <span class="notification-icon" aria-hidden="true">🔔</span>
+              {% if unread_notifications_count > 0 %}
+              <span class="notification-badge">{{ unread_notifications_count }}</span>
+              {% endif %}
+            </button>
+            <div class="notification-dropdown" role="region" aria-live="polite">
+              <div class="notification-header">
+                <span>Benachrichtigungen</span>
+                <button class="mark-read-btn" type="button">Alle als gelesen</button>
+              </div>
+              <ul class="notification-list">
+                {% if notifications %}
+                  {% for notification in notifications %}
+                  <li class="notification-item {{ 'notification-unread' if not notification.is_read else '' }}">
+                    {% if notification.link %}
+                    <a href="{{ notification.link }}" class="notification-link">
+                      <span class="notification-message">{{ notification.message }}</span>
+                    </a>
+                    {% else %}
+                    <span class="notification-message">{{ notification.message }}</span>
+                    {% endif %}
+                    <span class="notification-timestamp">{{ notification.created_at.strftime('%d.%m.%Y %H:%M') }}</span>
+                  </li>
+                  {% endfor %}
+                {% else %}
+                  <li class="notification-empty">Keine Benachrichtigungen</li>
+                {% endif %}
+              </ul>
+            </div>
+          </div>
+          <a href="{{ url_for('logout') }}">
+            <span class="nav-icon" aria-hidden="true">🚪</span>
+            <span>Logout</span>
+          </a>
+        </div>
+      </div>
+      {% else %}
+      <div class="nav-links nav-links-guest">
+        <a href="{{ url_for('login') }}">
+          <span class="nav-icon" aria-hidden="true">🔐</span>
+          <span>Login</span>
+        </a>
+      </div>
+      {% endif %}
+    </nav>
+    
+    <div class="{{ 'container-fluid' if request.endpoint == 'schedule' else 'container' }}">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-messages-container">
+          {% for category, message in messages %}
+          <div class="flash-message flash-{{ category }}" role="alert">
+            <div class="flash-icon">
+              {% if category == 'success' %}
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              {% elif category == 'warning' %}
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 9V13M12 17H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              {% elif category == 'danger' %}
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 8V12M12 16H12.01M22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              {% elif category == 'info' %}
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M13 16H12V12H11M12 8H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              {% endif %}
+            </div>
+            <div class="flash-content">
+              <div class="flash-message-text">{{ message }}</div>
+            </div>
+            <button class="flash-close" onclick="this.parentElement.remove()">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+      {% endwith %}
+      
+      {% block content %}{% endblock %}
+    </div>
+    
+    <!-- Bootstrap JavaScript für Modal-Funktionalität -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Moderne JavaScript-Verbesserungen -->
+    <script>
+      const navDropdowns = Array.from(document.querySelectorAll('[data-nav-dropdown]'));
+      const closeAllDropdowns = () => {
+        navDropdowns.forEach(dropdown => {
+          dropdown.removeAttribute('data-open');
+          const trigger = dropdown.querySelector('.nav-dropdown-trigger');
+          if (trigger) {
+            trigger.setAttribute('aria-expanded', 'false');
+          }
+        });
+      };
+
+      const navToggle = document.querySelector('.nav-toggle');
+      const navLinks = document.querySelector('.nav-links');
+
+      if (navToggle && navLinks) {
+        const closeMenu = () => {
+          navToggle.setAttribute('aria-expanded', 'false');
+          navLinks.removeAttribute('data-nav-open');
+          closeAllDropdowns();
+        };
+
+        navToggle.addEventListener('click', () => {
+          const isExpanded = navToggle.getAttribute('aria-expanded') === 'true';
+          if (isExpanded) {
+            closeMenu();
+          } else {
+            navLinks.setAttribute('data-nav-open', '');
+            navToggle.setAttribute('aria-expanded', 'true');
+          }
+        });
+
+        navLinks.querySelectorAll('a').forEach(link => {
+          link.addEventListener('click', () => {
+            if (window.innerWidth <= 1200) {
+              closeMenu();
+            }
+          });
+        });
+
+        const handleResize = () => {
+          if (window.innerWidth > 1200) {
+            navLinks.removeAttribute('data-nav-open');
+            navToggle.setAttribute('aria-expanded', 'false');
+            closeAllDropdowns();
+          }
+        };
+
+        handleResize();
+        window.addEventListener('resize', handleResize);
+      }
+
+      if (navDropdowns.length) {
+        navDropdowns.forEach(dropdown => {
+          const trigger = dropdown.querySelector('.nav-dropdown-trigger');
+          if (!trigger) {
+            return;
+          }
+
+          dropdown.addEventListener('mouseenter', () => {
+            if (window.innerWidth > 1200) {
+              closeAllDropdowns();
+              dropdown.setAttribute('data-open', '');
+              trigger.setAttribute('aria-expanded', 'true');
+            }
+          });
+
+          dropdown.addEventListener('mouseleave', () => {
+            if (window.innerWidth > 1200) {
+              dropdown.removeAttribute('data-open');
+              trigger.setAttribute('aria-expanded', 'false');
+            }
+          });
+
+          dropdown.addEventListener('focusin', () => {
+            closeAllDropdowns();
+            dropdown.setAttribute('data-open', '');
+            trigger.setAttribute('aria-expanded', 'true');
+          });
+
+          dropdown.addEventListener('focusout', event => {
+            if (!dropdown.contains(event.relatedTarget)) {
+              dropdown.removeAttribute('data-open');
+              trigger.setAttribute('aria-expanded', 'false');
+            }
+          });
+
+          trigger.addEventListener('click', event => {
+            if (window.innerWidth > 1200) {
+              return;
+            }
+            event.preventDefault();
+            const isOpen = dropdown.hasAttribute('data-open');
+            closeAllDropdowns();
+            if (!isOpen) {
+              dropdown.setAttribute('data-open', '');
+              trigger.setAttribute('aria-expanded', 'true');
+            }
+          });
+
+          dropdown.querySelectorAll('a').forEach(link => {
+            link.addEventListener('click', () => {
+              closeAllDropdowns();
+            });
+          });
+        });
+
+        document.addEventListener('click', event => {
+          const clickedInside = navDropdowns.some(dropdown => dropdown.contains(event.target));
+          if (!clickedInside) {
+            closeAllDropdowns();
+          }
+        });
+
+        window.addEventListener('resize', () => {
+          if (window.innerWidth > 1200) {
+            closeAllDropdowns();
+          }
+        });
+      }
+
+      const notificationWrapper = document.querySelector('.notification-wrapper');
+      if (notificationWrapper) {
+        const dropdown = notificationWrapper.querySelector('.notification-dropdown');
+        const button = notificationWrapper.querySelector('.notification-button');
+        const markReadBtn = notificationWrapper.querySelector('.mark-read-btn');
+        const markReadUrl = notificationWrapper.dataset.markReadUrl;
+        const badge = notificationWrapper.querySelector('.notification-badge');
+
+        const updateUnreadState = () => {
+          if (button) {
+            button.dataset.unread = '0';
+          }
+          if (badge) {
+            badge.style.display = 'none';
+          }
+          notificationWrapper.querySelectorAll('.notification-item').forEach(item => {
+            item.classList.remove('notification-unread');
+          });
+        };
+
+        const closeDropdown = () => {
+          if (dropdown) {
+            dropdown.removeAttribute('data-open');
+          }
+          document.removeEventListener('click', handleOutsideClick);
+        };
+
+        const openDropdown = () => {
+          if (dropdown) {
+            dropdown.setAttribute('data-open', '');
+          }
+          document.addEventListener('click', handleOutsideClick);
+        };
+
+        const markAllAsRead = () => {
+          if (!button) {
+            return;
+          }
+
+          if (!markReadUrl || button.dataset.unread === '0') {
+            updateUnreadState();
+            return;
+          }
+
+          fetch(markReadUrl, {
+            method: 'POST',
+            headers: {
+              'X-Requested-With': 'XMLHttpRequest'
+            }
+          })
+            .catch(() => {})
+            .finally(() => {
+              updateUnreadState();
+            });
+        };
+
+        function handleOutsideClick(event) {
+          if (!notificationWrapper.contains(event.target)) {
+            closeDropdown();
+          }
+        }
+
+        if (button) {
+          button.addEventListener('click', event => {
+            event.preventDefault();
+            event.stopPropagation();
+
+            if (dropdown && dropdown.hasAttribute('data-open')) {
+              closeDropdown();
+            } else {
+              openDropdown();
+              markAllAsRead();
+            }
+          });
+        }
+
+        if (markReadBtn) {
+          markReadBtn.addEventListener('click', event => {
+            event.preventDefault();
+            event.stopPropagation();
+            markAllAsRead();
+          });
+        }
+      }
+
+      // Smooth scrolling für interne Links
+      document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+          e.preventDefault();
+          const target = document.querySelector(this.getAttribute('href'));
+          if (target) {
+            target.scrollIntoView({
+              behavior: 'smooth',
+              block: 'start'
+            });
+          }
+        });
+      });
+      
+      // Auto-hide flash messages nach 6 Sekunden
+      setTimeout(() => {
+        document.querySelectorAll('.flash-message').forEach(message => {
+          message.classList.add('fade-out');
+          setTimeout(() => {
+            if (message.parentNode) {
+              message.parentNode.removeChild(message);
+            }
+          }, 500);
+        });
+      }, 6000);
+      
+      // Hover-Effekte für Tabellen-Zeilen
+      document.querySelectorAll('.table tbody tr').forEach(row => {
+        row.addEventListener('mouseenter', function() {
+          this.style.transform = 'translateY(-2px)';
+        });
+        row.addEventListener('mouseleave', function() {
+          this.style.transform = 'translateY(0)';
+        });
+      });
+    </script>
+  </body>
+</html>
+

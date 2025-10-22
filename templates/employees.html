@@ -1,0 +1,430 @@
+{% extends "layout.html" %}
+{% block title %}Mitarbeiter verwalten - Xerxes{% endblock %}
+{% block content %}
+
+<div class="employees-page">
+  {% set full_time = employees|selectattr('position', 'equalto', 'Vollzeit')|list|length %}
+  {% set part_time = employees|selectattr('position', 'equalto', 'Teilzeit')|list|length %}
+  {% set assistants = employees|selectattr('position', 'equalto', 'Aushilfe')|list|length %}
+
+  <section class="employees-hero">
+    <div class="employees-hero-text">
+      <p class="employees-hero-eyebrow">Teamübersicht</p>
+      <h1>Mitarbeiterverwaltung</h1>
+      <p class="employees-hero-subtitle">
+        Behalte dein Team, Kapazitäten und Auslastung jederzeit im Blick. Plane smarter, identifiziere Engpässe frühzeitig und verschaffe neuen Mitarbeitern einen schnellen Einstieg.
+      </p>
+      <div class="employees-hero-stats">
+        <div class="hero-stat">
+          <span class="hero-stat-label">Gesamt</span>
+          <span class="hero-stat-value">{{ employees|length }}</span>
+        </div>
+        <div class="hero-stat">
+          <span class="hero-stat-label">Vollzeit</span>
+          <span class="hero-stat-value">{{ full_time }}</span>
+        </div>
+        <div class="hero-stat">
+          <span class="hero-stat-label">Teilzeit</span>
+          <span class="hero-stat-value">{{ part_time }}</span>
+        </div>
+        <div class="hero-stat">
+          <span class="hero-stat-label">Aushilfen</span>
+          <span class="hero-stat-value">{{ assistants }}</span>
+        </div>
+      </div>
+    </div>
+    <div class="employees-hero-actions">
+      <button type="button" class="hero-action-button" data-bs-toggle="modal" data-bs-target="#addEmployeeModal">
+        <span class="hero-action-icon">➕</span>
+        <span>Neuen Mitarbeiter anlegen</span>
+      </button>
+      <div class="hero-secondary-action">
+        <span class="hero-secondary-icon">💡</span>
+        <div>
+          <p class="hero-secondary-title">Tipp</p>
+          <p class="hero-secondary-text">Nutze die Filter, um Monats- und Jahreswerte für Kapazitäten direkt zu prüfen.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {% if planning_insights %}
+  <section class="employees-insights">
+    <article class="employees-insight employees-insight-primary">
+      <div class="insight-header">
+        <span class="insight-icon">📊</span>
+        <div>
+          <p class="insight-eyebrow">Kapazitätsübersicht</p>
+          <h2>Aushilfen im Blick</h2>
+        </div>
+      </div>
+      <div class="insight-metrics">
+        <div class="insight-metric">
+          <span class="insight-label">Verfügbare Stunden</span>
+          <span class="insight-value">{{ planning_insights.total_remaining_hours|round(1) }}h</span>
+        </div>
+        <div class="insight-metric">
+          <span class="insight-label">Überstunden</span>
+          <span class="insight-value">{{ planning_insights.total_overtime_hours|round(1) }}h</span>
+        </div>
+        <div class="insight-metric">
+          <span class="insight-label">Abdeckung</span>
+          <span class="insight-value">{{ planning_insights.coverage_rate|round(0) }}%</span>
+          <span class="insight-hint">von {{ planning_insights.total_target_hours|round(0) }}h Soll</span>
+        </div>
+        <div class="insight-metric">
+          <span class="insight-label">Ø Reststunden</span>
+          <span class="insight-value">{{ planning_insights.avg_remaining_hours|round(1) }}h</span>
+        </div>
+      </div>
+      <div class="insight-details">
+        <p>
+          <strong>{{ planning_insights.assistant_count }}</strong> Aushilfen insgesamt ·
+          <strong>{{ planning_insights.underutilized_count }}</strong> mit freien Kapazitäten ·
+          <strong>{{ planning_insights.overutilized_count }}</strong> mit Überstunden
+        </p>
+        <p>
+          Netto-Kapazität: <strong>{{ planning_insights.net_available_hours|round(1) }}h</strong>
+          ({{ planning_insights.total_remaining_hours|round(1) }}h frei −
+          {{ planning_insights.total_overtime_hours|round(1) }}h Überstunden)
+        </p>
+        <p>
+          Geleistet: {{ planning_insights.total_worked_hours|round(1) }}h · Ø Überstunden:
+          {{ planning_insights.avg_overtime_hours|round(1) }}h
+        </p>
+        {% if planning_insights.assistants_without_hours %}
+        <p>{{ planning_insights.assistants_without_hours }} Aushilfen haben noch keine genehmigten Einsätze in diesem Monat.</p>
+        {% endif %}
+      </div>
+    </article>
+
+    {% if planning_insights.overutilized %}
+    <article class="employees-insight employees-insight-alert">
+      <div class="insight-header">
+        <span class="insight-icon">⚠️</span>
+        <div>
+          <p class="insight-eyebrow">Überstunden-Alarm</p>
+          <h2>Kritische Aushilfen</h2>
+        </div>
+      </div>
+      <p class="insight-description">{{ planning_insights.overutilized|length }} Aushilfen mit kritischen Überstunden</p>
+      <ul class="insight-list">
+        {% for emp in planning_insights.overutilized[:3] %}
+        <li>
+          <div>
+            <p class="insight-list-title">{{ emp.employee_name }}</p>
+            <p class="insight-list-subtitle">{{ emp.department }}</p>
+          </div>
+          <span class="insight-list-value">+{{ emp.overtime_hours }}h</span>
+        </li>
+        {% endfor %}
+      </ul>
+      {% if planning_insights.overutilized|length > 3 %}
+      <p class="insight-footer">… und {{ planning_insights.overutilized|length - 3 }} weitere</p>
+      {% endif %}
+    </article>
+    {% endif %}
+
+    {% if planning_insights.underutilized %}
+    <article class="employees-insight employees-insight-warning">
+      <div class="insight-header">
+        <span class="insight-icon">💡</span>
+        <div>
+          <p class="insight-eyebrow">Freie Kapazitäten</p>
+          <h2>Verfügbare Stunden</h2>
+        </div>
+      </div>
+      <p class="insight-description">{{ planning_insights.underutilized|length }} Aushilfen mit offenen Kapazitäten</p>
+      <ul class="insight-list">
+        {% for emp in planning_insights.underutilized[:3] %}
+        <li>
+          <div>
+            <p class="insight-list-title">{{ emp.employee_name }}</p>
+            <p class="insight-list-subtitle">{{ emp.department }}</p>
+          </div>
+          <span class="insight-list-value">{{ emp.remaining_hours }}h frei</span>
+        </li>
+        {% endfor %}
+      </ul>
+      {% if planning_insights.underutilized|length > 3 %}
+      <p class="insight-footer">… und {{ planning_insights.underutilized|length - 3 }} weitere</p>
+      {% endif %}
+    </article>
+    {% endif %}
+  </section>
+  {% endif %}
+
+  <section class="employees-board card">
+    <div class="employees-board-controls">
+      <form method="get" class="employees-search-form">
+        <label for="employee-search" class="filter-field search-field">
+          <span>Suchen</span>
+          <input
+            type="search"
+            id="employee-search"
+            name="q"
+            value="{{ search_query }}"
+            placeholder="Name, E-Mail oder Kürzel"
+            class="form-control form-control-sm"
+          >
+        </label>
+        <label for="employment-filter" class="filter-field">
+          <span>Anstellungsart</span>
+          <select
+            id="employment-filter"
+            name="position"
+            class="form-select form-select-sm"
+          >
+            <option value="">Alle</option>
+            <option value="Vollzeit" {% if selected_position == 'Vollzeit' %}selected{% endif %}>Vollzeit</option>
+            <option value="Teilzeit" {% if selected_position == 'Teilzeit' %}selected{% endif %}>Teilzeit</option>
+            <option value="Aushilfe" {% if selected_position == 'Aushilfe' %}selected{% endif %}>Aushilfe</option>
+          </select>
+        </label>
+        <input type="hidden" name="month" value="{{ current_month }}">
+        <input type="hidden" name="year" value="{{ current_year }}">
+        <div class="employees-search-form-actions">
+          <button type="submit" class="btn btn-primary btn-sm">Filtern</button>
+          {% if search_query or selected_position %}
+          <a
+            href="{{ url_for('employees', month=current_month, year=current_year) }}"
+            class="btn btn-link btn-sm"
+          >Zurücksetzen</a>
+          {% endif %}
+        </div>
+      </form>
+    </div>
+    <header class="employees-board-header">
+      <div class="board-header-text">
+        <span class="board-icon">📋</span>
+        <div>
+          <h2>Alle Mitarbeiter</h2>
+          <p>{{ employees|length }} Personen im ausgewählten Zeitraum</p>
+        </div>
+      </div>
+      <form method="get" class="employees-filter">
+        <label for="month" class="filter-field">
+          <span>Monat</span>
+          <select name="month" id="month" class="form-select form-select-sm">
+            {% for m in range(1, 13) %}
+            <option value="{{ m }}" {% if m == current_month %}selected{% endif %}>{{ m }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label for="year" class="filter-field">
+          <span>Jahr</span>
+          <select name="year" id="year" class="form-select form-select-sm">
+            {% for y in range(2020, 2030) %}
+            <option value="{{ y }}" {% if y == current_year %}selected{% endif %}>{{ y }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <input type="hidden" name="q" value="{{ search_query }}">
+        <input type="hidden" name="position" value="{{ selected_position }}">
+        <button type="submit" class="btn btn-primary btn-sm">Aktualisieren</button>
+      </form>
+    </header>
+
+    {% if employees %}
+    <div class="employee-collection">
+      {% for emp in employees %}
+      {% set emp_hours = hours_summary.get(emp.id, {}) %}
+      <article class="employee-card employee-card-{{ emp.position|default('unbekannt')|lower }}">
+        <div class="employee-card-header">
+          <div class="employee-avatar" aria-hidden="true">{{ emp.name[:2]|upper }}</div>
+          <div class="employee-headline">
+            <h3>{{ emp.name }}</h3>
+            <div class="employee-badges">
+              {% if emp.short_code %}
+              <span class="employee-badge badge-neutral">{{ emp.short_code }}</span>
+              {% endif %}
+              {% if emp.position %}
+              <span class="employee-badge">{{ emp.position }}</span>
+              {% endif %}
+            </div>
+          </div>
+          <div class="employee-actions">
+            <a href="{{ url_for('employee_profile', emp_id=emp.id) }}" class="employee-action primary" title="Profil anzeigen">
+              <span aria-hidden="true">👁️</span>
+              Profil
+            </a>
+            <a href="{{ url_for('delete_employee', emp_id=emp.id) }}"
+               class="employee-action danger"
+               title="Mitarbeiter löschen"
+               onclick="return confirm('Mitarbeiter {{ emp.name }} wirklich löschen?')">
+              <span aria-hidden="true">🗑️</span>
+              Löschen
+            </a>
+          </div>
+        </div>
+
+        <dl class="employee-meta">
+          <div>
+            <dt>Abteilung</dt>
+            <dd>{% if emp.department %}{{ emp.department.name }}{% else %}<em>Keine Zuordnung</em>{% endif %}</dd>
+          </div>
+          <div>
+            <dt>Soll</dt>
+            <dd>
+              {% if emp.monthly_hours and emp.monthly_hours >= 160 %}
+                Vollzeit
+              {% elif emp.monthly_hours %}
+                {{ emp.monthly_hours }}h/Monat
+              {% else %}
+                <em>Nicht festgelegt</em>
+              {% endif %}
+            </dd>
+          </div>
+          {% if emp.employee_number %}
+          <div>
+            <dt>Personalnummer</dt>
+            <dd>{{ emp.employee_number }}</dd>
+          </div>
+          {% endif %}
+          {% if emp.email %}
+          <div>
+            <dt>E-Mail</dt>
+            <dd><a href="mailto:{{ emp.email }}">{{ emp.email }}</a></dd>
+          </div>
+          {% endif %}
+          {% if emp.phone %}
+          <div>
+            <dt>Telefon</dt>
+            <dd><a href="tel:{{ emp.phone }}">{{ emp.phone }}</a></dd>
+          </div>
+          {% endif %}
+        </dl>
+
+        <div class="employee-stats">
+          <div class="employee-stat">
+            <span class="stat-label">Geleistet</span>
+            <span class="stat-value positive">{{ emp_hours.get('worked_hours', 0) }}h</span>
+            {% if emp_hours.get('shift_count', 0) > 0 %}
+            <span class="stat-sub">{{ emp_hours.get('shift_count', 0) }} Einsätze</span>
+            {% endif %}
+          </div>
+
+          <div class="employee-stat">
+            <span class="stat-label">Reststunden</span>
+            {% if emp.monthly_hours and emp.monthly_hours >= 160 %}
+            <span class="stat-value muted">–</span>
+            {% else %}
+              {% set remaining = emp_hours.get('remaining_hours', 0) %}
+              <span class="stat-value {% if remaining > 20 %}critical{% elif remaining > 0 %}caution{% else %}muted{% endif %}">
+                {{ remaining }}h
+              </span>
+              {% if remaining > 20 %}
+              <span class="stat-chip critical">Viel verfügbar</span>
+              {% endif %}
+            {% endif %}
+          </div>
+
+          {% if emp.position == 'Aushilfe' %}
+          <div class="employee-stat">
+            <span class="stat-label">Überstunden</span>
+            {% set overtime = emp_hours.get('overtime_hours', 0) %}
+            <span class="stat-value {% if overtime > 10 %}critical{% elif overtime > 0 %}caution{% else %}muted{% endif %}">
+              {% if overtime > 0 %}+{{ overtime }}h{% else %}0h{% endif %}
+            </span>
+            {% if overtime > 10 %}
+            <span class="stat-chip critical">Kritisch</span>
+            {% endif %}
+          </div>
+          {% endif %}
+        </div>
+
+        {% if emp.monthly_hours and emp.monthly_hours < 160 %}
+        {% set percentage = emp_hours.get('completion_percentage', 0) %}
+        <div class="employee-progress">
+          <div class="employee-progress-bar">
+            <div class="employee-progress-value {% if percentage >= 100 %}critical{% elif percentage >= 80 %}positive{% else %}caution{% endif %}"
+                 style="width: {% if percentage > 100 %}100{% else %}{{ percentage }}{% endif %}%;">
+            </div>
+          </div>
+          <span class="employee-progress-label {% if percentage >= 100 %}critical{% elif percentage >= 80 %}positive{% else %}caution{% endif %}">
+            {{ "%.0f"|format(percentage) }}%
+          </span>
+        </div>
+        {% endif %}
+      </article>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="employees-empty-state">
+      <div class="empty-icon">👥</div>
+      <p class="empty-title">Noch keine Mitarbeiter angelegt</p>
+      <p class="empty-text">Klicke auf „Neuen Mitarbeiter anlegen“, um dein Team aufzubauen.</p>
+    </div>
+    {% endif %}
+  </section>
+</div>
+
+<!-- Modal: Mitarbeiter hinzufügen -->
+<div class="modal fade" id="addEmployeeModal" tabindex="-1" aria-labelledby="addEmployeeModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addEmployeeModalLabel">
+          <span style="margin-right: 0.5rem;">➕</span>Neuen Mitarbeiter anlegen
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form method="post" action="{{ url_for('add_employee') }}">
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label for="name" class="form-label">Name*</label>
+              <input type="text" class="form-control" id="name" name="name" required>
+            </div>
+            <div class="col-md-6">
+              <label for="short_code" class="form-label">Kürzel</label>
+              <input type="text" class="form-control" id="short_code" name="short_code" maxlength="20" placeholder="z.B. JD">
+            </div>
+            <div class="col-md-6">
+              <label for="employee_number" class="form-label">Personalnummer</label>
+              <input type="text" class="form-control" id="employee_number" name="employee_number">
+            </div>
+            <div class="col-md-6">
+              <label for="department_id" class="form-label">Abteilung*</label>
+              <select class="form-select" id="department_id" name="department_id" required>
+                <option value="">Abteilung wählen</option>
+                {% for dept in departments %}
+                <option value="{{ dept.id }}">{{ dept.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label for="position" class="form-label">Position*</label>
+              <select class="form-select" id="position" name="position" required>
+                <option value="">Position wählen</option>
+                <option value="Vollzeit">Vollzeit</option>
+                <option value="Teilzeit">Teilzeit</option>
+                <option value="Aushilfe">Aushilfe</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label for="monthly_hours" class="form-label">Monatliche Stunden</label>
+              <input type="number" step="0.5" class="form-control" id="monthly_hours" name="monthly_hours" placeholder="z.B. 160">
+              <small class="form-text text-muted">Vollzeit: ≥160h, Teilzeit/Aushilfe: individuell</small>
+            </div>
+            <div class="col-md-6">
+              <label for="email" class="form-label">E-Mail</label>
+              <input type="email" class="form-control" id="email" name="email">
+            </div>
+            <div class="col-md-6">
+              <label for="phone" class="form-label">Telefon</label>
+              <input type="tel" class="form-control" id="phone" name="phone">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+          <button type="submit" class="btn btn-primary">Mitarbeiter anlegen</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+

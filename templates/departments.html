@@ -1,0 +1,213 @@
+{% extends "layout.html" %}
+{% block title %}Abteilungen verwalten - Xerxes{% endblock %}
+{% block content %}
+<div style="margin-bottom: 2rem;">
+  <h1 style="display: flex; align-items: center; margin-bottom: 0.5rem;">
+    <span style="margin-right: 0.75rem; font-size: 2rem;">🏢</span>
+    Abteilungen verwalten
+  </h1>
+  <p style="color: #64748b; font-size: 1.125rem; margin: 0;">Organisationsstruktur und Abteilungsverwaltung</p>
+</div>
+
+<!-- Abteilungen-Tabelle -->
+<div class="card" style="margin-bottom: 3rem;">
+  <div class="card-header">
+    <h3 style="margin: 0; display: flex; align-items: center;">
+      <span style="margin-right: 0.75rem;">📋</span>
+      Aktuelle Abteilungen ({{ departments|length }})
+    </h3>
+  </div>
+  <div class="card-body" style="padding: 0;">
+    {% if departments %}
+    <div style="overflow-x: auto;">
+      <table class="table" style="margin: 0;">
+        <thead>
+          <tr>
+            <th style="padding: 1.5rem 1rem;">
+              <span style="margin-right: 0.5rem;">🏢</span>Name
+            </th>
+            <th style="padding: 1.5rem 1rem;">
+              <span style="margin-right: 0.5rem;">🎨</span>Farbe
+            </th>
+            <th style="padding: 1.5rem 1rem;">
+              <span style="margin-right: 0.5rem;">📍</span>Bereich
+            </th>
+            <th style="padding: 1.5rem 1rem;">
+              <span style="margin-right: 0.5rem;">👥</span>Mitarbeiter
+            </th>
+            <th style="padding: 1.5rem 1rem; text-align: center;">
+              <span style="margin-right: 0.5rem;">⚙️</span>Aktionen
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for dept in departments %}
+          <tr>
+            <td style="padding: 1rem; font-weight: 600;">{{ dept.name }}</td>
+            <td style="padding: 1rem;">
+              {% if dept.color %}
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                  <div style="width: 20px; height: 20px; border-radius: 50%; background-color: {{ dept.color }}; border: 2px solid #e2e8f0;"></div>
+                  <span style="font-family: monospace; font-size: 0.875rem; color: #64748b;">{{ dept.color }}</span>
+                </div>
+              {% else %}
+                <span style="color: #9ca3af;">–</span>
+              {% endif %}
+            </td>
+            <td style="padding: 1rem;">
+              {% if dept.area %}
+                <span style="color: #059669; font-weight: 500;">{{ dept.area }}</span>
+              {% else %}
+                <span style="color: #9ca3af;">–</span>
+              {% endif %}
+            </td>
+            <td style="padding: 1rem;">
+              {% if dept.employees|length > 0 %}
+                <span class="badge" style="background-color: #3b82f6; font-size: 0.875rem;">
+                  {{ dept.employees|length }} Mitarbeiter
+                </span>
+              {% else %}
+                <span style="color: #9ca3af;">Keine Mitarbeiter</span>
+              {% endif %}
+            </td>
+            <td style="padding: 1rem; text-align: center;">
+              <a href="{{ url_for('delete_department', dept_id=dept.id) }}" 
+                 class="btn btn-outline-danger" 
+                 style="padding: 0.5rem 1rem; font-size: 0.875rem;"
+                 onclick="return confirm('Abteilung {{ dept.name }} wirklich löschen?')">
+                <span style="margin-right: 0.25rem;">🗑️</span>Löschen
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div style="text-align: center; padding: 3rem 2rem; color: #64748b;">
+      <div style="font-size: 4rem; margin-bottom: 1rem;">🏢</div>
+      <h3 style="margin-bottom: 0.5rem;">Noch keine Abteilungen</h3>
+      <p style="margin: 0;">Erstellen Sie die erste Abteilung über das Formular unten.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Neue Abteilung anlegen - nur für Super-Admins -->
+{% if not session.get('department_id') %}
+<div class="card">
+  <div class="card-header">
+    <h3 style="margin: 0; display: flex; align-items: center;">
+      <span style="margin-right: 0.75rem;">➕</span>
+      Neue Abteilung anlegen
+    </h3>
+  </div>
+  <div class="card-body">
+    <form method="post" action="{{ url_for('add_department') }}">
+      <div class="row">
+        <div class="col-md-4">
+          <label for="name" class="form-label">
+            <span style="margin-right: 0.5rem;">🏢</span>Abteilungsname *
+          </label>
+          <input 
+            type="text" 
+            class="form-control" 
+            id="name" 
+            name="name" 
+            required 
+            placeholder="z.B. Verwaltung, IT, Produktion"
+            style="font-weight: 500;"
+          />
+        </div>
+        
+        <div class="col-md-4">
+          <label for="color" class="form-label">
+            <span style="margin-right: 0.5rem;">🎨</span>Farbe
+          </label>
+          <div style="display: flex; gap: 0.5rem;">
+            <input 
+              type="color" 
+              class="form-control" 
+              id="color" 
+              name="color" 
+              style="width: 60px; height: 48px; padding: 0.25rem; border-radius: 0.5rem;"
+              value="#3b82f6"
+            />
+            <input 
+              type="text" 
+              class="form-control" 
+              placeholder="#3b82f6" 
+              style="font-family: monospace;"
+              onchange="document.getElementById('color').value = this.value"
+              oninput="document.getElementById('color').value = this.value"
+            />
+          </div>
+          <small style="color: #64748b; font-size: 0.75rem;">Farbe für die Darstellung im Dienstplan</small>
+        </div>
+        
+        <div class="col-md-4">
+          <label for="area" class="form-label">
+            <span style="margin-right: 0.5rem;">📍</span>Bereich
+          </label>
+          <input 
+            type="text" 
+            class="form-control" 
+            id="area" 
+            name="area" 
+            placeholder="z.B. Hauptgebäude, Werk 1, Außenstelle"
+          />
+        </div>
+      </div>
+      
+      <!-- Vorschau-Bereich -->
+      <div style="margin-top: 2rem; padding: 1.5rem; background-color: #f8fafc; border-radius: 0.5rem; border: 1px solid #e2e8f0;">
+        <h4 style="margin-bottom: 1rem; color: #374151; display: flex; align-items: center;">
+          <span style="margin-right: 0.5rem;">👁️</span>Vorschau
+        </h4>
+        <div style="display: flex; align-items: center; gap: 1rem;">
+          <div id="colorPreview" style="width: 40px; height: 40px; border-radius: 50%; background-color: #3b82f6; border: 2px solid #e2e8f0;"></div>
+          <div>
+            <div style="font-weight: 600; color: #1e293b;">Abteilungsname</div>
+            <div style="color: #64748b; font-size: 0.875rem;">So wird die Abteilung im System angezeigt</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Submit Button -->
+      <div style="text-align: center; padding-top: 2rem; border-top: 1px solid #e2e8f0; margin-top: 2rem;">
+        <button type="submit" class="btn btn-success" style="padding: 1rem 2rem; font-size: 1.1rem; font-weight: 600;">
+          <span style="margin-right: 0.5rem;">💾</span>Abteilung speichern
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% else %}
+<!-- Hinweis für Abteilungsadministratoren -->
+<div class="card">
+  <div class="card-body text-center" style="padding: 3rem;">
+    <div style="font-size: 3rem; margin-bottom: 1rem;">🏢</div>
+    <h4 style="color: #64748b; margin-bottom: 1rem;">Abteilungsverwaltung</h4>
+    <p style="color: #64748b; margin-bottom: 0;">
+      Als Abteilungsadministrator können Sie Ihre eigene Abteilung verwalten.<br>
+      Neue Abteilungen können nur von Super-Administratoren erstellt werden.
+    </p>
+  </div>
+</div>
+{% endif %}
+
+<!-- JavaScript für Live-Vorschau -->
+<script>
+  // Live-Vorschau für Farbe
+  document.getElementById('color').addEventListener('input', function() {
+    document.getElementById('colorPreview').style.backgroundColor = this.value;
+  });
+  
+  // Synchronisation zwischen Color-Picker und Text-Input
+  document.getElementById('color').addEventListener('change', function() {
+    const textInput = document.querySelector('input[placeholder="#3b82f6"]');
+    textInput.value = this.value;
+  });
+</script>
+{% endblock %}
+

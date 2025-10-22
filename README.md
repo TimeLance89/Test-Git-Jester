@@ -1,84 +1,71 @@
-# Employee Planner (Node.js & MySQL)
+# Employee Planner - Dienstplan Management System
 
-Ein webbasiertes Dienstplan-Management-System auf Basis von Node.js, Express und MySQL. Das System ermöglicht die Verwaltung von Abteilungen, Mitarbeitern und geplanten Schichten vollständig über den Browser.
+Ein webbasiertes System zur Verwaltung von Mitarbeitern, Dienstplänen und Arbeitszeiten.
 
 ## Features
 
-- **Dashboard** mit den wichtigsten Kennzahlen
-- **Abteilungsverwaltung** mit Absicherung gegen versehentliches Löschen
-- **Mitarbeiterverwaltung** inkl. Beschäftigungsart und Sollstunden/Monat
-- **Dienstplanung** mit Monatsübersicht und Formular zur Schichterstellung
-- **MySQL-Datenbank** als persistente Grundlage
-
-## Voraussetzungen
-
-- Node.js (>= 18)
-- npm
-- MySQL 8.x Server mit einem angelegten Schema (z. B. `employee_planner`)
+- **Mitarbeiterverwaltung**: Vollzeit- und Teilzeitmitarbeiter mit individuellen Arbeitszeiten
+- **Dienstplanung**: Monatliche Schichtplanung mit visueller Übersicht
+- **Abteilungsverwaltung**: Organisation von Mitarbeitern in Abteilungen
+- **Urlaubsverwaltung**: Antragstellung und Genehmigung von Urlaubszeiten
+- **Gesperrte Tage**: Verwaltung von Feiertagen und besonderen Ereignissen
+- **Responsive Design**: Optimiert für Desktop, Tablet und Mobile
 
 ## Installation
 
-1. **MySQL Schema anlegen**
-
-   ```sql
-   CREATE DATABASE employee_planner CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-   ```
-
-2. **Tabellen erstellen**
-
+1. **Abhängigkeiten installieren:**
    ```bash
-   mysql -u <USER> -p employee_planner < node_app/db/schema.sql
+   pip install -r requirements.txt
    ```
 
-3. **Abhängigkeiten installieren**
-
+2. **Datenbank initialisieren:**
    ```bash
-   cd node_app
-   npm install
+   python init_db.py
    ```
 
-4. **Konfigurationsdatei anlegen**
-
+3. **Anwendung starten:**
    ```bash
-   cp .env.example .env
-   # DB_HOST, DB_USER, DB_PASSWORD und DB_NAME entsprechend anpassen
+   python app.py
    ```
 
-5. **Entwicklungsserver starten**
-
-   ```bash
-   npm start
+4. **Im Browser öffnen:**
    ```
-
-6. **Im Browser öffnen**
-
-   ```
-   http://localhost:3000
+   http://localhost:5001
    ```
 
 ## Projektstruktur
 
 ```
-node_app/
-├── db/
-│   └── schema.sql          # SQL-Schema für MySQL
-├── public/
-│   └── css/styles.css      # Statische Assets
-├── server.js               # Express-Einstiegspunkt
-├── package.json            # Node.js Abhängigkeiten
-├── src/
-│   ├── db/pool.js          # MySQL Connection Pool
-│   ├── repositories/       # Datenbankabfragen
-│   ├── routes/             # Express Router
-│   └── views/              # EJS-Templates
-└── .env.example            # Beispielkonfiguration
+employee_planner/
+├── app.py                 # Haupt-Flask-Anwendung
+├── models.py              # Datenbankmodelle
+├── auto_schedule.py       # Automatische Schichtplanung
+├── init_db.py            # Datenbank-Initialisierung
+├── requirements.txt       # Python-Abhängigkeiten
+├── install.sh            # Installations-Script
+├── static/               # CSS und statische Dateien
+├── templates/            # HTML-Templates
+└── instance/             # Datenbank-Dateien
 ```
 
-## Weiterentwicklung
+## Vollzeit vs. Teilzeit Mitarbeiter
 
-- Erweiterung um Urlaubsverwaltung und Feiertagsplanung
-- Benutzer- und Rechteverwaltung
-- Automatisierte Schichtvorschläge auf Basis von Verfügbarkeiten
+Das System unterscheidet automatisch zwischen Vollzeit- und Teilzeitmitarbeitern:
+
+- **Vollzeit**: Mitarbeiter mit ≥160 Stunden/Monat
+  - Vereinfachte Stundenanzeige im Dienstplan
+  - Keine Soll-/Reststunden-Anzeige in der Mitarbeiterliste
+
+- **Teilzeit**: Mitarbeiter mit <160 Stunden/Monat
+  - Detaillierte Stundenübersicht
+  - Soll-/Reststunden-Tracking
+
+## Technologie
+
+- **Backend**: Flask (Python)
+- **Database**: SQLite
+- **Frontend**: Bootstrap 5, HTML5, CSS3
+- **Template Engine**: Jinja2
 
 ## Lizenz
 

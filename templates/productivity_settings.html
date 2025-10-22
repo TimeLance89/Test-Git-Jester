@@ -1,0 +1,334 @@
+{% extends "layout.html" %}
+{% block title %}Produktivität &amp; Effizienz{% endblock %}
+{% block content %}
+{% set global_setting = settings_dict.get('global') %}
+{% set default_value = global_setting.productivity_value if global_setting else 40.0 %}
+{% set ns = namespace(custom_count=0, inherited_count=0) %}
+{% if departments %}
+  {% for department in departments %}
+    {% if settings_dict.get(department.id) %}
+      {% set ns.custom_count = ns.custom_count + 1 %}
+    {% else %}
+      {% set ns.inherited_count = ns.inherited_count + 1 %}
+    {% endif %}
+  {% endfor %}
+{% endif %}
+
+<div class="productivity-page">
+  <header class="productivity-hero">
+    <div class="hero-icon" aria-hidden="true">⚙️</div>
+    <div class="hero-content">
+      <h1>Produktivität verwalten</h1>
+      <p>
+        Steuern Sie zentrale und abteilungsspezifische Produktivitätswerte, um Kapazitäten realistischer
+        zu planen. Änderungen greifen sofort in der Planung und den automatischen Berechnungen.
+      </p>
+      <div class="hero-meta">
+        <span>
+          <strong>Formel:</strong> Teile = Gesamtstunden × Produktivität
+        </span>
+        <span>
+          <strong>Hinweis:</strong> Dezimalwerte sind erlaubt (z. B. 37,5)
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <section class="productivity-summary" aria-label="Aktueller Überblick">
+    <article class="summary-card">
+      <div class="summary-label">Globale Produktivität</div>
+      <div class="summary-value">{{ '%.1f' | format(default_value) }}</div>
+      <p class="summary-description">
+        Wird verwendet, wenn keine abteilungsspezifische Regel vorhanden ist.
+      </p>
+      {% if global_setting and global_setting.created_date %}
+      <span class="summary-meta">
+        Aktualisiert am {{ global_setting.created_date.strftime('%d.%m.%Y') }}
+      </span>
+      {% else %}
+      <span class="summary-meta">Standardwert aktiv</span>
+      {% endif %}
+    </article>
+
+    <article class="summary-card">
+      <div class="summary-label">Eigene Abteilungswerte</div>
+      <div class="summary-value">{{ ns.custom_count }}</div>
+      <p class="summary-description">
+        Abteilungen mit individuellen Produktivitätsvorgaben.
+      </p>
+      <span class="summary-meta">{{ ns.inherited_count }} nutzen den globalen Wert</span>
+    </article>
+
+    <article class="summary-card">
+      <div class="summary-label">Schnellaktionen</div>
+      <div class="quick-actions">
+        <button type="button" class="quick-action" data-action="apply-global">
+          <span aria-hidden="true">↺</span> Globale Werte anwenden
+        </button>
+        <button type="button" class="quick-action" data-action="clear-all">
+          <span aria-hidden="true">🧹</span> Alle Eingaben leeren
+        </button>
+      </div>
+      <p class="summary-description">
+        Hilft, Eingaben schneller zu vereinheitlichen oder zurückzusetzen.
+      </p>
+    </article>
+  </section>
+
+  <form method="post" action="{{ url_for('save_productivity_settings') }}" class="productivity-form">
+    <section class="productivity-panel">
+      <header class="panel-header">
+        <div>
+          <h2>Globale Einstellung</h2>
+          <p>Dieser Wert bildet die Basis für alle Abteilungen ohne eigenen Eintrag.</p>
+        </div>
+        <div class="panel-tools">
+          <button type="button" class="panel-tool" data-action="reset-global" aria-label="Globalen Wert auf Standard zurücksetzen">
+            Zurücksetzen
+          </button>
+        </div>
+      </header>
+      <div class="panel-body">
+        <div class="form-field">
+          <label for="global_productivity">Globale Produktivität</label>
+          <div class="input-with-addon">
+            <input
+              type="number"
+              step="0.1"
+              min="0"
+              id="global_productivity"
+              name="global_productivity"
+              value="{{ '%.1f' | format(default_value) }}"
+              placeholder="z. B. 40.0"
+              required
+              aria-describedby="global-help"
+            />
+            <span class="input-addon">Teile/Stunde</span>
+          </div>
+          <small id="global-help">Automatisch übernommen für alle Abteilungen ohne eigenes Limit.</small>
+        </div>
+      </div>
+    </section>
+
+    {% if departments %}
+    <section class="productivity-panel">
+      <header class="panel-header">
+        <div>
+          <h2>Abteilungsspezifische Vorgaben</h2>
+          <p>
+            Definieren Sie individuelle Werte oder lassen Sie das Feld leer, um den globalen Wert zu verwenden.
+          </p>
+        </div>
+        <div class="panel-tools">
+          <label class="search-field">
+            <span class="search-icon" aria-hidden="true">🔍</span>
+            <input type="search" id="department-filter" placeholder="Abteilung suchen…" aria-label="Abteilungen filtern" />
+          </label>
+        </div>
+      </header>
+
+      <div class="panel-body">
+        <div class="department-grid" id="department-grid">
+          {% for department in departments %}
+          {% set department_setting = settings_dict.get(department.id) %}
+          <article class="department-card" data-name="{{ department.name | lower }}">
+            <div class="department-card-header">
+              <div>
+                <h3>{{ department.name }}</h3>
+                {% if department_setting %}
+                <span class="department-status department-status--custom">Eigener Wert aktiv</span>
+                {% else %}
+                <span class="department-status">Nutzen globalen Wert</span>
+                {% endif %}
+              </div>
+              <button type="button" class="department-reset" data-target="dept_{{ department.id }}_productivity">
+                Zurücksetzen
+              </button>
+            </div>
+
+            <div class="form-field">
+              <label for="dept_{{ department.id }}_productivity">Produktivität</label>
+              <div class="input-with-addon">
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  id="dept_{{ department.id }}_productivity"
+                  name="dept_{{ department.id }}_productivity"
+                  value="{{ department_setting.productivity_value if department_setting else '' }}"
+                  placeholder="Leer = {{ '%.1f' | format(default_value) }}"
+                />
+                <span class="input-addon">Teile/Stunde</span>
+              </div>
+            </div>
+
+            <dl class="department-meta">
+              <div>
+                <dt>Aktueller Wert</dt>
+                <dd>
+                  {% if department_setting %}
+                    {{ '%.1f' | format(department_setting.productivity_value) }} Teile/Stunde
+                  {% else %}
+                    Übernimmt globalen Wert
+                  {% endif %}
+                </dd>
+              </div>
+              <div>
+                <dt>Zuletzt geändert</dt>
+                <dd>
+                  {% if department_setting and department_setting.created_date %}
+                    {{ department_setting.created_date.strftime('%d.%m.%Y') }}
+                  {% else %}
+                    -
+                  {% endif %}
+                </dd>
+              </div>
+            </dl>
+          </article>
+          {% endfor %}
+        </div>
+        <p class="empty-state" id="department-empty" hidden>
+          Keine Abteilungen gefunden. Passen Sie den Suchbegriff an.
+        </p>
+      </div>
+    </section>
+    {% endif %}
+
+    <footer class="productivity-actions">
+      <button type="submit" class="btn-primary">
+        Änderungen speichern
+      </button>
+      <a href="{{ url_for('schedule') }}" class="btn-secondary">Zurück zum Dienstplan</a>
+    </footer>
+  </form>
+
+  <section class="productivity-panel">
+    <header class="panel-header">
+      <div>
+        <h2>Aktive Regeln</h2>
+        <p>Transparente Übersicht über alle gespeicherten Produktivitätswerte.</p>
+      </div>
+    </header>
+    <div class="panel-body">
+      <div class="table-wrapper">
+        <table class="productivity-table">
+          <thead>
+            <tr>
+              <th scope="col">Bereich</th>
+              <th scope="col">Produktivität</th>
+              <th scope="col">Erstellt am</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for key, setting in settings_dict.items() %}
+            <tr>
+              <td>
+                {% if key == 'global' %}
+                  <span class="badge badge-primary">Global</span>
+                  <span>Standard</span>
+                {% else %}
+                  {% for dept in departments %}
+                    {% if dept.id == key %}
+                      <span class="badge">Abteilung</span>
+                      <span>{{ dept.name }}</span>
+                    {% endif %}
+                  {% endfor %}
+                {% endif %}
+              </td>
+              <td>
+                <strong>{{ '%.1f' | format(setting.productivity_value) }}</strong>
+                <span class="table-sub">Teile/Stunde</span>
+              </td>
+              <td>
+                {{ setting.created_date.strftime('%d.%m.%Y') if setting.created_date else '—' }}
+              </td>
+            </tr>
+            {% endfor %}
+            {% if not settings_dict %}
+            <tr>
+              <td colspan="3" class="table-empty">
+                <div>
+                  <span aria-hidden="true">🌱</span>
+                  <p>Noch keine individuellen Einstellungen vorhanden. Es wird der Standardwert 40,0 genutzt.</p>
+                </div>
+              </td>
+            </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const globalInput = document.querySelector('#global_productivity');
+    const defaultValue = '{{ '%.1f' | format(default_value) }}';
+    const departmentInputs = Array.from(document.querySelectorAll('.department-card input[type="number"]'));
+    const applyGlobalBtn = document.querySelector('[data-action="apply-global"]');
+    const clearAllBtn = document.querySelector('[data-action="clear-all"]');
+    const resetGlobalBtn = document.querySelector('[data-action="reset-global"]');
+    const resetButtons = Array.from(document.querySelectorAll('.department-reset'));
+    const filterInput = document.querySelector('#department-filter');
+    const departmentCards = Array.from(document.querySelectorAll('.department-card'));
+    const emptyState = document.querySelector('#department-empty');
+
+    if (applyGlobalBtn) {
+      applyGlobalBtn.addEventListener('click', () => {
+        const value = parseFloat(globalInput.value.replace(',', '.')) || parseFloat(defaultValue);
+        departmentInputs.forEach((input) => {
+          if (!input.value) {
+            input.value = value.toFixed(1);
+          }
+        });
+      });
+    }
+
+    if (clearAllBtn) {
+      clearAllBtn.addEventListener('click', () => {
+        departmentInputs.forEach((input) => {
+          input.value = '';
+        });
+      });
+    }
+
+    if (resetGlobalBtn) {
+      resetGlobalBtn.addEventListener('click', () => {
+        globalInput.value = defaultValue;
+      });
+    }
+
+    resetButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        const target = document.getElementById(button.dataset.target);
+        if (target) {
+          target.value = '';
+        }
+      });
+    });
+
+    if (filterInput) {
+      filterInput.addEventListener('input', () => {
+        const query = filterInput.value.trim().toLowerCase();
+        let visibleCount = 0;
+
+        departmentCards.forEach((card) => {
+          const name = card.dataset.name;
+          const isVisible = !query || name.includes(query);
+          card.toggleAttribute('hidden', !isVisible);
+          if (isVisible) {
+            visibleCount += 1;
+          }
+        });
+
+        if (emptyState) {
+          emptyState.hidden = visibleCount !== 0;
+        }
+      });
+    }
+  });
+</script>
+
+{% endblock %}
+

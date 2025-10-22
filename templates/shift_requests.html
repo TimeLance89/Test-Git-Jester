@@ -1,0 +1,425 @@
+{% extends "layout.html" %}
+{% block title %}Offene Einsätze - Xerxes{% endblock %}
+{% block content %}
+<div style="margin-bottom: 2rem;">
+  <h1 style="display: flex; align-items: center; margin-bottom: 0.5rem;">
+    <span style="margin-right: 0.75rem; font-size: 2rem;">⏰</span>
+    Offene Einsätze
+  </h1>
+  <p style="color: #64748b; font-size: 1.125rem; margin: 0;">Genehmigung ausstehender Schichtanträge und Kalkulation</p>
+</div>
+
+<!-- Tab Navigation - Modern Card Style -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+  
+  <!-- Anträge Tab Button -->
+  <div class="tab-card active" data-bs-toggle="tab" data-bs-target="#antraege" 
+       style="cursor: pointer; border-radius: 1rem; padding: 1.5rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); transition: all 0.3s ease;">
+    <div style="display: flex; align-items: center; justify-content: space-between;">
+      <div>
+        <div style="font-size: 3rem; margin-bottom: 0.5rem;">📋</div>
+        <h3 style="margin: 0; font-size: 1.5rem; font-weight: 700;">Anträge</h3>
+        <p style="margin: 0.5rem 0 0 0; opacity: 0.9; font-size: 0.875rem;">Ausstehende Genehmigungen verwalten</p>
+      </div>
+      <div style="text-align: right;">
+        <div style="font-size: 3rem; font-weight: 700;">{{ shifts|length }}</div>
+        <div style="font-size: 0.875rem; opacity: 0.9;">Offen</div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Kalkulator Tab Button -->
+  <div class="tab-card" data-bs-toggle="tab" data-bs-target="#kalkulator" 
+       style="cursor: pointer; border-radius: 1rem; padding: 1.5rem; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); transition: all 0.3s ease; opacity: 0.7;">
+    <div style="display: flex; align-items: center; justify-content: space-between;">
+      <div>
+        <div style="font-size: 3rem; margin-bottom: 0.5rem;">🧮</div>
+        <h3 style="margin: 0; font-size: 1.5rem; font-weight: 700;">Teile-Kalkulator</h3>
+        <p style="margin: 0.5rem 0 0 0; opacity: 0.9; font-size: 0.875rem;">Produktion simulieren und optimieren</p>
+      </div>
+      <div style="text-align: right;">
+        <div style="font-size: 3rem;">🎯</div>
+      </div>
+    </div>
+  </div>
+  
+</div>
+
+<style>
+.tab-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+}
+
+.tab-card.active {
+  opacity: 1 !important;
+  transform: scale(1.02);
+}
+
+.tab-card:not(.active) {
+  opacity: 0.7;
+}
+</style>
+
+<script>
+// Tab-Wechsel Logik
+document.querySelectorAll('.tab-card').forEach(card => {
+  card.addEventListener('click', function() {
+    // Entferne active von allen
+    document.querySelectorAll('.tab-card').forEach(c => c.classList.remove('active'));
+    // Füge active zum geklickten hinzu
+    this.classList.add('active');
+  });
+});
+</script>
+
+<!-- Tab Content -->
+<div class="tab-content">
+  
+  <!-- Anträge Tab -->
+  <div class="tab-pane fade show active" id="antraege">
+    <div class="card">
+      <div class="card-header">
+        <h3 style="margin: 0; display: flex; align-items: center;">
+          <span style="margin-right: 0.75rem;">📋</span>
+          Ausstehende Genehmigungen ({{ shifts|length }})
+        </h3>
+      </div>
+      <div class="card-body" style="padding: 0;">
+        {% if shifts %}
+        <div style="overflow-x: auto;">
+          <table class="table" style="margin: 0;">
+            <thead>
+              <tr>
+                <th style="padding: 1.5rem 1rem;">
+                  <span style="margin-right: 0.5rem;">👤</span>Mitarbeiter
+                </th>
+                <th style="padding: 1.5rem 1rem;">
+                  <span style="margin-right: 0.5rem;">📅</span>Datum
+                </th>
+                <th style="padding: 1.5rem 1rem;">
+                  <span style="margin-right: 0.5rem;">⏰</span>Stunden
+                </th>
+                <th style="padding: 1.5rem 1rem;">
+                  <span style="margin-right: 0.5rem;">🏷️</span>Typ
+                </th>
+                <th style="padding: 1.5rem 1rem; text-align: center;">
+                  <span style="margin-right: 0.5rem;">⚙️</span>Aktionen
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for shift in shifts %}
+              <tr>
+                <td style="padding: 1rem; font-weight: 600;">{{ shift.employee.name }}</td>
+                <td style="padding: 1rem; font-weight: 500;">{{ shift.date.strftime('%d.%m.%Y') }}</td>
+                <td style="padding: 1rem;">
+                  <span style="font-weight: 600; color: #059669;">{{ '%.1f'|format(shift.hours) }}h</span>
+                </td>
+                <td style="padding: 1rem;">
+                  {% if shift.shift_type %}
+                    <span class="badge" style="background-color: #64748b;">{{ shift.shift_type }}</span>
+                  {% else %}
+                    <span style="color: #9ca3af;">–</span>
+                  {% endif %}
+                </td>
+                <td style="padding: 1rem; text-align: center;">
+                  <div style="display: flex; gap: 0.5rem; justify-content: center;">
+                    <a href="{{ url_for('approve_shift', shift_id=shift.id) }}" 
+                       class="btn btn-success" 
+                       style="padding: 0.5rem 1rem; font-size: 0.875rem;">
+                      <span style="margin-right: 0.25rem;">✅</span>Genehmigen
+                    </a>
+                    <a href="{{ url_for('decline_shift', shift_id=shift.id) }}" 
+                       class="btn btn-outline-danger" 
+                       style="padding: 0.5rem 1rem; font-size: 0.875rem;"
+                       onclick="return confirm('Einsatz von {{ shift.employee.name }} wirklich ablehnen?')">
+                      <span style="margin-right: 0.25rem;">❌</span>Ablehnen
+                    </a>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 3rem 2rem; color: #64748b;">
+          <div style="font-size: 4rem; margin-bottom: 1rem;">✅</div>
+          <h3 style="margin-bottom: 0.5rem;">Alle Einsätze genehmigt</h3>
+          <p style="margin: 0;">Aktuell stehen keine Einsätze zur Genehmigung aus.</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  
+  <!-- Kalkulator Tab -->
+  <div class="tab-pane fade" id="kalkulator">
+    {% if sorted_dates %}
+    <div class="card" style="margin-bottom: 2rem; border: 2px solid #3b82f6;">
+      <div class="card-header" style="background-color: #eff6ff; border-bottom: 2px solid #3b82f6;">
+        <h3 style="margin: 0; display: flex; align-items: center;">
+          <span style="margin-right: 0.75rem;">🧮</span>
+          Teile-Kalkulator
+        </h3>
+        <p style="margin: 0.5rem 0 0 0; color: #ffffff; font-size: 0.875rem;">
+          Simulieren Sie verschiedene Mitarbeiter-Kombinationen, um die Teile-Produktion zu berechnen
+        </p>
+      </div>
+      <div class="card-body">
+        
+        <!-- Datumsauswahl -->
+        <div style="margin-bottom: 2rem;">
+          <label style="font-weight: 600; margin-bottom: 0.5rem; display: block;">
+            <span style="margin-right: 0.5rem;">📅</span>Tag auswählen:
+          </label>
+          <select id="calculatorDate" class="form-select" style="max-width: 300px;">
+            <option value="">-- Bitte wählen --</option>
+            {% for date in sorted_dates %}
+            <option value="{{ date.strftime('%Y-%m-%d') }}">
+              {{ date.strftime('%d.%m.%Y') }} - {{ shifts_by_date[date]|length }} Anträge
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        
+        <!-- Mitarbeiter-Auswahl -->
+        <div id="employeeSelection" style="display: none;">
+          <h4 style="margin-bottom: 1rem; display: flex; align-items: center;">
+            <span style="margin-right: 0.5rem;">👥</span>Mitarbeiter für diesen Tag
+          </h4>
+          
+          <div id="employeeList" style="margin-bottom: 2rem;">
+            <!-- Wird dynamisch gefüllt -->
+          </div>
+          
+          <!-- Berechnung -->
+          <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none;">
+            <div class="card-body">
+              <h4 style="margin-bottom: 1.5rem; display: flex; align-items: center;">
+                <span style="margin-right: 0.75rem;">📊</span>Berechnete Produktion
+              </h4>
+              
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem;">
+                <div>
+                  <div style="font-size: 0.875rem; opacity: 0.9; margin-bottom: 0.25rem;">Aushilfen Stunden</div>
+                  <div style="font-size: 2rem; font-weight: 700;" id="calcAushilfenHours">0</div>
+                </div>
+                <div>
+                  <div style="font-size: 0.875rem; opacity: 0.9; margin-bottom: 0.25rem;">Feste Mitarbeiter Stunden</div>
+                  <div style="font-size: 2rem; font-weight: 700;" id="calcFesteHours">0</div>
+                </div>
+                <div>
+                  <div style="font-size: 0.875rem; opacity: 0.9; margin-bottom: 0.25rem;">Gesamt Stunden</div>
+                  <div style="font-size: 2rem; font-weight: 700;" id="calcGesamtHours">0</div>
+                </div>
+                <div>
+                  <div style="font-size: 0.875rem; opacity: 0.9; margin-bottom: 0.25rem;">Produktivität</div>
+                  <div style="font-size: 2rem; font-weight: 700;" id="calcProductivity">{{ default_productivity }}</div>
+                </div>
+                <div style="grid-column: span 2;">
+                  <div style="font-size: 0.875rem; opacity: 0.9; margin-bottom: 0.25rem;">🎯 Geschätzte Teile</div>
+                  <div style="font-size: 3rem; font-weight: 700;" id="calcTeile">0</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+      </div>
+    </div>
+    {% else %}
+    <div class="card">
+      <div class="card-body" style="text-align: center; padding: 3rem 2rem; color: #64748b;">
+        <div style="font-size: 4rem; margin-bottom: 1rem;">🧮</div>
+        <h3 style="margin-bottom: 0.5rem;">Keine Schichtanträge vorhanden</h3>
+        <p style="margin: 0;">Es gibt aktuell keine offenen Schichtanträge zum Kalkulieren.</p>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+  
+</div>
+
+<!-- Schnellzugriff -->
+<div style="margin-top: 2rem; text-align: center;">
+  <a href="{{ url_for('schedule') }}" class="btn btn-secondary" style="padding: 0.75rem 1.5rem;">
+    <span style="margin-right: 0.5rem;">📅</span>Zum Dienstplan
+  </a>
+</div>
+
+<script>
+// Schichtdaten nach Datum
+const shiftsByDate = {{ shifts_by_date_json|tojson }};
+const approvedByDate = {{ approved_by_date_json|tojson }};
+const productivitySettings = {{ productivity_settings|tojson }};
+const defaultProductivity = {{ default_productivity }};
+
+// Datumsauswahl Event
+document.getElementById('calculatorDate').addEventListener('change', function() {
+  const selectedDate = this.value;
+  const employeeSelection = document.getElementById('employeeSelection');
+  const employeeList = document.getElementById('employeeList');
+  
+  if (!selectedDate) {
+    employeeSelection.style.display = 'none';
+    return;
+  }
+  
+  // Hole Schichten für dieses Datum (ausstehend + genehmigt)
+  const pendingShifts = shiftsByDate[selectedDate] || [];
+  const approvedShifts = approvedByDate[selectedDate] || [];
+  const allShifts = [...approvedShifts, ...pendingShifts];
+  
+  if (allShifts.length === 0) {
+    employeeSelection.style.display = 'none';
+    return;
+  }
+  
+  // Zeige Mitarbeiter-Auswahl
+  employeeSelection.style.display = 'block';
+  
+  // Erstelle Mitarbeiter-Liste
+  let html = '';
+  
+  // Genehmigte Schichten zuerst (immer aktiviert, nicht deaktivierbar)
+  if (approvedShifts.length > 0) {
+    html += '<h5 style="margin-bottom: 1rem; color: #059669; display: flex; align-items: center;"><span style="margin-right: 0.5rem;">✅</span>Bereits genehmigt (' + approvedShifts.length + ')</h5>';
+    html += '<div style="display: grid; gap: 1rem; margin-bottom: 2rem;">';
+    
+    approvedShifts.forEach(shift => {
+      const employee = shift.employee;
+      const departmentId = employee.department_id;
+      const productivity = productivitySettings[String(departmentId)] || defaultProductivity;
+      
+      html += `
+        <div class="card" style="border: 2px solid #059669; background-color: #f0fdf4;">
+          <div class="card-body" style="padding: 1rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div style="flex: 1;">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                  <input type="checkbox" 
+                         class="form-check-input employee-checkbox" 
+                         id="emp_approved_${shift.id}"
+                         data-hours="${shift.hours}"
+                         data-position="${employee.position || 'Aushilfe'}"
+                         data-productivity="${productivity}"
+                         checked
+                         disabled
+                         style="width: 1.5rem; height: 1.5rem;">
+                  <div>
+                    <div style="font-weight: 600; font-size: 1.125rem;">✅ ${employee.name}</div>
+                    <div style="color: #059669; font-size: 0.875rem; font-weight: 600;">
+                      Genehmigt • ${employee.position || 'Aushilfe'} • ${shift.hours}h • 
+                      ${employee.department ? employee.department.name : 'Keine Abteilung'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div style="text-align: right;">
+                <div style="font-size: 0.875rem; color: #64748b;">Produktivität</div>
+                <div style="font-weight: 700; color: #059669; font-size: 1.25rem;">${productivity}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+    
+    html += '</div>';
+  }
+  
+  // Ausstehende Schichten (können aktiviert/deaktiviert werden)
+  if (pendingShifts.length > 0) {
+    html += '<h5 style="margin-bottom: 1rem; color: #d97706; display: flex; align-items: center;"><span style="margin-right: 0.5rem;">⏳</span>Ausstehende Anträge (' + pendingShifts.length + ')</h5>';
+    html += '<div style="display: grid; gap: 1rem;">';
+    
+    pendingShifts.forEach(shift => {
+    const employee = shift.employee;
+    const departmentId = employee.department_id;
+    // Konvertiere zu String für Lookup
+    const productivity = productivitySettings[String(departmentId)] || defaultProductivity;
+    
+    html += `
+      <div class="card" style="border: 2px solid #e2e8f0;">
+        <div class="card-body" style="padding: 1rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="flex: 1;">
+              <div style="display: flex; align-items: center; gap: 1rem;">
+                <input type="checkbox" 
+                       class="form-check-input employee-checkbox" 
+                       id="emp_${shift.id}"
+                       data-hours="${shift.hours}"
+                       data-position="${employee.position || 'Aushilfe'}"
+                       data-productivity="${productivity}"
+                       style="width: 1.5rem; height: 1.5rem; cursor: pointer;">
+                <div>
+                  <div style="font-weight: 600; font-size: 1.125rem;">${employee.name}</div>
+                  <div style="color: #64748b; font-size: 0.875rem;">
+                    ${employee.position || 'Aushilfe'} • ${shift.hours}h • 
+                    ${employee.department ? employee.department.name : 'Keine Abteilung'}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div style="text-align: right;">
+              <div style="font-size: 0.875rem; color: #64748b;">Produktivität</div>
+              <div style="font-weight: 700; color: #3b82f6; font-size: 1.25rem;">${productivity}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  });
+  
+    html += '</div>';
+  }
+  
+  employeeList.innerHTML = html;
+  
+  // Event Listener für Checkboxen (nur für nicht-disabled)
+  document.querySelectorAll('.employee-checkbox:not([disabled])').forEach(checkbox => {
+    checkbox.addEventListener('change', calculateProduction);
+  });
+  
+  // Initial berechnen (alle ausstehenden ausgewählt, genehmigte sind bereits checked)
+  document.querySelectorAll('.employee-checkbox:not([disabled])').forEach(cb => cb.checked = true);
+  calculateProduction();
+});
+
+function calculateProduction() {
+  let aushilfenHours = 0;
+  let festeHours = 0;
+  let totalWeightedProductivity = 0;
+  let totalHours = 0;
+  
+  document.querySelectorAll('.employee-checkbox:checked').forEach(checkbox => {
+    const hours = parseFloat(checkbox.dataset.hours);
+    const position = checkbox.dataset.position;
+    const productivity = parseFloat(checkbox.dataset.productivity);
+    
+    totalHours += hours;
+    totalWeightedProductivity += hours * productivity;
+    
+    if (position === 'Vollzeit' || position === 'Teilzeit') {
+      festeHours += hours;
+    } else {
+      aushilfenHours += hours;
+    }
+  });
+  
+  const avgProductivity = totalHours > 0 ? totalWeightedProductivity / totalHours : defaultProductivity;
+  const teile = Math.round(totalHours * avgProductivity);
+  
+  // Update UI
+  document.getElementById('calcAushilfenHours').textContent = aushilfenHours.toFixed(1) + 'h';
+  document.getElementById('calcFesteHours').textContent = festeHours.toFixed(1) + 'h';
+  document.getElementById('calcGesamtHours').textContent = totalHours.toFixed(1) + 'h';
+  document.getElementById('calcProductivity').textContent = avgProductivity.toFixed(1);
+  document.getElementById('calcTeile').textContent = teile.toLocaleString('de-DE');
+}
+</script>
+
+{% endblock %}
+
