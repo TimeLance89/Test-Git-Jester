@@ -1,7 +1,3 @@
-# Node dependencies
-node_app/node_modules/
-node_app/.env
-
 # Byte-compiled / cache files
 __pycache__/
 *.py[cod]

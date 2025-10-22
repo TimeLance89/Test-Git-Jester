@@ -1,0 +1,196 @@
+{% extends "layout.html" %}
+{% block title %}Automatische Schichtenerstellung - Xerxes{% endblock %}
+{% block content %}
+<div class="auto-schedule-page">
+  <section class="auto-schedule-hero">
+    <div class="auto-schedule-hero-icon" aria-hidden="true">🤖</div>
+    <div class="auto-schedule-hero-text">
+      <h1>Automatische Schichtenerstellung</h1>
+      <p>Erstelle Schichten auf Knopfdruck – basierend auf hinterlegten Standard-Arbeitszeiten und Positionen.</p>
+      {% if is_department_admin %}
+      <div class="auto-schedule-hero-meta">
+        <span class="meta-pill">🔒 Bereichsmodus aktiv – es werden nur Mitarbeiter deiner Abteilung angezeigt.</span>
+      </div>
+      {% endif %}
+    </div>
+  </section>
+
+  <form method="post" action="{{ url_for('create_auto_schedule') }}" class="auto-schedule-form">
+    <section class="auto-schedule-card">
+      <header class="auto-schedule-card-header">
+        <div>
+          <h2>Zeitraum auswählen</h2>
+          <p>Bestimme, für welchen Monat Schichten erzeugt werden sollen.</p>
+        </div>
+        <span class="header-icon" aria-hidden="true">📅</span>
+      </header>
+      <div class="auto-schedule-card-body auto-schedule-grid">
+        <div class="form-field">
+          <label for="month">Monat</label>
+          <select id="month" name="month" required>
+            <option value="1" {% if current_month == 1 %}selected{% endif %}>Januar</option>
+            <option value="2" {% if current_month == 2 %}selected{% endif %}>Februar</option>
+            <option value="3" {% if current_month == 3 %}selected{% endif %}>März</option>
+            <option value="4" {% if current_month == 4 %}selected{% endif %}>April</option>
+            <option value="5" {% if current_month == 5 %}selected{% endif %}>Mai</option>
+            <option value="6" {% if current_month == 6 %}selected{% endif %}>Juni</option>
+            <option value="7" {% if current_month == 7 %}selected{% endif %}>Juli</option>
+            <option value="8" {% if current_month == 8 %}selected{% endif %}>August</option>
+            <option value="9" {% if current_month == 9 %}selected{% endif %}>September</option>
+            <option value="10" {% if current_month == 10 %}selected{% endif %}>Oktober</option>
+            <option value="11" {% if current_month == 11 %}selected{% endif %}>November</option>
+            <option value="12" {% if current_month == 12 %}selected{% endif %}>Dezember</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label for="year">Jahr</label>
+          <input type="number" id="year" name="year" value="{{ current_year }}" min="2020" max="2035" required />
+        </div>
+      </div>
+    </section>
+
+    <section class="auto-schedule-card">
+      <header class="auto-schedule-card-header">
+        <div>
+          <h2>Modus wählen</h2>
+          <p>Lege fest, für wen Schichten erstellt werden sollen.</p>
+        </div>
+        <span class="header-icon" aria-hidden="true">🎯</span>
+      </header>
+      <div class="auto-schedule-card-body mode-options">
+        <label class="mode-option">
+          <input type="radio" name="mode" value="all" checked />
+          <div class="mode-option-content">
+            <div class="mode-option-title">Alle Mitarbeitenden mit Standardzeiten</div>
+            <p>Erstellt automatisch Schichten für alle verfügbaren Mitarbeitenden.</p>
+          </div>
+        </label>
+
+        <label class="mode-option" data-mode="position">
+          <input type="radio" name="mode" value="position" />
+          <div class="mode-option-content">
+            <div class="mode-option-title">Nach Position</div>
+            <p>Plane gezielt alle Mitarbeitenden einer Position.</p>
+            <div class="mode-extra" data-target="position" hidden>
+              {% if positions %}
+              <select name="position" aria-label="Position auswählen">
+                <option value="">– Position auswählen –</option>
+                {% for position in positions %}
+                <option value="{{ position }}">{{ position }}</option>
+                {% endfor %}
+              </select>
+              {% else %}
+              <div class="empty-hint">Keine Positionen vorhanden.</div>
+              {% endif %}
+            </div>
+          </div>
+        </label>
+
+        <label class="mode-option" data-mode="employee">
+          <input type="radio" name="mode" value="employee" />
+          <div class="mode-option-content">
+            <div class="mode-option-title">Einzelner Mitarbeitender</div>
+            <p>Erstelle Schichten für eine gezielte Person.</p>
+            <div class="mode-extra" data-target="employee" hidden>
+              {% if employees %}
+              <select name="employee_id" aria-label="Mitarbeiter auswählen">
+                <option value="">– Mitarbeitenden auswählen –</option>
+                {% for employee in employees %}
+                <option value="{{ employee.id }}">{{ employee.name }}{% if employee.position %} · {{ employee.position }}{% endif %}</option>
+                {% endfor %}
+              </select>
+              {% else %}
+              <div class="empty-hint">Keine Mitarbeitenden verfügbar.</div>
+              {% endif %}
+            </div>
+          </div>
+        </label>
+      </div>
+    </section>
+
+    <section class="auto-schedule-card">
+      <header class="auto-schedule-card-header">
+        <div>
+          <h2>Optionen</h2>
+          <p>Steuere, ob Schichten direkt erstellt oder nur als Vorschau angezeigt werden.</p>
+        </div>
+        <span class="header-icon" aria-hidden="true">⚙️</span>
+      </header>
+      <div class="auto-schedule-card-body">
+        <label class="checkbox-option">
+          <input type="checkbox" name="dry_run" value="1" />
+          <span>
+            <span class="checkbox-title">Nur Vorschau (Dry Run)</span>
+            <span class="checkbox-description">Zeigt das Ergebnis an, ohne Schichten in der Datenbank zu speichern.</span>
+          </span>
+        </label>
+      </div>
+    </section>
+
+    <section class="auto-schedule-card info-card">
+      <header class="auto-schedule-card-header">
+        <div>
+          <h2>Hinweise</h2>
+          <p>So arbeitet die automatische Planung.</p>
+        </div>
+        <span class="header-icon" aria-hidden="true">💡</span>
+      </header>
+      <div class="auto-schedule-card-body">
+        <ul class="info-list">
+          <li>Bereits vorhandene Schichten bleiben unverändert.</li>
+          <li>Automatisch erzeugte Schichten werden sofort als genehmigt markiert.</li>
+          <li>Vollzeit-Positionen erhalten automatisch 8 Stunden von Montag bis Freitag.</li>
+          <li>Nutze die Vorschau, um vorab den Umfang der Planung zu prüfen.</li>
+        </ul>
+      </div>
+    </section>
+
+    <footer class="auto-schedule-actions">
+      <button type="submit" class="btn-primary">
+        <span aria-hidden="true">🤖</span>
+        <span>Schichten erstellen</span>
+      </button>
+      <a href="{{ url_for('schedule') }}" class="btn-secondary">
+        <span aria-hidden="true">↩️</span>
+        <span>Zurück zum Dienstplan</span>
+      </a>
+    </footer>
+  </form>
+</div>
+
+<script>
+  const modeRadios = document.querySelectorAll('input[name="mode"]');
+  const modeLabels = document.querySelectorAll('.mode-option');
+
+  const updateModeState = () => {
+    const checkedRadio = document.querySelector('input[name="mode"]:checked');
+    const selectedMode = checkedRadio ? checkedRadio.value : null;
+
+    modeLabels.forEach((label) => {
+      const radio = label.querySelector('input[type="radio"]');
+      const target = label.dataset.mode;
+      const extra = label.querySelector('.mode-extra');
+
+      if (radio.checked) {
+        label.classList.add('is-active');
+      } else {
+        label.classList.remove('is-active');
+      }
+
+      if (extra) {
+        const shouldEnable = target === selectedMode;
+        extra.hidden = !shouldEnable;
+        extra.querySelectorAll('select, input').forEach((field) => {
+          field.disabled = !shouldEnable;
+        });
+      }
+    });
+  };
+
+  modeRadios.forEach((radio) => {
+    radio.addEventListener('change', updateModeState);
+  });
+
+  updateModeState();
+</script>
+{% endblock %}
