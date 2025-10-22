@@ -1,0 +1,141 @@
+{% extends "layout.html" %}
+{% block title %}Systemeinstellungen{% endblock %}
+{% block content %}
+<div class="settings-page">
+  <header class="settings-hero">
+    <div class="settings-hero-content">
+      <span class="settings-eyebrow">Systembereich</span>
+      <h1>Systemeinstellungen</h1>
+      <p>
+        Konfigurieren Sie globale Richtlinien, planen Sie künftige Automatisierungen und
+        behalten Sie Wartungsfenster im Blick. Alle Änderungen werden zentral protokolliert
+        und stehen für kommende Releases zur Verfügung.
+      </p>
+      <div class="settings-meta">
+        <span>Nur für Systemadministratoren sichtbar</span>
+        <span>Letzte Aktualisierung: {{ last_updated.strftime('%d.%m.%Y %H:%M') }} Uhr</span>
+      </div>
+    </div>
+    <div class="settings-hero-stats" role="group" aria-label="Systemstatus">
+      {% for stat in stats %}
+      <div class="settings-stat">
+        <div class="settings-stat-value">{{ stat.value }}</div>
+        <div class="settings-stat-label">{{ stat.label }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </header>
+
+  <section class="settings-quick-actions" aria-label="Direktaktionen">
+    <div class="settings-section-header">
+      <h2>Direktaktionen</h2>
+      <p>Bereiten Sie Automatisierungen und wiederkehrende Verwaltungsaufgaben vor.</p>
+    </div>
+    <div class="settings-quick-grid">
+      {% for action in quick_actions %}
+      <button
+        type="button"
+        class="settings-quick-action"
+        data-action="{{ action.id }}"
+        title="Funktion wird in Kürze verfügbar sein"
+      >
+        <span class="settings-quick-icon" aria-hidden="true">{{ action.icon }}</span>
+        <span class="settings-quick-content">
+          <span class="settings-quick-title">{{ action.title }}</span>
+          <span class="settings-quick-description">{{ action.description }}</span>
+        </span>
+        <span class="settings-quick-hint">Demnächst</span>
+      </button>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="settings-grid">
+    <div class="settings-column">
+      <article class="settings-card">
+        <header class="settings-card-header">
+          <div>
+            <h3>Module &amp; Richtlinien</h3>
+            <p>Überblick über aktive Bereiche der Plattform.</p>
+          </div>
+          <span class="settings-chip">Live</span>
+        </header>
+        <ul class="settings-list">
+          {% for area in focus_areas %}
+          <li>
+            <span class="settings-list-icon" aria-hidden="true">{{ area.icon }}</span>
+            <span class="settings-list-content">
+              <span class="settings-list-title">{{ area.title }}</span>
+              <span class="settings-list-description">{{ area.description }}</span>
+            </span>
+            <span class="settings-status">{{ area.badge }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+      </article>
+
+      <article class="settings-card">
+        <header class="settings-card-header">
+          <div>
+            <h3>Roadmap</h3>
+            <p>Geplante Erweiterungen für die nächsten Releases.</p>
+          </div>
+        </header>
+        <ul class="settings-roadmap">
+          {% for item in roadmap %}
+          <li>
+            <span class="settings-roadmap-icon" aria-hidden="true">{{ item.icon }}</span>
+            <span class="settings-roadmap-content">
+              <span class="settings-roadmap-title">{{ item.title }}</span>
+              <span class="settings-roadmap-description">{{ item.description }}</span>
+            </span>
+            <span class="settings-roadmap-time">{{ item.quarter }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+      </article>
+    </div>
+
+    <div class="settings-column">
+      <article class="settings-card">
+        <header class="settings-card-header">
+          <div>
+            <h3>Wartungsfenster</h3>
+            <p>Geplante Aufgaben für Plattformstabilität.</p>
+          </div>
+        </header>
+        <ul class="settings-maintenance">
+          {% for note in maintenance_notes %}
+          <li>
+            <span class="settings-maintenance-icon" aria-hidden="true">{{ note.icon }}</span>
+            <span class="settings-maintenance-content">
+              <span class="settings-maintenance-title">{{ note.title }}</span>
+              <span class="settings-maintenance-window">{{ note.window }}</span>
+              <span class="settings-maintenance-impact">{{ note.impact }}</span>
+            </span>
+          </li>
+          {% endfor %}
+        </ul>
+      </article>
+
+      <article class="settings-card settings-card--accent">
+        <header class="settings-card-header">
+          <div>
+            <h3>Audit &amp; Monitoring</h3>
+            <p>Transparenz über Systemereignisse.</p>
+          </div>
+        </header>
+        <ul class="settings-audit">
+          {% for entry in audit_notes %}
+          <li>{{ entry }}</li>
+          {% endfor %}
+        </ul>
+        <div class="settings-note">
+          <span aria-hidden="true">ℹ️</span>
+          <p>Export-Funktionen und Benachrichtigungen folgen mit dem nächsten Release.</p>
+        </div>
+      </article>
+    </div>
+  </section>
+</div>
+{% endblock %}
