@@ -1,0 +1,244 @@
+{% extends "layout.html" %}
+{% block title %}Automatisierte Freigaben{% endblock %}
+{% block content %}
+<div class="automation-page">
+  <header class="automation-hero">
+    <div class="automation-hero-text">
+      <span class="automation-eyebrow">Freigabe-Assistent</span>
+      <h1>Automatisierte Freigaben</h1>
+      <p>
+        Planen Sie wiederkehrende Genehmigungen für Schichten und Abwesenheiten. Die festgelegten Regeln laufen
+        zuverlässig im Hintergrund und informieren Mitarbeitende und Administratoren automatisch.
+      </p>
+      <div class="automation-meta">
+        <span><strong>{{ active_count }}</strong> aktive Automationen</span>
+        <span><strong>{{ automations|length }}</strong> gespeicherte Vorlagen</span>
+        <span>
+          {% if upcoming_run %}
+            Nächster Lauf: {{ upcoming_run.strftime('%d.%m.%Y %H:%M') }} Uhr
+          {% else %}
+            Kein Termin geplant
+          {% endif %}
+        </span>
+      </div>
+    </div>
+    <div class="automation-hero-panel" aria-label="Kurzübersicht">
+      <div>
+        <span class="automation-hero-label">Sofort starten</span>
+        <p>Neue Automationen werden unmittelbar aktiviert und erscheinen in der Übersicht.</p>
+      </div>
+      <ul class="automation-hero-list">
+        <li>Genehmigt offene Einsätze vollautomatisch</li>
+        <li>Bestätigt Urlaubs- und Krankheitsanträge gemäß Regelwerk</li>
+        <li>Benachrichtigt Teams nach jeder Ausführung</li>
+      </ul>
+    </div>
+  </header>
+
+  <section class="automation-summary" aria-label="Statuskennzahlen">
+    <article class="automation-summary-card">
+      <h2>Aktive Workflows</h2>
+      <p class="automation-summary-value">{{ active_count }}</p>
+      <p class="automation-summary-description">Laufende Freigabeprozesse, die regelmäßig ausgeführt werden.</p>
+    </article>
+    <article class="automation-summary-card">
+      <h2>Gespeicherte Regeln</h2>
+      <p class="automation-summary-value">{{ automations|length }}</p>
+      <p class="automation-summary-description">Komplette Bibliothek Ihrer Freigabe-Automationen.</p>
+    </article>
+    <article class="automation-summary-card">
+      <h2>Nächster Lauf</h2>
+      <p class="automation-summary-value">
+        {% if upcoming_run %}
+          {{ upcoming_run.strftime('%d.%m.%Y %H:%M') }}
+        {% else %}
+          –
+        {% endif %}
+      </p>
+      <p class="automation-summary-description">Sobald der Zeitpunkt erreicht ist, laufen alle fälligen Regeln automatisch.</p>
+    </article>
+  </section>
+
+  <div class="automation-grid">
+    <section class="automation-form-card" aria-label="Neue Automatisierung anlegen">
+      <header class="automation-card-header">
+        <div>
+          <h2>Neue Automatisierung</h2>
+          <p>Definieren Sie Ziel, Zeitplan und Rhythmus. Alle Einstellungen lassen sich jederzeit anpassen.</p>
+        </div>
+      </header>
+      <form method="post" action="{{ url_for('create_automated_approval') }}" class="automation-form" data-automation-form>
+        <div class="form-field">
+          <label for="automation_name">Bezeichnung</label>
+          <input type="text" id="automation_name" name="name" placeholder="z. B. Schichten täglich prüfen" required />
+        </div>
+        <div class="form-field">
+          <label for="automation_type">Automatisierung</label>
+          <select id="automation_type" name="automation_type" required>
+            {% for value, label in automation_types %}
+            <option value="{{ value }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-field">
+          <label for="schedule_type">Zeitplan</label>
+          <select id="schedule_type" name="schedule_type" required data-schedule-picker>
+            {% for value, label in schedule_choices %}
+            <option value="{{ value }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-field" data-run-time-field>
+          <label for="run_time">Ausführungszeit</label>
+          <input type="time" id="run_time" name="run_time" required />
+          <small>24-Stunden-Format</small>
+        </div>
+        <fieldset class="form-field automation-weekdays" data-weekly-fields hidden>
+          <legend>Wochentage</legend>
+          <div class="automation-weekdays-grid">
+            {% for value, label in weekday_labels %}
+            <label class="automation-weekday-option">
+              <input type="checkbox" name="days_of_week" value="{{ value }}" />
+              <span>{{ label }}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </fieldset>
+        <div class="form-field" data-once-field hidden>
+          <label for="once_date">Ausführungsdatum</label>
+          <input type="date" id="once_date" name="once_date" />
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn-primary">Automatisierung speichern</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="automation-list-card" aria-label="Bestehende Automationen">
+      <header class="automation-card-header">
+        <div>
+          <h2>Geplante Abläufe</h2>
+          <p>Verwalten Sie bestehende Regeln, starten Sie sie sofort oder deaktivieren Sie sie temporär.</p>
+        </div>
+      </header>
+      {% if automations %}
+      <ul class="automation-list">
+        {% for automation in automations %}
+        <li class="automation-item">
+          <header class="automation-item-header">
+            <div>
+              <h3>{{ automation.name }}</h3>
+              <span class="automation-chip {{ 'automation-chip--active' if automation.is_active else '' }}">
+                {{ 'Aktiv' if automation.is_active else 'Inaktiv' }}
+              </span>
+            </div>
+            <div class="automation-item-actions">
+              <form method="post" action="{{ url_for('toggle_automated_approval', automation_id=automation.id) }}">
+                <button type="submit" class="btn-tertiary">{{ 'Deaktivieren' if automation.is_active else 'Aktivieren' }}</button>
+              </form>
+              <form method="post" action="{{ url_for('run_automated_approval', automation_id=automation.id) }}">
+                {% set disable_run = (automation.schedule_type == 'once' and not automation.is_active and not automation.next_run) %}
+                <button type="submit" class="btn-secondary" {% if disable_run %}disabled{% endif %}>Jetzt ausführen</button>
+              </form>
+              <form method="post" action="{{ url_for('delete_automated_approval', automation_id=automation.id) }}" onsubmit="return confirm('Automatisierung dauerhaft löschen?');">
+                <button type="submit" class="btn-danger">Löschen</button>
+              </form>
+            </div>
+          </header>
+          <div class="automation-item-body">
+            <div class="automation-item-info">
+              <span class="automation-info-label">Automatisierung</span>
+              <span>{{ type_labels.get(automation.automation_type, automation.automation_type) }}</span>
+            </div>
+            <div class="automation-item-info">
+              <span class="automation-info-label">Zeitplan</span>
+              <span>{{ schedule_labels.get(automation.schedule_type, automation.schedule_type) }}</span>
+            </div>
+            {% if automation.schedule_type == 'weekly' and automation.days_of_week %}
+            <div class="automation-item-info">
+              <span class="automation-info-label">Wochentage</span>
+              <span>
+                {% set ns = namespace(labels=[]) %}
+                {% for day_code in automation.days_of_week.split(',') %}
+                  {% set label = weekday_map.get(day_code.strip()) %}
+                  {% if label %}
+                    {% set ns.labels = ns.labels + [label] %}
+                  {% endif %}
+                {% endfor %}
+                {{ ns.labels | join(', ') }}
+              </span>
+            </div>
+            {% endif %}
+            <div class="automation-item-info">
+              <span class="automation-info-label">Nächster Lauf</span>
+              <span>
+                {% if automation.next_run %}
+                  {{ automation.next_run.strftime('%d.%m.%Y %H:%M') }}
+                {% else %}
+                  Kein Termin geplant
+                {% endif %}
+              </span>
+            </div>
+            <div class="automation-item-info">
+              <span class="automation-info-label">Letztes Ergebnis</span>
+              <span>
+                {% if automation.last_run %}
+                  {{ automation.last_run.strftime('%d.%m.%Y %H:%M') }} · {{ automation.last_run_summary or 'Ausgeführt' }}
+                {% else %}
+                  Noch nicht ausgeführt
+                {% endif %}
+              </span>
+            </div>
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="automation-empty">Noch keine Automatisierungen gespeichert. Legen Sie links Ihre erste Regel an.</p>
+      {% endif %}
+    </section>
+  </div>
+</div>
+
+<script>
+  (function() {
+    const form = document.querySelector('[data-automation-form]');
+    if (!form) return;
+
+    const scheduleSelect = form.querySelector('[data-schedule-picker]');
+    const weeklyFields = form.querySelector('[data-weekly-fields]');
+    const onceField = form.querySelector('[data-once-field]');
+    const runTimeField = form.querySelector('[data-run-time-field] input');
+    const onceInput = onceField ? onceField.querySelector('input') : null;
+
+    const toggleFields = () => {
+      const value = scheduleSelect.value;
+      if (value === 'weekly') {
+        weeklyFields.hidden = false;
+        onceField.hidden = true;
+        runTimeField.required = true;
+        if (onceInput) {
+          onceInput.required = false;
+        }
+      } else if (value === 'once') {
+        weeklyFields.hidden = true;
+        onceField.hidden = false;
+        runTimeField.required = true;
+        if (onceInput) {
+          onceInput.required = true;
+        }
+      } else {
+        weeklyFields.hidden = true;
+        onceField.hidden = true;
+        runTimeField.required = true;
+        if (onceInput) {
+          onceInput.required = false;
+        }
+      }
+    };
+
+    scheduleSelect.addEventListener('change', toggleFields);
+    toggleFields();
+  })();
+</script>
+{% endblock %}

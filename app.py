@@ -13,6 +13,8 @@ from __future__ import annotations
 
 import calendar
 import secrets
+import threading
+import time as time_module
 from collections import Counter, defaultdict
 from datetime import date, datetime, timedelta
 from typing import Dict, List, Tuple
@@ -46,6 +48,7 @@ from models import (
     ProductivitySettings,
     BlockedDay,
     Notification,
+    ApprovalAutomation,
 )
 from auto_schedule import create_default_shifts_for_month, create_default_shifts_for_employee_position
 
@@ -672,6 +675,219 @@ def notify_employee(employee_id: int, message: str, link: str | None = None) -> 
 
     _create_notification(employee_id, message, link)
 
+
+def _parse_days_of_week(days: str | None) -> list[int]:
+    """Wandelt eine kommaseparierte Liste von Wochentagen in Integer um."""
+
+    if not days:
+        return []
+
+    parsed: set[int] = set()
+    for entry in days.split(","):
+        entry = entry.strip()
+        if not entry:
+            continue
+        try:
+            day = int(entry)
+        except ValueError:
+            continue
+        if 0 <= day <= 6:
+            parsed.add(day)
+    return sorted(parsed)
+
+
+def _calculate_next_run(
+    schedule_type: str,
+    run_time_value,
+    days: str | None,
+    *,
+    reference: datetime | None = None,
+) -> datetime | None:
+    """Berechnet den nächsten Ausführungstermin für eine Automatisierung."""
+
+    if schedule_type == "once":
+        return None
+
+    if reference is None:
+        reference = datetime.now()
+
+    if not run_time_value:
+        return None
+
+    run_time = run_time_value
+
+    if schedule_type == "daily":
+        candidate = datetime.combine(reference.date(), run_time)
+        if candidate <= reference:
+            candidate += timedelta(days=1)
+        return candidate
+
+    if schedule_type == "weekly":
+        allowed_days = _parse_days_of_week(days)
+        if not allowed_days:
+            allowed_days = list(range(7))
+
+        for delta in range(0, 8):
+            candidate_date = reference.date() + timedelta(days=delta)
+            candidate_dt = datetime.combine(candidate_date, run_time)
+            if candidate_dt <= reference:
+                continue
+            if candidate_date.weekday() in allowed_days:
+                return candidate_dt
+
+        # Fallback: nächsten passenden Wochentag bestimmen.
+        weekday = reference.weekday()
+        offsets = [((day - weekday) % 7) or 7 for day in allowed_days]
+        candidate_date = reference.date() + timedelta(days=min(offsets))
+        return datetime.combine(candidate_date, run_time)
+
+    return None
+
+
+def _execute_automation(automation: ApprovalAutomation) -> str:
+    """Führt eine Automatisierung aus und gibt eine Zusammenfassung zurück."""
+
+    approved_shifts = 0
+    approved_leaves = 0
+
+    shift_link = url_for("shift_requests_overview")
+    leave_link = url_for("leave_requests")
+
+    if automation.automation_type in {"approve_shifts", "approve_all"}:
+        pending_shifts = Shift.query.filter_by(approved=False).all()
+        for shift in pending_shifts:
+            shift.approved = True
+            request_message = _build_shift_request_message(shift.employee, shift.date)
+            _clear_request_notifications(request_message, shift_link)
+            notify_employee(
+                shift.employee_id,
+                f"Dein Einsatz am {shift.date.strftime('%d.%m.%Y')} wurde automatisch genehmigt.",
+                url_for("schedule", month=shift.date.month, year=shift.date.year),
+            )
+            approved_shifts += 1
+
+    if automation.automation_type in {"approve_leaves", "approve_all"}:
+        pending_leaves = Leave.query.filter_by(approved=False).all()
+        for leave in pending_leaves:
+            leave.approved = True
+            request_message = _build_leave_request_message(
+                leave.employee,
+                leave.leave_type,
+                leave.start_date,
+                leave.end_date,
+            )
+            _clear_request_notifications(request_message, leave_link)
+            if leave.start_date == leave.end_date:
+                date_range = leave.start_date.strftime('%d.%m.%Y')
+            else:
+                date_range = (
+                    f"{leave.start_date.strftime('%d.%m.%Y')} bis {leave.end_date.strftime('%d.%m.%Y')}"
+                )
+            notify_employee(
+                leave.employee_id,
+                f"Dein {leave.leave_type}-Antrag für {date_range} wurde automatisch genehmigt.",
+                url_for("leave_form"),
+            )
+            approved_leaves += 1
+
+    summary_parts = []
+    if approved_shifts:
+        summary_parts.append(f"{approved_shifts} Einsätze")
+    if approved_leaves:
+        summary_parts.append(f"{approved_leaves} Abwesenheiten")
+
+    if summary_parts:
+        summary_text = ", ".join(summary_parts) + " automatisch freigegeben"
+        admin_message = f"Automation '{automation.name}' hat {summary_text}."
+        admins = Employee.query.filter(Employee.is_admin.is_(True)).all()
+        for admin in admins:
+            _create_notification(admin.id, admin_message, url_for("system_settings"))
+    else:
+        summary_text = "Keine offenen Vorgänge gefunden."
+
+    return summary_text
+
+
+def _run_and_schedule_automation(automation: ApprovalAutomation) -> str:
+    """Hilfsfunktion, die eine Automation ausführt und den nächsten Termin setzt."""
+
+    summary = _execute_automation(automation)
+    now = datetime.now()
+    automation.last_run = now
+    automation.last_run_summary = summary
+
+    if automation.schedule_type == "once":
+        automation.is_active = False
+        automation.next_run = None
+    else:
+        automation.next_run = _calculate_next_run(
+            automation.schedule_type,
+            automation.run_time,
+            automation.days_of_week,
+            reference=now + timedelta(seconds=1),
+        )
+
+    automation.updated_at = datetime.now()
+    db.session.commit()
+    return summary
+
+
+def _process_due_automations() -> None:
+    """Prüft fällige Automatisierungen und führt sie aus."""
+
+    now = datetime.now()
+    due_automations = ApprovalAutomation.query.filter(
+        ApprovalAutomation.is_active.is_(True),
+        ApprovalAutomation.next_run.isnot(None),
+        ApprovalAutomation.next_run <= now,
+    ).all()
+
+    for automation in due_automations:
+        try:
+            _run_and_schedule_automation(automation)
+        except Exception as exc:  # pragma: no cover - Schutz vor unerwarteten Fehlern
+            db.session.rollback()
+            print(f"Fehler bei Automatisierung '{automation.name}': {exc}")
+
+
+def _start_automation_worker(app: Flask) -> None:
+    """Startet einen Hintergrund-Thread zur Verarbeitung der Automatisierungen."""
+
+    if getattr(app, "_automation_worker_started", False):
+        return
+
+    def _worker() -> None:
+        while True:
+            with app.app_context():
+                _process_due_automations()
+            time_module.sleep(60)
+
+    thread = threading.Thread(target=_worker, name="automation-runner", daemon=True)
+    thread.start()
+    app._automation_worker_started = True
+
+
+AUTOMATION_TYPE_CHOICES = [
+    ("approve_shifts", "Einsätze automatisch freigeben"),
+    ("approve_leaves", "Abwesenheiten automatisch genehmigen"),
+    ("approve_all", "Einsätze & Abwesenheiten gemeinsam freigeben"),
+]
+
+SCHEDULE_CHOICES = [
+    ("daily", "Täglich zur angegebenen Uhrzeit"),
+    ("weekly", "Wöchentlich an ausgewählten Tagen"),
+    ("once", "Einmalig zum festgelegten Zeitpunkt"),
+]
+
+WEEKDAY_LABELS = [
+    ("0", "Montag"),
+    ("1", "Dienstag"),
+    ("2", "Mittwoch"),
+    ("3", "Donnerstag"),
+    ("4", "Freitag"),
+    ("5", "Samstag"),
+    ("6", "Sonntag"),
+]
 
 def create_app() -> Flask:
 
@@ -2872,6 +3088,167 @@ def create_app() -> Flask:
             last_updated=last_updated,
         )
 
+    @app.route("/settings/automatisierte-freigaben")
+    @super_admin_required
+    def automated_approvals() -> str:
+        """Verwaltet zeitgesteuerte Automatisierungen für Freigaben."""
+
+        automations = ApprovalAutomation.query.order_by(ApprovalAutomation.created_at.desc()).all()
+
+        active_count = sum(1 for automation in automations if automation.is_active)
+        next_runs = [automation.next_run for automation in automations if automation.next_run]
+        upcoming_run = min(next_runs) if next_runs else None
+        type_labels = dict(AUTOMATION_TYPE_CHOICES)
+        schedule_labels = dict(SCHEDULE_CHOICES)
+        weekday_map = {code: label for code, label in WEEKDAY_LABELS}
+
+        return render_template(
+            "automated_approvals.html",
+            automations=automations,
+            automation_types=AUTOMATION_TYPE_CHOICES,
+            schedule_choices=SCHEDULE_CHOICES,
+            weekday_labels=WEEKDAY_LABELS,
+            active_count=active_count,
+            upcoming_run=upcoming_run,
+            type_labels=type_labels,
+            schedule_labels=schedule_labels,
+            weekday_map=weekday_map,
+        )
+
+    @app.route("/settings/automatisierte-freigaben/anlegen", methods=["POST"])
+    @super_admin_required
+    def create_automated_approval() -> str:
+        """Erstellt eine neue Automatisierung für Freigaben."""
+
+        name = (request.form.get("name") or "").strip()
+        automation_type = request.form.get("automation_type")
+        schedule_type = request.form.get("schedule_type")
+        run_time_raw = request.form.get("run_time")
+        once_date_raw = request.form.get("once_date")
+        selected_days = request.form.getlist("days_of_week")
+
+        if not name:
+            flash("Bitte vergeben Sie einen Namen für die Automatisierung.", "danger")
+            return redirect(url_for("automated_approvals"))
+
+        valid_types = {choice[0] for choice in AUTOMATION_TYPE_CHOICES}
+        if automation_type not in valid_types:
+            flash("Der ausgewählte Automatisierungstyp ist ungültig.", "danger")
+            return redirect(url_for("automated_approvals"))
+
+        valid_schedules = {choice[0] for choice in SCHEDULE_CHOICES}
+        if schedule_type not in valid_schedules:
+            flash("Der ausgewählte Zeitplan ist ungültig.", "danger")
+            return redirect(url_for("automated_approvals"))
+
+        run_time_value = None
+        if run_time_raw:
+            try:
+                run_time_value = datetime.strptime(run_time_raw, "%H:%M").time()
+            except ValueError:
+                flash("Bitte geben Sie eine gültige Uhrzeit im Format HH:MM an.", "danger")
+                return redirect(url_for("automated_approvals"))
+
+        next_run = None
+        days_value = ",".join(sorted(set(selected_days))) if selected_days else None
+
+        if schedule_type == "weekly" and not days_value:
+            flash("Bitte wählen Sie mindestens einen Wochentag für den wöchentlichen Ablauf.", "danger")
+            return redirect(url_for("automated_approvals"))
+
+        if schedule_type == "once":
+            if not once_date_raw or not run_time_value:
+                flash("Für eine einmalige Automatisierung sind Datum und Uhrzeit erforderlich.", "danger")
+                return redirect(url_for("automated_approvals"))
+            try:
+                run_date = datetime.strptime(once_date_raw, "%Y-%m-%d").date()
+            except ValueError:
+                flash("Bitte geben Sie ein gültiges Datum an.", "danger")
+                return redirect(url_for("automated_approvals"))
+            next_run = datetime.combine(run_date, run_time_value)
+            if next_run <= datetime.now():
+                flash("Der Ausführungszeitpunkt muss in der Zukunft liegen.", "danger")
+                return redirect(url_for("automated_approvals"))
+        else:
+            if not run_time_value:
+                flash("Bitte legen Sie eine Uhrzeit fest, zu der die Automatisierung ausgeführt werden soll.", "danger")
+                return redirect(url_for("automated_approvals"))
+            next_run = _calculate_next_run(
+                schedule_type,
+                run_time_value,
+                days_value,
+                reference=datetime.now() + timedelta(seconds=1),
+            )
+            if not next_run:
+                flash("Der nächste Ausführungstermin konnte nicht berechnet werden.", "danger")
+                return redirect(url_for("automated_approvals"))
+
+        automation = ApprovalAutomation(
+            name=name,
+            automation_type=automation_type,
+            schedule_type=schedule_type,
+            run_time=run_time_value,
+            days_of_week=days_value,
+            next_run=next_run,
+            is_active=True,
+        )
+
+        db.session.add(automation)
+        db.session.commit()
+
+        flash(f"Automatisierung '{name}' wurde angelegt.", "success")
+        return redirect(url_for("automated_approvals"))
+
+    @app.route("/settings/automatisierte-freigaben/<int:automation_id>/umschalten", methods=["POST"])
+    @super_admin_required
+    def toggle_automated_approval(automation_id: int) -> str:
+        """Aktiviert oder deaktiviert eine bestehende Automatisierung."""
+
+        automation = ApprovalAutomation.query.get_or_404(automation_id)
+        automation.is_active = not automation.is_active
+
+        if automation.is_active:
+            if automation.schedule_type == "once" and not automation.next_run:
+                flash(
+                    "Einmalige Automatisierungen können nach ihrer Ausführung nicht erneut aktiviert werden.",
+                    "warning",
+                )
+                automation.is_active = False
+            else:
+                if not automation.next_run:
+                    automation.next_run = _calculate_next_run(
+                        automation.schedule_type,
+                        automation.run_time,
+                        automation.days_of_week,
+                        reference=datetime.now() + timedelta(seconds=1),
+                    )
+        db.session.commit()
+
+        status = "aktiviert" if automation.is_active else "deaktiviert"
+        flash(f"Automatisierung '{automation.name}' wurde {status}.", "success")
+        return redirect(url_for("automated_approvals"))
+
+    @app.route("/settings/automatisierte-freigaben/<int:automation_id>/loeschen", methods=["POST"])
+    @super_admin_required
+    def delete_automated_approval(automation_id: int) -> str:
+        """Löscht eine Automatisierung dauerhaft."""
+
+        automation = ApprovalAutomation.query.get_or_404(automation_id)
+        db.session.delete(automation)
+        db.session.commit()
+        flash(f"Automatisierung '{automation.name}' wurde entfernt.", "info")
+        return redirect(url_for("automated_approvals"))
+
+    @app.route("/settings/automatisierte-freigaben/<int:automation_id>/ausfuehren", methods=["POST"])
+    @super_admin_required
+    def run_automated_approval(automation_id: int) -> str:
+        """Führt eine Automatisierung sofort aus."""
+
+        automation = ApprovalAutomation.query.get_or_404(automation_id)
+        summary = _run_and_schedule_automation(automation)
+        flash(f"Automatisierung '{automation.name}' ausgeführt: {summary}", "success")
+        return redirect(url_for("automated_approvals"))
+
     @app.route("/auto-schedule")
     @admin_required
     def auto_schedule_form() -> str:
@@ -3249,6 +3626,8 @@ def create_app() -> Flask:
         except Exception as e:
             db.session.rollback()
             return jsonify({'error': f'Fehler beim Aktualisieren: {str(e)}'}), 500
+
+    _start_automation_worker(app)
 
     return app
 
