@@ -30,6 +30,7 @@
       <ul class="automation-hero-list">
         <li>Genehmigt offene Einsätze vollautomatisch</li>
         <li>Bestätigt Urlaubs- und Krankheitsanträge gemäß Regelwerk</li>
+        <li>Plant Standard-Schichten für ausgewählte Mitarbeitergruppen</li>
         <li>Benachrichtigt Teams nach jeder Ausführung</li>
       </ul>
     </div>
@@ -79,6 +80,20 @@
             <option value="{{ value }}">{{ label }}</option>
             {% endfor %}
           </select>
+        </div>
+        <div class="form-field" data-position-field hidden>
+          <label for="target_position">Mitarbeitergruppe</label>
+          {% if positions %}
+          <select id="target_position" name="target_position">
+            <option value="">Bitte auswählen</option>
+            {% for position in positions %}
+            <option value="{{ position }}">{{ position }}</option>
+            {% endfor %}
+          </select>
+          <small>Legt automatisch Standard-Schichten für die ausgewählte Gruppe an.</small>
+          {% else %}
+          <p class="form-hint">Es sind noch keine Mitarbeitergruppen hinterlegt.</p>
+          {% endif %}
         </div>
         <div class="form-field">
           <label for="schedule_type">Zeitplan</label>
@@ -150,6 +165,12 @@
               <span class="automation-info-label">Automatisierung</span>
               <span>{{ type_labels.get(automation.automation_type, automation.automation_type) }}</span>
             </div>
+            {% if automation.target_position %}
+            <div class="automation-item-info">
+              <span class="automation-info-label">Gruppe</span>
+              <span>{{ automation.target_position }}</span>
+            </div>
+            {% endif %}
             <div class="automation-item-info">
               <span class="automation-info-label">Zeitplan</span>
               <span>{{ schedule_labels.get(automation.schedule_type, automation.schedule_type) }}</span>
@@ -210,6 +231,9 @@
     const onceField = form.querySelector('[data-once-field]');
     const runTimeField = form.querySelector('[data-run-time-field] input');
     const onceInput = onceField ? onceField.querySelector('input') : null;
+    const typeSelect = form.querySelector('#automation_type');
+    const positionField = form.querySelector('[data-position-field]');
+    const positionSelect = positionField ? positionField.querySelector('select') : null;
 
     const toggleFields = () => {
       const value = scheduleSelect.value;
@@ -238,7 +262,24 @@
     };
 
     scheduleSelect.addEventListener('change', toggleFields);
+    const toggleTypeFields = () => {
+      if (!positionField || !typeSelect) return;
+      const needsPosition = typeSelect.value === 'auto_schedule_position';
+      positionField.hidden = !needsPosition;
+      if (positionSelect) {
+        positionSelect.required = needsPosition;
+        if (!needsPosition) {
+          positionSelect.value = '';
+        }
+      }
+    };
+
+    if (typeSelect) {
+      typeSelect.addEventListener('change', toggleTypeFields);
+    }
+
     toggleFields();
+    toggleTypeFields();
   })();
 </script>
 {% endblock %}
