@@ -744,6 +744,36 @@ def _calculate_next_run(
     return None
 
 
+def _forecast_automation_runs(
+    automation: ApprovalAutomation,
+    *,
+    limit: int = 3,
+) -> List[datetime]:
+    """Ermittelt die nächsten geplanten Ausführungszeitpunkte einer Automation."""
+
+    occurrences: List[datetime] = []
+
+    if not automation.next_run:
+        return occurrences
+
+    current = automation.next_run
+    occurrences.append(current)
+
+    for _ in range(1, max(1, limit)):
+        next_occurrence = _calculate_next_run(
+            automation.schedule_type,
+            automation.run_time,
+            automation.days_of_week,
+            reference=current + timedelta(seconds=1),
+        )
+        if not next_occurrence:
+            break
+        occurrences.append(next_occurrence)
+        current = next_occurrence
+
+    return occurrences[:limit]
+
+
 def _execute_automation(automation: ApprovalAutomation) -> str:
     """Führt eine Automatisierung aus und gibt eine Zusammenfassung zurück."""
 
@@ -3124,6 +3154,8 @@ def create_app() -> Flask:
     def automated_approvals() -> str:
         """Verwaltet zeitgesteuerte Automatisierungen für Freigaben."""
 
+        _process_due_automations()
+
         automations = ApprovalAutomation.query.order_by(ApprovalAutomation.created_at.desc()).all()
 
         position_rows = (
@@ -3141,9 +3173,49 @@ def create_app() -> Flask:
                 positions.append(value)
                 seen_positions.add(value)
 
+        now = datetime.now()
         active_count = sum(1 for automation in automations if automation.is_active)
+        inactive_count = sum(1 for automation in automations if not automation.is_active)
         next_runs = [automation.next_run for automation in automations if automation.next_run]
         upcoming_run = min(next_runs) if next_runs else None
+        overdue_automations = [
+            automation
+            for automation in automations
+            if automation.next_run and automation.next_run <= now
+        ]
+        runs_last_24h = sum(
+            1
+            for automation in automations
+            if automation.last_run and now - automation.last_run <= timedelta(hours=24)
+        )
+        recent_runs = sorted(
+            [automation for automation in automations if automation.last_run],
+            key=lambda automation: automation.last_run or datetime.min,
+            reverse=True,
+        )[:5]
+        type_statistics = [
+            {
+                "label": label,
+                "count": sum(
+                    1 for automation in automations if automation.automation_type == value
+                ),
+            }
+            for value, label in AUTOMATION_TYPE_CHOICES
+        ]
+        timeline_entries: List[dict] = []
+        for automation in automations:
+            for index, occurrence in enumerate(_forecast_automation_runs(automation, limit=3)):
+                timeline_entries.append(
+                    {
+                        "automation": automation,
+                        "scheduled_time": occurrence,
+                        "is_primary": index == 0,
+                        "is_overdue": occurrence <= now,
+                    }
+                )
+        timeline_entries.sort(key=lambda entry: (entry["scheduled_time"], entry["automation"].id))
+        timeline_entries = timeline_entries[:10]
+
         type_labels = dict(AUTOMATION_TYPE_CHOICES)
         schedule_labels = dict(SCHEDULE_CHOICES)
         weekday_map = {code: label for code, label in WEEKDAY_LABELS}
@@ -3156,6 +3228,12 @@ def create_app() -> Flask:
             weekday_labels=WEEKDAY_LABELS,
             active_count=active_count,
             upcoming_run=upcoming_run,
+            overdue_count=len(overdue_automations),
+            runs_last_24h=runs_last_24h,
+            inactive_count=inactive_count,
+            timeline_entries=timeline_entries,
+            recent_runs=recent_runs,
+            type_statistics=type_statistics,
             type_labels=type_labels,
             schedule_labels=schedule_labels,
             weekday_map=weekday_map,

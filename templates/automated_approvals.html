@@ -47,6 +47,17 @@
       <p class="automation-summary-value">{{ automations|length }}</p>
       <p class="automation-summary-description">Komplette Bibliothek Ihrer Freigabe-Automationen.</p>
     </article>
+    <article class="automation-summary-card {{ 'automation-summary-card--warning' if overdue_count else '' }}">
+      <h2>Überfällige Läufe</h2>
+      <p class="automation-summary-value">{{ overdue_count }}</p>
+      <p class="automation-summary-description">
+        {% if overdue_count %}
+          Es warten Automationen auf die Ausführung.
+        {% else %}
+          Alle geplanten Aufgaben liegen im Zeitplan.
+        {% endif %}
+      </p>
+    </article>
     <article class="automation-summary-card">
       <h2>Nächster Lauf</h2>
       <p class="automation-summary-value">
@@ -57,6 +68,39 @@
         {% endif %}
       </p>
       <p class="automation-summary-description">Sobald der Zeitpunkt erreicht ist, laufen alle fälligen Regeln automatisch.</p>
+    </article>
+  </section>
+
+  <section class="automation-insights" aria-label="Aktivitätsübersicht">
+    <article class="automation-insight-card">
+      <h2>Aktivitätsmonitor</h2>
+      <p>Überblick über Ausführungen und Wartestatus der Automationen.</p>
+      <div class="automation-insight-metrics">
+        <div class="automation-insight-metric">
+          <span class="automation-insight-label">Läufe in den letzten 24&nbsp;Stunden</span>
+          <span class="automation-insight-value">{{ runs_last_24h }}</span>
+        </div>
+        <div class="automation-insight-metric">
+          <span class="automation-insight-label">Inaktive Automationen</span>
+          <span class="automation-insight-value">{{ inactive_count }}</span>
+        </div>
+        <div class="automation-insight-metric">
+          <span class="automation-insight-label">Geplante Termine (Vorschau)</span>
+          <span class="automation-insight-value">{{ timeline_entries|length }}</span>
+        </div>
+      </div>
+    </article>
+    <article class="automation-insight-card">
+      <h2>Verteilung nach Automatisierungstyp</h2>
+      <p>Welche Freigabe-Automationen aktuell im Einsatz sind.</p>
+      <ul class="automation-type-list">
+        {% for item in type_statistics %}
+        <li class="automation-type-item">
+          <span>{{ item.label }}</span>
+          <span class="automation-type-count">{{ item.count }}</span>
+        </li>
+        {% endfor %}
+      </ul>
     </article>
   </section>
 
@@ -216,6 +260,68 @@
       </ul>
       {% else %}
       <p class="automation-empty">Noch keine Automatisierungen gespeichert. Legen Sie links Ihre erste Regel an.</p>
+      {% endif %}
+    </section>
+  </div>
+
+  <div class="automation-detail-grid">
+    <section class="automation-timeline-card" aria-label="Nächste Ausführungstermine">
+      <header class="automation-card-header">
+        <div>
+          <h2>Kommende Ausführungen</h2>
+          <p>Die nächsten geplanten Automationen im Überblick.</p>
+        </div>
+      </header>
+      {% if timeline_entries %}
+      <ol class="automation-timeline-list">
+        {% for entry in timeline_entries %}
+        <li class="automation-timeline-item {{ 'automation-timeline-item--overdue' if entry.is_overdue else '' }} {{ 'automation-timeline-item--primary' if entry.is_primary else '' }}">
+          <time class="automation-timeline-date">{{ entry.scheduled_time.strftime('%d.%m.%Y %H:%M') }}</time>
+          <div class="automation-timeline-content">
+            <div class="automation-timeline-headline">
+              <strong>{{ entry.automation.name }}</strong>
+              {% if entry.is_overdue %}
+              <span class="automation-timeline-badge">Überfällig</span>
+              {% elif entry.is_primary %}
+              <span class="automation-timeline-badge automation-timeline-badge--primary">Nächster Lauf</span>
+              {% endif %}
+            </div>
+            <p class="automation-timeline-meta">
+              {{ type_labels.get(entry.automation.automation_type, entry.automation.automation_type) }} ·
+              {{ schedule_labels.get(entry.automation.schedule_type, entry.automation.schedule_type) }}
+              {% if entry.automation.target_position %}
+              · {{ entry.automation.target_position }}
+              {% endif %}
+            </p>
+          </div>
+        </li>
+        {% endfor %}
+      </ol>
+      {% else %}
+      <p class="automation-empty">Aktuell sind keine zukünftigen Läufe geplant.</p>
+      {% endif %}
+    </section>
+    <section class="automation-history-card" aria-label="Letzte Ausführungen">
+      <header class="automation-card-header">
+        <div>
+          <h2>Aktuelle Ergebnisse</h2>
+          <p>Zusammenfassung der letzten Ausführungen.</p>
+        </div>
+      </header>
+      {% if recent_runs %}
+      <ul class="automation-history-list">
+        {% for automation in recent_runs %}
+        <li class="automation-history-item">
+          <div>
+            <strong>{{ automation.name }}</strong>
+            <span class="automation-history-meta">{{ automation.last_run.strftime('%d.%m.%Y %H:%M') }}</span>
+          </div>
+          <span class="automation-history-summary">{{ automation.last_run_summary or 'Ausgeführt' }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="automation-empty">Es liegen noch keine Ausführungsprotokolle vor.</p>
       {% endif %}
     </section>
   </div>
