@@ -18,6 +18,7 @@ import threading
 import time as time_module
 from collections import Counter, defaultdict
 from datetime import date, datetime, timedelta
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from io import StringIO
 from typing import Dict, List, Tuple
 import pandas as pd
@@ -1133,6 +1134,37 @@ def create_app() -> Flask:
     app.config["SECRET_KEY"] = secrets.token_hex(32)
 
     init_db(app)
+
+    @app.template_filter("round_half_up")
+    def round_half_up_filter(value, digits: int = 0):
+        """Rundet numerische Werte im kaufmännischen Sinn (0.5 -> 1)."""
+
+        if value is None:
+            return ""
+
+        try:
+            digits = int(digits)
+        except (TypeError, ValueError):
+            digits = 0
+
+        try:
+            decimal_value = Decimal(str(value))
+        except (InvalidOperation, ValueError):
+            return value
+
+        exponent = Decimal("1").scaleb(-digits)
+        try:
+            rounded = decimal_value.quantize(exponent, rounding=ROUND_HALF_UP)
+        except InvalidOperation:
+            return value
+
+        if digits <= 0:
+            try:
+                return int(rounded)
+            except (ValueError, OverflowError):
+                return float(rounded)
+
+        return format(rounded, f".{digits}f")
 
     @app.context_processor
     def inject_pending_counts():
