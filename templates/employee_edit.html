@@ -64,13 +64,22 @@
           </div>
           <div class="col-md-4">
             <label for="position" class="form-label">
-              <span style="margin-right: 0.5rem;">💼</span>Position
+              <span style="margin-right: 0.5rem;">💼</span>Arbeitsklasse / Position
             </label>
             <select class="form-select" id="position" name="position">
-              <option value="Vollzeit" {% if emp.position == 'Vollzeit' %}selected{% endif %}>Vollzeit</option>
-              <option value="Teilzeit" {% if emp.position == 'Teilzeit' %}selected{% endif %}>Teilzeit</option>
-              <option value="Aushilfe" {% if emp.position == 'Aushilfe' %}selected{% endif %}>Aushilfe</option>
+              <option value="" {% if not emp.position %}selected{% endif %}>– Keine Arbeitsklasse –</option>
+              {% for work_class in work_classes %}
+              <option value="{{ work_class.name }}" {% if emp.position == work_class.name %}selected{% endif %}>{{ work_class.name }}</option>
+              {% endfor %}
+              {% for legacy in legacy_positions or [] %}
+              {% if legacy not in work_classes|map(attribute='name')|list %}
+              <option value="{{ legacy }}" {% if emp.position == legacy %}selected{% endif %}>{{ legacy }} (inaktiv)</option>
+              {% endif %}
+              {% endfor %}
             </select>
+            {% if legacy_positions %}
+            <small class="form-text text-muted">Diese Arbeitsklasse ist derzeit deaktiviert. Du kannst sie beibehalten oder eine aktive Klasse wählen.</small>
+            {% endif %}
           </div>
           <div class="col-md-4">
             <label for="monthly_hours" class="form-label">

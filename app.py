@@ -55,6 +55,177 @@ from auto_schedule import create_default_shifts_for_month, create_default_shifts
 
 LEAVE_TYPES_EXCLUDED_FROM_PRODUCTIVITY = {"Urlaub", "Krank"}
 
+DEFAULT_GROUP_ICONS = {
+    "Vollzeit": "👔",
+    "Teilzeit": "⏰",
+    "Aushilfe": "🤝",
+}
+
+UNASSIGNED_WORK_CLASS_LABEL = "Ohne Arbeitsklasse"
+
+_COLOR_PALETTE = [
+    "#2563eb",
+    "#0ea5e9",
+    "#10b981",
+    "#f97316",
+    "#8b5cf6",
+    "#f43f5e",
+    "#22c55e",
+    "#14b8a6",
+    "#facc15",
+    "#6366f1",
+]
+
+
+def _normalize_hex_color(value: str | None) -> str | None:
+    """Normalisiert einen Hex-Farbwert in die Form #rrggbb."""
+
+    if not value:
+        return None
+
+    color = value.strip()
+    if not color:
+        return None
+
+    if color.startswith("#"):
+        color = color[1:]
+
+    if len(color) == 3:
+        color = "".join(component * 2 for component in color)
+
+    if len(color) != 6:
+        return None
+
+    try:
+        int(color, 16)
+    except ValueError:
+        return None
+
+    return f"#{color.lower()}"
+
+
+def _hex_to_rgb(color: str | None) -> Tuple[int, int, int] | None:
+    """Wandelt einen Hex-Farbwert in RGB um."""
+
+    normalized = _normalize_hex_color(color)
+    if not normalized:
+        return None
+
+    raw = normalized.lstrip("#")
+    try:
+        return tuple(int(raw[index : index + 2], 16) for index in (0, 2, 4))
+    except ValueError:
+        return None
+
+
+def _lighten_hex(color: str, factor: float) -> str:
+    """Erzeugt eine hellere Variante des gegebenen Farbtons."""
+
+    rgb = _hex_to_rgb(color)
+    if not rgb:
+        return "#f1f5f9"
+
+    factor = max(0.0, min(1.0, factor))
+
+    def _lighten_component(component: int) -> int:
+        return int(component + (255 - component) * factor)
+
+    r, g, b = rgb
+    return f"#{_lighten_component(r):02x}{_lighten_component(g):02x}{_lighten_component(b):02x}"
+
+
+def _get_contrast_text_color(color: str) -> str:
+    """Ermittelt eine gut lesbare Textfarbe für den angegebenen Hintergrund."""
+
+    rgb = _hex_to_rgb(color)
+    if not rgb:
+        return "#111827"
+
+    r, g, b = (component / 255 for component in rgb)
+    luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
+    return "#111827" if luminance > 0.6 else "#ffffff"
+
+
+def _color_from_name(name: str | None) -> str:
+    """Wählt einen konsistenten Farbwert anhand eines Namens."""
+
+    if not name:
+        return "#64748b"
+
+    index = abs(hash(name)) % len(_COLOR_PALETTE)
+    return _COLOR_PALETTE[index]
+
+
+def _build_group_meta(name: str, base_color: str | None = None) -> Dict[str, str]:
+    """Erstellt Farbinformationen und Symbole für Dienstplan-Gruppen."""
+
+    normalized = _normalize_hex_color(base_color) or _normalize_hex_color(_color_from_name(name))
+    if not normalized:
+        normalized = "#2563eb"
+
+    header_color = normalized
+    row_bg_color = _lighten_hex(header_color, 0.88)
+    total_bg_color = _lighten_hex(header_color, 0.75)
+    border_color = _lighten_hex(header_color, 0.6)
+
+    icon = DEFAULT_GROUP_ICONS.get(name, "🏷️")
+    if name == UNASSIGNED_WORK_CLASS_LABEL:
+        icon = "🗂️"
+
+    return {
+        "icon": icon,
+        "header_color": header_color,
+        "header_text_color": _get_contrast_text_color(header_color),
+        "row_bg_color": row_bg_color,
+        "total_bg_color": total_bg_color,
+        "accent_color": header_color,
+        "border_color": border_color,
+    }
+
+
+def _get_available_group_names(include_unassigned: bool = True) -> List[str]:
+    """Bestimmt alle bekannten Positions- bzw. Arbeitsklassen-Gruppen."""
+
+    work_classes = (
+        WorkClass.query.order_by(WorkClass.is_default.desc(), WorkClass.name.asc()).all()
+    )
+    names: List[str] = []
+    seen: set[str] = set()
+
+    for work_class in work_classes:
+        if work_class.name and work_class.name not in seen:
+            names.append(work_class.name)
+            seen.add(work_class.name)
+
+    existing_positions = [
+        value
+        for (value,) in (
+            db.session.query(Employee.position)
+            .filter(Employee.position.isnot(None))
+            .filter(Employee.position != "")
+            .distinct()
+            .order_by(Employee.position)
+            .all()
+        )
+    ]
+
+    for value in existing_positions:
+        if value and value not in seen:
+            names.append(value)
+            seen.add(value)
+
+    if include_unassigned:
+        has_unassigned = (
+            db.session.query(Employee.id)
+            .filter(or_(Employee.position.is_(None), Employee.position == ""))
+            .first()
+            is not None
+        )
+        if has_unassigned and UNASSIGNED_WORK_CLASS_LABEL not in seen:
+            names.append(UNASSIGNED_WORK_CLASS_LABEL)
+
+    return names
+
 def calculate_productivity_for_dates(dates: List[date], department_id: int | None = None) -> Dict[date, Dict[str, float]]:
     """Berechnet Produktivitätskennzahlen für eine beliebige Liste an Tagen."""
 
@@ -1510,9 +1681,50 @@ def create_app() -> Flask:
         year = request.args.get('year', type=int) or today.year
         
         search_query = (request.args.get("q") or "").strip()
-        position_filter = (request.args.get("position") or "").strip()
-        valid_positions = {"Vollzeit", "Teilzeit", "Aushilfe"}
-        if position_filter not in valid_positions:
+        raw_position_filter = (request.args.get("position") or "").strip()
+
+        work_classes = (
+            WorkClass.query.order_by(WorkClass.is_default.desc(), WorkClass.name.asc()).all()
+        )
+        active_work_classes = [wc for wc in work_classes if wc.is_active]
+
+        position_options: List[str] = []
+        seen_positions: set[str] = set()
+
+        for work_class in active_work_classes:
+            if work_class.name not in seen_positions:
+                position_options.append(work_class.name)
+                seen_positions.add(work_class.name)
+
+        existing_positions = [
+            value
+            for (value,) in (
+                db.session.query(Employee.position)
+                .filter(Employee.position.isnot(None))
+                .filter(Employee.position != "")
+                .distinct()
+                .order_by(Employee.position)
+                .all()
+            )
+        ]
+        for value in existing_positions:
+            if value and value not in seen_positions:
+                position_options.append(value)
+                seen_positions.add(value)
+
+        has_unassigned_employees = (
+            db.session.query(Employee.id)
+            .filter(or_(Employee.position.is_(None), Employee.position == ""))
+            .first()
+            is not None
+        )
+
+        position_filter = raw_position_filter
+        valid_positions = set(position_options)
+        include_unassigned = False
+        if raw_position_filter == "__UNASSIGNED__":
+            include_unassigned = True
+        elif raw_position_filter and raw_position_filter not in valid_positions:
             position_filter = ""
 
         # Abteilungsbasierte Filterung
@@ -1536,7 +1748,11 @@ def create_app() -> Flask:
                 )
             )
 
-        if position_filter:
+        if include_unassigned:
+            employee_query = employee_query.filter(
+                or_(Employee.position.is_(None), Employee.position == "")
+            )
+        elif position_filter:
             employee_query = employee_query.filter(Employee.position == position_filter)
 
         employees = employee_query.order_by(Employee.name).all()
@@ -1549,6 +1765,59 @@ def create_app() -> Flask:
         # Generiere Planungshilfen (abteilungsbasiert)
         planning_insights = get_planning_insights(year, month, user_dept_id)
 
+        position_counter = Counter(emp.position for emp in employees if emp.position)
+        hero_position_summary: List[Dict[str, object]] = []
+        summary_names: set[str] = set()
+        for work_class in active_work_classes:
+            hero_position_summary.append(
+                {
+                    "name": work_class.name,
+                    "count": position_counter.get(work_class.name, 0),
+                    "color": _normalize_hex_color(work_class.color)
+                    or _color_from_name(work_class.name),
+                }
+            )
+            summary_names.add(work_class.name)
+
+        for value in existing_positions:
+            if value not in summary_names:
+                hero_position_summary.append(
+                    {
+                        "name": value,
+                        "count": position_counter.get(value, 0),
+                        "color": _color_from_name(value),
+                    }
+                )
+                summary_names.add(value)
+
+        unassigned_count = sum(1 for emp in employees if not (emp.position and emp.position.strip()))
+        if unassigned_count:
+            hero_position_summary.append(
+                {
+                    "name": UNASSIGNED_WORK_CLASS_LABEL,
+                    "count": unassigned_count,
+                    "color": _color_from_name(UNASSIGNED_WORK_CLASS_LABEL),
+                }
+            )
+
+        non_zero_entries = [entry for entry in hero_position_summary if entry["count"] > 0]
+        if non_zero_entries:
+            top_position_summary = sorted(
+                non_zero_entries, key=lambda item: item["count"], reverse=True
+            )[:3]
+        else:
+            top_position_summary = hero_position_summary[:3]
+
+        position_filter_options = [
+            {"value": option, "label": option} for option in position_options
+        ]
+        if has_unassigned_employees:
+            position_filter_options.append(
+                {"value": "__UNASSIGNED__", "label": UNASSIGNED_WORK_CLASS_LABEL}
+            )
+
+        selected_position_value = "__UNASSIGNED__" if include_unassigned else position_filter
+
         return render_template(
             "employees.html",
             employees=employees,
@@ -1558,7 +1827,10 @@ def create_app() -> Flask:
             current_month=month,
             current_year=year,
             search_query=search_query,
-            selected_position=position_filter,
+            selected_position=selected_position_value,
+            work_classes=active_work_classes,
+            position_filter_options=position_filter_options,
+            hero_position_summary=top_position_summary,
         )
 
     @app.route("/berichte/monat")
@@ -1912,7 +2184,21 @@ def create_app() -> Flask:
         username = request.form.get("username", "").strip() or None
         password = request.form.get("password", "")
         is_admin_flag = bool(request.form.get("is_admin"))
-        
+
+        work_classes = (
+            WorkClass.query.order_by(WorkClass.is_default.desc(), WorkClass.name.asc()).all()
+        )
+        active_work_classes = [wc for wc in work_classes if wc.is_active]
+        valid_positions = {wc.name for wc in active_work_classes}
+
+        if active_work_classes and not position:
+            flash("Bitte wähle eine Arbeitsklasse für den Mitarbeiter aus.", "warning")
+            return redirect(url_for("employees"))
+
+        if position and position not in valid_positions:
+            flash("Bitte wähle eine gültige Arbeitsklasse.", "danger")
+            return redirect(url_for("employees"))
+
         # Standard-Arbeitszeiten verarbeiten
         default_daily_hours = request.form.get("default_daily_hours") or None
         default_daily_hours = float(default_daily_hours) if default_daily_hours else None
@@ -1993,6 +2279,11 @@ def create_app() -> Flask:
         if not session.get("is_admin") and session.get("user_id") != emp_id:
             flash("Sie können nur Ihre eigenen Daten bearbeiten.", "danger")
             return redirect(url_for("index"))
+        all_work_classes = (
+            WorkClass.query.order_by(WorkClass.is_default.desc(), WorkClass.name.asc()).all()
+        )
+        active_work_classes = [wc for wc in all_work_classes if wc.is_active]
+        valid_positions = {wc.name for wc in active_work_classes}
         if request.method == "POST":
             name = request.form.get("name", "").strip()
             emp_number = request.form.get("employee_number", "").strip() or None
@@ -2007,6 +2298,9 @@ def create_app() -> Flask:
             username = request.form.get("username", "").strip() or None
             password = request.form.get("password", "")
             is_admin_flag = bool(request.form.get("is_admin"))
+            if position and position not in valid_positions and position != emp.position:
+                flash("Bitte wähle eine gültige Arbeitsklasse.", "danger")
+                return redirect(url_for("edit_employee", emp_id=emp.id))
             emp.name = name or emp.name
             emp.employee_number = emp_number
             emp.department_id = dept_id
@@ -2034,10 +2328,15 @@ def create_app() -> Flask:
             flash("Mitarbeiter wurde aktualisiert.", "success")
             return redirect(url_for("employee_profile", emp_id=emp.id))
         departments = Department.query.order_by(Department.name).all()
+        legacy_positions: List[str] = []
+        if emp.position and emp.position not in valid_positions:
+            legacy_positions.append(emp.position)
         return render_template(
             "employee_edit.html",
             emp=emp,
             departments=departments,
+            work_classes=active_work_classes,
+            legacy_positions=legacy_positions,
         )
 
     @app.route("/abteilungen")
@@ -2170,31 +2469,54 @@ def create_app() -> Flask:
                 .order_by(Employee.name)
                 .all()
             )
-        
-        # Gruppiere Mitarbeiter nach Arbeitszeit-Kategorien
-        vollzeit_employees = [emp for emp in all_employees if emp.position == 'Vollzeit']
-        teilzeit_employees = [emp for emp in all_employees if emp.position == 'Teilzeit']
-        aushilfe_employees = [emp for emp in all_employees if emp.position == 'Aushilfe']
-        
-        # Hole die Reihenfolge der Benutzergruppen aus der Datenbank
-        from models import EmployeeGroupOrder
-        group_order = EmployeeGroupOrder.query.order_by(EmployeeGroupOrder.order_position).all()
-        
-        # Erstelle ein Dictionary für die Gruppen
-        employee_groups = {
-            'Vollzeit': vollzeit_employees,
-            'Teilzeit': teilzeit_employees,
-            'Aushilfe': aushilfe_employees
+
+        all_work_classes = (
+            WorkClass.query.order_by(WorkClass.is_default.desc(), WorkClass.name.asc()).all()
+        )
+        work_class_by_name = {wc.name: wc for wc in all_work_classes}
+
+        employee_groups: Dict[str, List[Employee]] = {
+            wc.name: [] for wc in all_work_classes
         }
-        
-        # Wenn keine Reihenfolge definiert ist, verwende Standard-Reihenfolge
-        if not group_order:
-            ordered_group_names = ['Vollzeit', 'Teilzeit', 'Aushilfe']
-        else:
-            ordered_group_names = [g.group_name for g in group_order]
-        
-        # Für Rückwärtskompatibilität
+
         employees = all_employees
+        for emp in employees:
+            position_name = (emp.position or "").strip()
+            if position_name:
+                if position_name not in employee_groups:
+                    employee_groups[position_name] = []
+                employee_groups[position_name].append(emp)
+            else:
+                employee_groups.setdefault(UNASSIGNED_WORK_CLASS_LABEL, []).append(emp)
+
+        employee_groups.setdefault(UNASSIGNED_WORK_CLASS_LABEL, employee_groups.get(UNASSIGNED_WORK_CLASS_LABEL, []))
+
+        from models import EmployeeGroupOrder
+
+        group_order_entries = EmployeeGroupOrder.query.order_by(EmployeeGroupOrder.order_position).all()
+        saved_order = {entry.group_name: entry.order_position for entry in group_order_entries}
+        base_order_mapping = {wc.name: index for index, wc in enumerate(all_work_classes)}
+
+        def _group_sort_key(name: str) -> Tuple[int, int, str]:
+            if name in saved_order:
+                return (0, saved_order[name], name.lower())
+            base_rank = base_order_mapping.get(name, len(base_order_mapping))
+            if name == UNASSIGNED_WORK_CLASS_LABEL:
+                base_rank += len(base_order_mapping)
+            return (1, base_rank, name.lower())
+
+        ordered_group_names = sorted(employee_groups.keys(), key=_group_sort_key)
+
+        group_meta: Dict[str, Dict[str, str]] = {}
+        for group_name in employee_groups.keys():
+            work_class = work_class_by_name.get(group_name)
+            base_color = work_class.color if work_class else None
+            group_meta[group_name] = _build_group_meta(group_name, base_color)
+
+        # Für Rückwärtskompatibilität
+        vollzeit_employees = list(employee_groups.get("Vollzeit", []))
+        teilzeit_employees = list(employee_groups.get("Teilzeit", []))
+        aushilfe_employees = list(employee_groups.get("Aushilfe", []))
 
         shifts_query = Shift.query.filter(
             Shift.date.between(schedule_start, schedule_end)
@@ -2304,6 +2626,7 @@ def create_app() -> Flask:
             aushilfe_employees=aushilfe_employees,
             employee_groups=employee_groups,
             ordered_group_names=ordered_group_names,
+            group_meta=group_meta,
             shifts=shifts,
             leaves=leaves,
             blocked_days=blocked_days,
@@ -3958,25 +4281,29 @@ def create_app() -> Flask:
         """Gibt die aktuelle Reihenfolge der Benutzergruppen zurück."""
         from models import EmployeeGroupOrder
         from flask import jsonify
-        
-        group_order = EmployeeGroupOrder.query.order_by(EmployeeGroupOrder.order_position).all()
-        
-        if not group_order:
-            # Standard-Reihenfolge zurückgeben
-            return jsonify({
-                'groups': [
-                    {'name': 'Vollzeit', 'position': 0},
-                    {'name': 'Teilzeit', 'position': 1},
-                    {'name': 'Aushilfe', 'position': 2}
+
+        group_order_entries = EmployeeGroupOrder.query.order_by(EmployeeGroupOrder.order_position).all()
+        available_groups = _get_available_group_names()
+
+        order_mapping = {entry.group_name: entry.order_position for entry in group_order_entries}
+
+        for entry in group_order_entries:
+            if entry.group_name not in available_groups:
+                available_groups.append(entry.group_name)
+
+        sorted_groups = sorted(
+            available_groups,
+            key=lambda name: (order_mapping.get(name, len(order_mapping)), name.lower()),
+        )
+
+        return jsonify(
+            {
+                "groups": [
+                    {"name": name, "position": index}
+                    for index, name in enumerate(sorted_groups)
                 ]
-            })
-        
-        return jsonify({
-            'groups': [
-                {'name': g.group_name, 'position': g.order_position}
-                for g in group_order
-            ]
-        })
+            }
+        )
 
     @app.route("/api/employee-group-order", methods=["POST"])
     @admin_required
@@ -3992,20 +4319,39 @@ def create_app() -> Flask:
             return jsonify({'error': 'Nur Systemadministratoren können die Reihenfolge ändern.'}), 403
         
         try:
-            data = request.get_json()
+            data = request.get_json() or {}
             groups = data.get('groups', [])
-            
-            if not groups:
-                return jsonify({'error': 'Keine Gruppen angegeben.'}), 400
-            
+
+            available_groups = _get_available_group_names()
+            if not available_groups:
+                return jsonify({'error': 'Keine Gruppen verfügbar.'}), 400
+
+            sanitized_groups: List[str] = []
+            seen: set[str] = set()
+
+            for group in groups:
+                name = (group or {}).get('name')
+                if not name:
+                    continue
+                if name in available_groups and name not in seen:
+                    sanitized_groups.append(name)
+                    seen.add(name)
+
+            for name in available_groups:
+                if name not in seen:
+                    sanitized_groups.append(name)
+
+            if not sanitized_groups:
+                sanitized_groups = available_groups
+
             # Lösche alte Reihenfolge
             EmployeeGroupOrder.query.delete()
-            
+
             # Speichere neue Reihenfolge
-            for group in groups:
+            for index, name in enumerate(sanitized_groups):
                 group_order = EmployeeGroupOrder(
-                    group_name=group['name'],
-                    order_position=group['position']
+                    group_name=name,
+                    order_position=index,
                 )
                 db.session.add(group_order)
             

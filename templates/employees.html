@@ -3,10 +3,6 @@
 {% block content %}
 
 <div class="employees-page">
-  {% set full_time = employees|selectattr('position', 'equalto', 'Vollzeit')|list|length %}
-  {% set part_time = employees|selectattr('position', 'equalto', 'Teilzeit')|list|length %}
-  {% set assistants = employees|selectattr('position', 'equalto', 'Aushilfe')|list|length %}
-
   <section class="employees-hero">
     <div class="employees-hero-text">
       <p class="employees-hero-eyebrow">Teamübersicht</p>
@@ -19,18 +15,12 @@
           <span class="hero-stat-label">Gesamt</span>
           <span class="hero-stat-value">{{ employees|length }}</span>
         </div>
+        {% for summary in hero_position_summary or [] %}
         <div class="hero-stat">
-          <span class="hero-stat-label">Vollzeit</span>
-          <span class="hero-stat-value">{{ full_time }}</span>
+          <span class="hero-stat-label">{{ summary.name }}</span>
+          <span class="hero-stat-value"{% if summary.color %} style="color: {{ summary.color }};"{% endif %}>{{ summary.count }}</span>
         </div>
-        <div class="hero-stat">
-          <span class="hero-stat-label">Teilzeit</span>
-          <span class="hero-stat-value">{{ part_time }}</span>
-        </div>
-        <div class="hero-stat">
-          <span class="hero-stat-label">Aushilfen</span>
-          <span class="hero-stat-value">{{ assistants }}</span>
-        </div>
+        {% endfor %}
       </div>
     </div>
     <div class="employees-hero-actions">
@@ -176,9 +166,9 @@
             class="form-select form-select-sm"
           >
             <option value="">Alle</option>
-            <option value="Vollzeit" {% if selected_position == 'Vollzeit' %}selected{% endif %}>Vollzeit</option>
-            <option value="Teilzeit" {% if selected_position == 'Teilzeit' %}selected{% endif %}>Teilzeit</option>
-            <option value="Aushilfe" {% if selected_position == 'Aushilfe' %}selected{% endif %}>Aushilfe</option>
+            {% for option in position_filter_options or [] %}
+            <option value="{{ option.value }}" {% if selected_position == option.value %}selected{% endif %}>{{ option.label }}</option>
+            {% endfor %}
           </select>
         </label>
         <input type="hidden" name="month" value="{{ current_month }}">
@@ -394,13 +384,16 @@
               </select>
             </div>
             <div class="col-md-6">
-              <label for="position" class="form-label">Position*</label>
-              <select class="form-select" id="position" name="position" required>
-                <option value="">Position wählen</option>
-                <option value="Vollzeit">Vollzeit</option>
-                <option value="Teilzeit">Teilzeit</option>
-                <option value="Aushilfe">Aushilfe</option>
+              <label for="position" class="form-label">Arbeitsklasse / Position{% if work_classes %}*{% endif %}</label>
+              <select class="form-select" id="position" name="position" {% if work_classes %}required{% endif %}>
+                <option value="">Arbeitsklasse wählen</option>
+                {% for work_class in work_classes %}
+                <option value="{{ work_class.name }}">{{ work_class.name }}</option>
+                {% endfor %}
               </select>
+              {% if not work_classes %}
+              <small class="form-text text-muted">Lege im Bereich <a href="{{ url_for('system_settings') }}#work-class-manager">Einstellungen &rsaquo; Arbeitsklassen</a> zunächst eine Arbeitsklasse an.</small>
+              {% endif %}
             </div>
             <div class="col-md-6">
               <label for="monthly_hours" class="form-label">Monatliche Stunden</label>
