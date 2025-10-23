@@ -1,181 +1,1412 @@
 {% extends "layout.html" %}
-{% set super_admins = users | selectattr('is_admin') | selectattr('department_id', 'equalto', None) | list %}
-{% set department_admins = users | selectattr('is_admin') | rejectattr('department_id', 'equalto', None) | list %}
-{% set employees = users | rejectattr('is_admin') | list %}
-{% block title %}Benutzerverwaltung - Xerxes{% endblock %}
+{% block title %}Teamverwaltung & Rollen - Xerxes{% endblock %}
 {% block content %}
-<section class="user-management-page">
-  <header class="page-header">
-    <div class="page-header-main">
-      <div class="page-header-icon">👥</div>
-      <div>
-        <h1>Benutzerverwaltung</h1>
-        <p>Administrator-Rechte und Benutzerrollen verwalten</p>
+<style>
+  .user-management-shell {
+    display: flex;
+    flex-direction: column;
+    gap: 3rem;
+    padding-block: 1.5rem 4rem;
+  }
+
+  .user-hero {
+    position: relative;
+    display: grid;
+    gap: 2.5rem;
+    grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
+    padding: clamp(2rem, 3vw, 3rem);
+    border-radius: var(--radius-xl, 32px);
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.92), rgba(30, 64, 175, 0.92)),
+      url('https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1600&q=80') center/cover;
+    color: #fff;
+    overflow: hidden;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .user-hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.5), rgba(56, 189, 248, 0.35));
+    mix-blend-mode: screen;
+    opacity: 0.65;
+  }
+
+  .user-hero__intro,
+  .user-hero__metrics {
+    position: relative;
+    z-index: 1;
+  }
+
+  .user-hero__intro {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .hero-eyebrow {
+    margin: 0;
+    font-size: 0.8rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.75);
+  }
+
+  .user-hero__intro h1 {
+    margin: 0;
+    font-size: clamp(2rem, 4vw, 2.9rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  .hero-lead {
+    margin: 0;
+    max-width: 60ch;
+    font-size: 1.05rem;
+    line-height: 1.65;
+    color: rgba(255, 255, 255, 0.82);
+  }
+
+  .hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.85rem;
+  }
+
+  .hero-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.85rem 1.4rem;
+    border-radius: var(--radius-lg);
+    font-weight: 600;
+    text-decoration: none;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  }
+
+  .hero-action--primary {
+    background: #fff;
+    color: var(--primary-color);
+    box-shadow: var(--shadow-md);
+  }
+
+  .hero-action--primary:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .hero-action--ghost {
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    color: #fff;
+    background: rgba(255, 255, 255, 0.12);
+  }
+
+  .hero-action--ghost:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+  }
+
+  .user-hero__metrics {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+
+  .hero-metric {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    padding: 1.15rem 1.25rem;
+    border-radius: var(--radius-lg);
+    background: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(6px);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  }
+
+  .hero-metric__label {
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  .hero-metric__value {
+    font-size: clamp(2.1rem, 3vw, 2.6rem);
+    font-weight: 700;
+  }
+
+  .hero-metric__meta {
+    font-size: 0.95rem;
+    color: rgba(255, 255, 255, 0.75);
+  }
+
+  .user-overview-grid {
+    display: grid;
+    gap: 1.75rem;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  }
+
+  .insights-panel,
+  .overview-card {
+    border-radius: var(--radius-xl, 32px);
+    background: #fff;
+    box-shadow: var(--shadow-lg);
+    padding: clamp(1.6rem, 2vw, 2.2rem);
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .insights-panel header h2,
+  .overview-card h2 {
+    margin: 0;
+    font-size: 1.35rem;
+  }
+
+  .insights-panel header p {
+    margin: 0;
+    color: var(--text-secondary);
+  }
+
+  .insights-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+
+  .insight-card {
+    display: flex;
+    gap: 0.9rem;
+    align-items: center;
+    padding: 1.1rem 1.2rem;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(37, 99, 235, 0.03));
+  }
+
+  .insight-card__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.8rem;
+    height: 2.8rem;
+    border-radius: 999px;
+    background: rgba(37, 99, 235, 0.12);
+    font-size: 1.25rem;
+  }
+
+  .insight-card__label {
+    display: block;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-secondary);
+  }
+
+  .insight-card__value {
+    display: block;
+    font-size: 1.7rem;
+    font-weight: 700;
+  }
+
+  .insight-card__meta {
+    display: block;
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+  }
+
+  .department-snapshot__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1.1rem;
+  }
+
+  .department-snapshot__item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px dashed var(--border-color);
+  }
+
+  .department-snapshot__item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  .department-snapshot__title {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-weight: 600;
+  }
+
+  .department-snapshot__share {
+    margin-left: auto;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+  }
+
+  .department-snapshot__meta {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+  }
+
+  .department-snapshot__meta a {
+    font-weight: 600;
+    color: var(--primary-color);
+    text-decoration: none;
+  }
+
+  .department-snapshot__meta a:hover {
+    text-decoration: underline;
+  }
+
+  .role-overview {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .role-overview__header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .role-overview__header p {
+    margin: 0;
+    max-width: 60ch;
+    color: var(--text-secondary);
+  }
+
+  .role-card-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
+
+  .role-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1.4rem 1.5rem;
+    border-radius: var(--radius-xl, 28px);
+    background: #fff;
+    border: 1px solid transparent;
+    box-shadow: var(--shadow-md);
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  }
+
+  .role-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .role-card.is-active {
+    border-color: rgba(37, 99, 235, 0.4);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15), var(--shadow-lg);
+  }
+
+  .role-card__header {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+  }
+
+  .role-card__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 999px;
+    background: rgba(37, 99, 235, 0.12);
+    font-size: 1.35rem;
+  }
+
+  .role-card__title {
+    font-weight: 600;
+    font-size: 1.05rem;
+  }
+
+  .role-card__description {
+    display: block;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+  }
+
+  .role-card__stats {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-weight: 600;
+  }
+
+  .role-card__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    background: rgba(37, 99, 235, 0.12);
+    color: var(--primary-color);
+    font-size: 0.85rem;
+  }
+
+  .role-card__badge.is-active {
+    background: rgba(37, 99, 235, 0.18);
+  }
+
+  .role-card__progress {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+  }
+
+  .role-card__progress-bar {
+    position: relative;
+    width: 100%;
+    height: 0.6rem;
+    border-radius: 999px;
+    background: rgba(148, 163, 184, 0.2);
+    overflow: hidden;
+  }
+
+  .role-card__progress-bar::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    width: var(--role-progress, 0%);
+    border-radius: inherit;
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.85), rgba(59, 130, 246, 0.75));
+  }
+
+  .role-card__progress-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+  }
+
+  .user-callout {
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+    padding: 1.4rem 1.6rem;
+    border-radius: var(--radius-lg);
+    border: 1px solid transparent;
+    box-shadow: var(--shadow-md);
+    background: #fff;
+  }
+
+  .user-callout--warning {
+    border-color: rgba(251, 191, 36, 0.5);
+    background: linear-gradient(135deg, rgba(251, 191, 36, 0.18), rgba(252, 211, 77, 0.18));
+  }
+
+  .user-callout--info {
+    border-color: rgba(59, 130, 246, 0.35);
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(56, 189, 248, 0.12));
+  }
+
+  .user-callout__icon {
+    font-size: 1.75rem;
+  }
+
+  .user-callout__content h3 {
+    margin: 0 0 0.3rem;
+    font-size: 1.1rem;
+  }
+
+  .user-callout__content p {
+    margin: 0;
+    color: var(--text-secondary);
+  }
+
+  .user-callout__action {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.55rem 0.95rem;
+    border-radius: var(--radius-md);
+    background: #fff;
+    box-shadow: var(--shadow-sm);
+    font-weight: 600;
+    color: var(--primary-color);
+    text-decoration: none;
+  }
+
+  .user-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+  }
+
+  .user-toolbar__intro h2 {
+    margin: 0;
+  }
+
+  .user-toolbar__intro p {
+    margin: 0.3rem 0 0;
+    color: var(--text-secondary);
+  }
+
+  .user-toolbar__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .view-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.3rem;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.05);
+  }
+
+  .view-toggle__option {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.9rem;
+    border-radius: 999px;
+    text-decoration: none;
+    font-weight: 600;
+    color: var(--text-secondary);
+    transition: background 0.2s ease, color 0.2s ease;
+  }
+
+  .view-toggle__option.is-active {
+    background: #fff;
+    color: var(--primary-color);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .user-filter-form {
+    border-radius: var(--radius-xl, 32px);
+    background: #fff;
+    box-shadow: var(--shadow-lg);
+    padding: clamp(1.6rem, 2vw, 2.2rem);
+  }
+
+  .user-filter-form .filter-grid {
+    display: grid;
+    gap: 1.2rem;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    align-items: end;
+  }
+
+  .filter-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .filter-label {
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+
+  .search-field {
+    position: relative;
+  }
+
+  .search-icon {
+    position: absolute;
+    left: 0.9rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1rem;
+    color: var(--text-secondary);
+  }
+
+  .search-input {
+    width: 100%;
+    padding: 0.75rem 0.85rem 0.75rem 2.6rem;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    background: #fff;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .filter-select {
+    width: 100%;
+    padding: 0.75rem 0.85rem;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    background: #fff;
+  }
+
+  .search-input:focus,
+  .filter-select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+  }
+
+  .filter-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    justify-content: flex-end;
+  }
+
+  .active-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+  }
+
+  .filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.45rem 0.75rem;
+    border-radius: 999px;
+    background: rgba(37, 99, 235, 0.12);
+    color: var(--primary-color);
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .table-scroll {
+    overflow-x: auto;
+  }
+
+  .user-table {
+    width: 100%;
+    border-spacing: 0;
+  }
+
+  .user-table thead th {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-secondary);
+    font-weight: 600;
+    border-bottom: 1px solid var(--border-color);
+    padding: 0.75rem 1rem;
+  }
+
+  .user-table tbody td {
+    padding: 1rem;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.7);
+  }
+
+  .user-table tbody tr:hover {
+    background: rgba(37, 99, 235, 0.07);
+  }
+
+  .user-cell {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .user-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 3rem;
+    height: 3rem;
+    border-radius: 999px;
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.18), rgba(14, 165, 233, 0.28));
+    color: var(--primary-color);
+    font-weight: 700;
+    font-size: 1.1rem;
+  }
+
+  .user-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+
+  .user-meta-name {
+    font-weight: 600;
+  }
+
+  .user-meta-sub,
+  .user-meta-position {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+  }
+
+  .role-stack {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    align-items: center;
+  }
+
+  .role-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    background: rgba(37, 99, 235, 0.12);
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+
+  .role-badge--super_admin {
+    background: rgba(250, 204, 21, 0.18);
+    color: #92400e;
+  }
+
+  .role-badge--department_admin {
+    background: rgba(37, 99, 235, 0.18);
+    color: var(--primary-color);
+  }
+
+  .role-badge--employee {
+    background: rgba(148, 163, 184, 0.18);
+    color: var(--text-secondary);
+  }
+
+  .department-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.05);
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+  }
+
+  .department-chip--global {
+    background: rgba(37, 99, 235, 0.12);
+    color: var(--primary-color);
+  }
+
+  .department-chip--unassigned {
+    background: rgba(148, 163, 184, 0.18);
+  }
+
+  .department-dot {
+    width: 0.6rem;
+    height: 0.6rem;
+    border-radius: 999px;
+    background: var(--primary-color);
+  }
+
+  .contact-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    color: var(--text-secondary);
+  }
+
+  .user-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    justify-content: flex-end;
+  }
+
+  .role-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    border-radius: var(--radius-md);
+    border: 1px solid transparent;
+    font-weight: 600;
+    padding: 0.55rem 0.95rem;
+    background: #fff;
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .role-action:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+  }
+
+  .role-action--super {
+    border-color: rgba(220, 38, 38, 0.3);
+    color: #b91c1c;
+  }
+
+  .role-action--department {
+    border-color: rgba(37, 99, 235, 0.3);
+    color: var(--primary-color);
+  }
+
+  .role-action--remove {
+    border-color: rgba(148, 163, 184, 0.35);
+    color: var(--text-secondary);
+  }
+
+  .user-card-grid {
+    display: grid;
+    gap: 1.2rem;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  }
+
+  .user-card {
+    display: flex;
+    flex-direction: column;
+    gap: 1.1rem;
+    padding: 1.4rem 1.5rem;
+    border-radius: var(--radius-xl, 28px);
+    background: #fff;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .user-card__header {
+    display: flex;
+    gap: 0.9rem;
+    align-items: center;
+  }
+
+  .user-card__meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .user-card__name {
+    font-weight: 600;
+    font-size: 1.05rem;
+  }
+
+  .user-card__username,
+  .user-card__position {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+  }
+
+  .user-card__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+  }
+
+  .user-card__contact {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+
+  .user-card__contact dt {
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+  }
+
+  .user-card__contact dd {
+    margin: 0.1rem 0 0;
+    font-weight: 600;
+  }
+
+  .user-card__footer {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .user-card__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+  }
+
+  .user-card__hint {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+  }
+
+  .department-overview-board {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .department-overview-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
+
+  .department-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+    padding: 1.3rem 1.4rem;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+    background: #fff;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .department-card__header {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-weight: 600;
+  }
+
+  .department-card__stats {
+    display: flex;
+    gap: 1.2rem;
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+  }
+
+  .department-card__link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-weight: 600;
+    color: var(--primary-color);
+    text-decoration: none;
+  }
+
+  .department-card__link:hover {
+    text-decoration: underline;
+  }
+
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 3rem 1.5rem;
+    border-radius: var(--radius-xl, 32px);
+    background: #fff;
+    box-shadow: var(--shadow-lg);
+    color: var(--text-secondary);
+    text-align: center;
+  }
+
+  .empty-state-icon {
+    font-size: 2.4rem;
+  }
+
+  @media (max-width: 1100px) {
+    .user-hero {
+      grid-template-columns: 1fr;
+    }
+
+    .user-overview-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 780px) {
+    .user-toolbar {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .hero-actions {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .user-card__contact {
+      grid-template-columns: 1fr;
+    }
+
+    .role-card-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<section class="user-management-shell">
+  <header class="user-hero">
+    <div class="user-hero__intro">
+      <p class="hero-eyebrow">System · Benutzerverwaltung</p>
+      <h1>Teamübersicht &amp; Rollensteuerung</h1>
+      <p class="hero-lead">
+        Steuern Sie Zugriffe, Abteilungen und Kontaktdaten in einer modernen Oberfläche.
+        Dank flexibler Filter behalten Sie auch in großen Teams stets den Überblick.
+      </p>
+      <div class="hero-actions">
+        <a href="{{ export_url }}" class="hero-action hero-action--primary">
+          <span aria-hidden="true">⬇️</span>
+          <span>CSV Export herunterladen</span>
+        </a>
+        <a href="#filters" class="hero-action hero-action--ghost">
+          <span aria-hidden="true">🎯</span>
+          <span>Filter &amp; Suche öffnen</span>
+        </a>
       </div>
     </div>
-    <div class="page-header-meta">
-      <span class="meta-pill">
-        <span class="meta-icon">🔐</span>
-        {{ users|length }} aktive Benutzer
-      </span>
-      <span class="meta-pill">
-        <span class="meta-icon">🏢</span>
-        {{ departments|length }} Abteilungen
-      </span>
-      <span class="meta-pill meta-pill--highlight">
-        <span class="meta-icon">🔥</span>
-        {{ super_admins|length }} Super-Admins
-      </span>
+    <div class="user-hero__metrics">
+      <article class="hero-metric">
+        <span class="hero-metric__label">Benutzer gesamt</span>
+        <span class="hero-metric__value">{{ stats.total }}</span>
+        <span class="hero-metric__meta">Alle aktiven Logins</span>
+      </article>
+      <article class="hero-metric">
+        <span class="hero-metric__label">Aktuelle Ansicht</span>
+        <span class="hero-metric__value">{{ stats.visible }}</span>
+        <span class="hero-metric__meta">Gefilterte Treffer in der Liste</span>
+      </article>
+      <article class="hero-metric">
+        <span class="hero-metric__label">Kontaktvollständigkeit</span>
+        <span class="hero-metric__value">{{ contact_completion_rate|round(0, 'half_up') }}%</span>
+        <span class="hero-metric__meta">{{ contact_counts['complete'] }} Profile mit E-Mail &amp; Telefon</span>
+      </article>
+      <article class="hero-metric">
+        <span class="hero-metric__label">Admins gesamt</span>
+        <span class="hero-metric__value">{{ admin_total }}</span>
+        <span class="hero-metric__meta">{{ admin_ratio|round(0, 'half_up') }}% Anteil im Team</span>
+      </article>
     </div>
   </header>
 
-  <section class="card-modern">
-    <div class="card-modern-header">
+  <section class="user-overview-grid">
+    <article class="insights-panel">
+      <header>
+        <h2>Teamstatus in Echtzeit</h2>
+        <p>Nutzen Sie die Kennzahlen als schnellen Gesundheitscheck Ihrer Benutzerverwaltung.</p>
+      </header>
+      <div class="insights-grid">
+        {% for insight in insights %}
+        <div class="insight-card">
+          <div class="insight-card__icon" aria-hidden="true">{{ insight.icon }}</div>
+          <div>
+            <span class="insight-card__label">{{ insight.label }}</span>
+            <span class="insight-card__value">{{ insight.value }}</span>
+            <span class="insight-card__meta">{{ insight.subtext }}</span>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </article>
+
+    <aside class="overview-card">
+      <h2>Top-Abteilungen</h2>
+      {% if top_departments %}
+      <ul class="department-snapshot__list">
+        {% for department in top_departments %}
+        <li class="department-snapshot__item">
+          <div class="department-snapshot__title">
+            <span class="department-dot"{% if department.color %} style="background-color: {{ department.color }};"{% endif %}></span>
+            <span>{{ department.name }}</span>
+            <span class="department-snapshot__share">{{ department.share|round(0, 'half_up') }}%</span>
+          </div>
+          <div class="department-snapshot__meta">
+            <span>{{ department.total }} Benutzer · {{ department.admins }} Admins</span>
+            <a href="{{ department.url }}">In Liste öffnen</a>
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="empty-hint">Noch keine Abteilungen mit Benutzern hinterlegt.</p>
+      {% endif %}
+    </aside>
+  </section>
+
+  <section class="role-overview" id="rollen">
+    <div class="role-overview__header">
       <div>
         <h2>Rollen im Überblick</h2>
-        <p>Verstehen Sie die Unterschiede zwischen den Berechtigungsstufen.</p>
+        <p>Erkennen Sie auf einen Blick, wie sich die Benutzer auf Super-Admins, Abteilungsadmins und Mitarbeitende verteilen.</p>
       </div>
+      <span class="role-card__badge is-active">{{ admin_total }} Admins aktiv</span>
     </div>
-    <div class="role-grid">
-      <article class="role-card role-card--super">
-        <header>
-          <span class="role-icon">🔥</span>
-          <h3>Super-Administrator</h3>
-        </header>
-        <p>Vollzugriff auf das System – ideal für zentrale Administratoren.</p>
-        <ul>
-          <li>Verwaltet alle Abteilungen und Einstellungen</li>
-          <li>Erstellt neue Abteilungen und Administratoren</li>
-          <li>Kann alle Benutzerrechte anpassen</li>
-        </ul>
-      </article>
-      <article class="role-card role-card--department">
-        <header>
-          <span class="role-icon">🏢</span>
-          <h3>Abteilungsadministrator</h3>
-        </header>
-        <p>Fokussierte Rechte für die Steuerung einer Abteilung.</p>
-        <ul>
-          <li>Verwaltet Mitarbeiter der eigenen Abteilung</li>
-          <li>Erstellt und bearbeitet Dienstpläne</li>
-          <li>Genehmigt Abwesenheiten für das Team</li>
-        </ul>
-      </article>
-      <article class="role-card role-card--employee">
-        <header>
-          <span class="role-icon">👤</span>
-          <h3>Mitarbeiter</h3>
-        </header>
-        <p>Transparenter Zugriff auf eigene Daten und Anträge.</p>
-        <ul>
-          <li>Sieht persönliche Daten und Dienstpläne</li>
-          <li>Beantragt Abwesenheiten digital</li>
-          <li>Bleibt über Teamkollegen informiert</li>
-        </ul>
-      </article>
+    <div class="role-card-grid">
+      {% for card in role_cards %}
+      <a href="{{ card.url }}" class="role-card{% if card.active %} is-active{% endif %}">
+        <div class="role-card__header">
+          <span class="role-card__icon" aria-hidden="true">{{ card.icon }}</span>
+          <div>
+            <span class="role-card__title">{{ card.label }}</span>
+            <span class="role-card__description">{{ card.description }}</span>
+          </div>
+        </div>
+        <div class="role-card__stats">
+          <span>{{ card.visible }} von {{ card.total }}</span>
+          <span class="role-card__badge{% if card.active %} is-active{% endif %}">
+            {% if card.active %}Aktiver Filter{% else %}Anzeigen{% endif %}
+          </span>
+        </div>
+        <div class="role-card__progress">
+          <div class="role-card__progress-bar" style="--role-progress: {{ card.progress|round(0, 'half_up') }}%;"></div>
+          <div class="role-card__progress-meta">
+            <span>{{ card.progress|round(0, 'half_up') }}% sichtbar</span>
+            <span>{% if card.missing > 0 %}{{ card.missing }} ausgeblendet{% else %}Alles sichtbar{% endif %}</span>
+          </div>
+        </div>
+      </a>
+      {% endfor %}
     </div>
   </section>
 
-  <section class="card-modern">
-    <div class="card-modern-header">
-      <div>
-        <h2>Alle Benutzer</h2>
-        <p>Steuern Sie Rollen und Abteilungszuordnungen an einem Ort.</p>
-      </div>
-      <div class="card-modern-meta">
-        <span class="badge-pill">{{ super_admins|length }} Super-Admins</span>
-        <span class="badge-pill">{{ department_admins|length }} Abteilungs-Admins</span>
-        <span class="badge-pill">{{ employees|length }} Mitarbeiter</span>
+  {% if contact_counts['incomplete'] > 0 %}
+  <aside class="user-callout user-callout--warning">
+    <div class="user-callout__icon" aria-hidden="true">⚠️</div>
+    <div class="user-callout__content">
+      <h3>Offene Kontaktdaten</h3>
+      <p>{{ contact_counts['incomplete'] }} Benutzer benötigen noch eine vollständige E-Mail- und Telefonangabe.</p>
+    </div>
+    <a href="{{ missing_contact_url }}" class="user-callout__action">
+      <span aria-hidden="true">🔍</span>
+      <span>Fehlende Kontakte filtern</span>
+    </a>
+  </aside>
+  {% endif %}
+
+  <section class="user-toolbar" id="filters">
+    <div class="user-toolbar__intro">
+      <h2>Suche &amp; Filter</h2>
+      <p>Filtern Sie nach Rollen, Abteilungen oder Kontaktstatus, um die Ergebnisliste weiter einzugrenzen.</p>
+    </div>
+    <div class="user-toolbar__actions">
+      <nav class="view-toggle" aria-label="Ansicht wechseln">
+        {% for view in view_modes %}
+        <a href="{{ view.url }}" class="view-toggle__option{% if view.active %} is-active{% endif %}">
+          <span aria-hidden="true">{{ view.icon }}</span>
+          <span>{{ view.label }}</span>
+        </a>
+        {% endfor %}
+      </nav>
+      <a href="{{ export_url }}" class="btn btn-primary btn-sm">
+        <span aria-hidden="true">⬇️</span>
+        <span>CSV Export</span>
+      </a>
+    </div>
+  </section>
+
+  <form method="get" class="user-filter-form" data-user-filter-form>
+    <input type="hidden" name="view" value="{{ filter_values.view }}">
+    <div class="filter-grid">
+      <label class="filter-field">
+        <span class="filter-label">Suche</span>
+        <div class="search-field">
+          <span class="search-icon" aria-hidden="true">🔍</span>
+          <input
+            type="search"
+            name="q"
+            value="{{ filter_values.q }}"
+            placeholder="Name, Benutzername oder E-Mail"
+            class="search-input"
+          >
+        </div>
+      </label>
+
+      <label class="filter-field">
+        <span class="filter-label">Rolle</span>
+        <select name="role" class="filter-select" data-auto-submit>
+          <option value="all"{% if filter_values.role == 'all' %} selected{% endif %}>Alle Rollen</option>
+          {% for card in role_cards if card.id != 'all' %}
+          <option value="{{ card.id }}"{% if filter_values.role == card.id %} selected{% endif %}>
+            {{ card.label }} ({{ card.total }})
+          </option>
+          {% endfor %}
+        </select>
+      </label>
+
+      <label class="filter-field">
+        <span class="filter-label">Abteilung</span>
+        <select name="department" class="filter-select" data-auto-submit>
+          <option value="all"{% if filter_values.department == 'all' %} selected{% endif %}>Alle Abteilungen</option>
+          {% set none_stats = department_lookup.get('none') %}
+          <option value="none"{% if filter_values.department == 'none' %} selected{% endif %}>
+            Ohne Abteilung{% if none_stats %} ({{ none_stats.total }}){% endif %}
+          </option>
+          {% for department in departments %}
+          {% set dept_id = department.id|string %}
+          {% set dept_stats = department_lookup.get(dept_id) %}
+          <option value="{{ dept_id }}"{% if filter_values.department == dept_id %} selected{% endif %}>
+            {{ department.name }}{% if dept_stats %} ({{ dept_stats.total }}){% endif %}
+          </option>
+          {% endfor %}
+        </select>
+      </label>
+
+      <label class="filter-field">
+        <span class="filter-label">Kontaktstatus</span>
+        <select name="contact" class="filter-select" data-auto-submit>
+          {% for option in contact_filter_options %}
+          <option value="{{ option.value }}"{% if filter_values.contact == option.value %} selected{% endif %}>
+            {{ option.label }} ({{ contact_counts[option.count_key] }})
+          </option>
+          {% endfor %}
+        </select>
+      </label>
+
+      <label class="filter-field">
+        <span class="filter-label">Sortierung</span>
+        <select name="sort" class="filter-select" data-auto-submit>
+          {% for value, label in sort_options %}
+          <option value="{{ value }}"{% if filter_values.sort == value %} selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+
+      <div class="filter-actions">
+        <button type="submit" class="btn btn-primary btn-sm">
+          <span aria-hidden="true">✨</span>
+          <span>Filter anwenden</span>
+        </button>
+        {% if active_filters %}
+        <a href="{{ clear_filters_url }}" class="btn btn-ghost btn-sm">
+          <span aria-hidden="true">↺</span>
+          <span>Filter zurücksetzen</span>
+        </a>
+        {% endif %}
       </div>
     </div>
+  </form>
 
-    {% if users %}
+  {% if active_filters %}
+  <div class="active-filters">
+    {% for chip in active_filters %}
+    <a href="{{ chip.remove_url }}" class="filter-chip">
+      <span class="filter-chip-label">{{ chip.label }}</span>
+      <span class="filter-chip-value">{{ chip.value }}</span>
+      <span class="filter-chip-remove" aria-hidden="true">✕</span>
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if users %}
+    {% if view_mode == 'cards' %}
+    <div class="user-card-grid">
+      {% for user in users %}
+      {% set role_key = role_lookup.get(user.id) %}
+      {% set role_info = role_meta.get(role_key) %}
+      {% set name_parts = user.name.split() %}
+      {% set initials = name_parts[0][0] %}
+      {% if name_parts|length > 1 %}
+        {% set initials = initials ~ name_parts[1][0] %}
+      {% endif %}
+      <article class="user-card">
+        <header class="user-card__header">
+          <span class="user-avatar" aria-hidden="true">{{ initials.upper() }}</span>
+          <div class="user-card__meta">
+            <span class="user-card__name">{{ user.name }}</span>
+            <span class="user-card__username">@{{ user.username }}</span>
+            {% if user.position %}
+            <span class="user-card__position">{{ user.position }}</span>
+            {% endif %}
+          </div>
+        </header>
+        <div class="user-card__tags">
+          {% if role_info %}
+          <span class="role-badge role-badge--{{ role_key }}">
+            <span aria-hidden="true">{{ role_info.icon }}</span>
+            <span>{{ role_info.label }}</span>
+          </span>
+          {% endif %}
+          {% if user.department %}
+          <span class="department-chip">
+            {% if user.department.color %}
+            <span class="department-dot" style="background-color: {{ user.department.color }};"></span>
+            {% endif %}
+            {{ user.department.name }}
+          </span>
+          {% elif role_key == 'super_admin' %}
+          <span class="department-chip department-chip--global">🌟 Systemweit</span>
+          {% else %}
+          <span class="department-chip department-chip--unassigned">Keine Zuordnung</span>
+          {% endif %}
+        </div>
+        <dl class="user-card__contact">
+          <div>
+            <dt>E-Mail</dt>
+            <dd>{{ user.email or 'Keine E-Mail hinterlegt' }}</dd>
+          </div>
+          <div>
+            <dt>Telefon</dt>
+            <dd>{{ user.phone or 'Keine Telefonnummer hinterlegt' }}</dd>
+          </div>
+        </dl>
+        <footer class="user-card__footer">
+          {% if not session.get('department_id') %}
+          <div class="user-card__actions">
+            {% if not (user.is_admin and not user.department_id) %}
+            <form method="post" action="{{ url_for('make_user_super_admin', user_id=user.id) }}">
+              <button type="submit" class="btn btn-ghost btn-sm role-action role-action--super" onclick="return confirm('{{ user.name }} zum Super-Administrator mit Vollzugriff machen?')">
+                <span aria-hidden="true">🔥</span>
+                <span>Super-Admin</span>
+              </button>
+            </form>
+            {% endif %}
+
+            {% if not user.is_admin or not user.department_id %}
+            <div class="dropdown user-role-dropdown">
+              <button class="btn btn-ghost btn-sm role-action role-action--department dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                <span aria-hidden="true">🏢</span>
+                <span>Abteilungs-Admin</span>
+              </button>
+              <ul class="dropdown-menu">
+                {% for dept in departments %}
+                <li>
+                  <form method="post" action="{{ url_for('make_user_department_admin', user_id=user.id) }}">
+                    <input type="hidden" name="department_id" value="{{ dept.id }}">
+                    <button type="submit" class="dropdown-item role-dropdown-item" onclick="return confirm('{{ user.name }} zum Administrator von {{ dept.name }} machen?')">
+                      {% if dept.color %}
+                      <span class="department-dot" style="background-color: {{ dept.color }};"></span>
+                      {% endif %}
+                      {{ dept.name }}
+                    </button>
+                  </form>
+                </li>
+                {% endfor %}
+              </ul>
+            </div>
+            {% endif %}
+
+            {% if user.is_admin %}
+            <form method="post" action="{{ url_for('remove_user_admin', user_id=user.id) }}">
+              <button type="submit" class="btn btn-ghost btn-sm role-action role-action--remove" onclick="return confirm('Administrator-Rechte von {{ user.name }} entfernen?')">
+                <span aria-hidden="true">❌</span>
+                <span>Rechte entfernen</span>
+              </button>
+            </form>
+            {% endif %}
+          </div>
+          {% else %}
+          <span class="user-card__hint">Nur Super-Admins können Benutzerrollen ändern</span>
+          {% endif %}
+        </footer>
+      </article>
+      {% endfor %}
+    </div>
+    {% else %}
     <div class="table-scroll">
-      <table class="table-modern">
+      <table class="table-modern user-table">
         <thead>
           <tr>
-            <th>Name</th>
-            <th>Benutzername</th>
-            <th>E-Mail</th>
-            <th>Abteilung</th>
-            <th>Status</th>
-            <th class="text-center">Aktionen</th>
+            <th>Person</th>
+            <th>Rolle &amp; Bereich</th>
+            <th>Kontakt</th>
+            <th class="text-right">Aktionen</th>
           </tr>
         </thead>
         <tbody>
           {% for user in users %}
+          {% set role_key = role_lookup.get(user.id) %}
+          {% set role_info = role_meta.get(role_key) %}
+          {% set name_parts = user.name.split() %}
+          {% set initials = name_parts[0][0] %}
+          {% if name_parts|length > 1 %}
+            {% set initials = initials ~ name_parts[1][0] %}
+          {% endif %}
           <tr>
-            <td class="user-name">{{ user.name }}</td>
-            <td>{{ user.username }}</td>
-            <td>{{ user.email or '–' }}</td>
             <td>
-              {% if user.department %}
+              <div class="user-cell">
+                <div class="user-avatar" aria-hidden="true">{{ initials.upper() }}</div>
+                <div class="user-meta">
+                  <span class="user-meta-name">{{ user.name }}</span>
+                  <span class="user-meta-sub">@{{ user.username }}</span>
+                  {% if user.position %}
+                  <span class="user-meta-position">{{ user.position }}</span>
+                  {% endif %}
+                </div>
+              </div>
+            </td>
+            <td>
+              <div class="role-stack">
+                {% if role_info %}
+                <span class="role-badge role-badge--{{ role_key }}">
+                  <span aria-hidden="true">{{ role_info.icon }}</span>
+                  <span>{{ role_info.label }}</span>
+                </span>
+                {% endif %}
+                {% if user.department %}
                 <span class="department-chip">
                   {% if user.department.color %}
-                    <span class="department-dot" style="background-color: {{ user.department.color }};"></span>
+                  <span class="department-dot" style="background-color: {{ user.department.color }};"></span>
                   {% endif %}
                   {{ user.department.name }}
                 </span>
-              {% else %}
-                <span class="department-chip department-chip--global">🌟 Alle Abteilungen</span>
-              {% endif %}
+                {% elif role_key == 'super_admin' %}
+                <span class="department-chip department-chip--global">🌟 Systemweit</span>
+                {% else %}
+                <span class="department-chip department-chip--unassigned">Keine Zuordnung</span>
+                {% endif %}
+              </div>
             </td>
             <td>
-              {% if user.is_admin and not user.department_id %}
-                <span class="role-badge role-badge--super">🔥 Super-Admin</span>
-              {% elif user.is_admin and user.department_id %}
-                <span class="role-badge role-badge--department">🏢 Abteilungs-Admin</span>
-              {% else %}
-                <span class="role-badge role-badge--employee">👤 Mitarbeiter</span>
-              {% endif %}
+              <ul class="contact-list">
+                <li>{{ user.email or 'Keine E-Mail hinterlegt' }}</li>
+                <li>{{ user.phone or 'Keine Telefonnummer hinterlegt' }}</li>
+              </ul>
             </td>
-            <td>
+            <td class="text-right">
               {% if not session.get('department_id') %}
-                <div class="user-actions">
-                  {% if not (user.is_admin and not user.department_id) %}
-                  <form method="post" action="{{ url_for('make_user_super_admin', user_id=user.id) }}">
-                    <button type="submit" class="btn btn-danger btn-sm"
-                            onclick="return confirm('{{ user.name }} zum Super-Administrator mit Vollzugriff machen?')">
-                      🔥 Super-Admin
-                    </button>
-                  </form>
-                  {% endif %}
+              <div class="user-actions">
+                {% if not (user.is_admin and not user.department_id) %}
+                <form method="post" action="{{ url_for('make_user_super_admin', user_id=user.id) }}">
+                  <button type="submit" class="btn btn-ghost btn-sm role-action role-action--super" onclick="return confirm('{{ user.name }} zum Super-Administrator mit Vollzugriff machen?')">
+                    <span aria-hidden="true">🔥</span>
+                    <span>Super-Admin</span>
+                  </button>
+                </form>
+                {% endif %}
 
-                  {% if not user.is_admin or not user.department_id %}
-                  <div class="dropdown">
-                    <button class="btn btn-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                      🏢 Abteilungs-Admin
-                    </button>
-                    <ul class="dropdown-menu">
-                      {% for dept in departments %}
-                      <li>
-                        <form method="post" action="{{ url_for('make_user_department_admin', user_id=user.id) }}">
-                          <input type="hidden" name="department_id" value="{{ dept.id }}">
-                          <button type="submit" class="dropdown-item"
-                                  onclick="return confirm('{{ user.name }} zum Administrator von {{ dept.name }} machen?')">
-                            {% if dept.color %}
-                              <span class="department-dot" style="background-color: {{ dept.color }};"></span>
-                            {% endif %}
-                            {{ dept.name }}
-                          </button>
-                        </form>
-                      </li>
-                      {% endfor %}
-                    </ul>
-                  </div>
-                  {% endif %}
-
-                  {% if user.is_admin %}
-                  <form method="post" action="{{ url_for('remove_user_admin', user_id=user.id) }}">
-                    <button type="submit" class="btn btn-outline-secondary btn-sm"
-                            onclick="return confirm('Administrator-Rechte von {{ user.name }} entfernen?')">
-                      ❌ Rechte entfernen
-                    </button>
-                  </form>
-                  {% endif %}
+                {% if not user.is_admin or not user.department_id %}
+                <div class="dropdown user-role-dropdown">
+                  <button class="btn btn-ghost btn-sm role-action role-action--department dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    <span aria-hidden="true">🏢</span>
+                    <span>Abteilungs-Admin</span>
+                  </button>
+                  <ul class="dropdown-menu">
+                    {% for dept in departments %}
+                    <li>
+                      <form method="post" action="{{ url_for('make_user_department_admin', user_id=user.id) }}">
+                        <input type="hidden" name="department_id" value="{{ dept.id }}">
+                        <button type="submit" class="dropdown-item role-dropdown-item" onclick="return confirm('{{ user.name }} zum Administrator von {{ dept.name }} machen?')">
+                          {% if dept.color %}
+                          <span class="department-dot" style="background-color: {{ dept.color }};"></span>
+                          {% endif %}
+                          {{ dept.name }}
+                        </button>
+                      </form>
+                    </li>
+                    {% endfor %}
+                  </ul>
                 </div>
+                {% endif %}
+
+                {% if user.is_admin %}
+                <form method="post" action="{{ url_for('remove_user_admin', user_id=user.id) }}">
+                  <button type="submit" class="btn btn-ghost btn-sm role-action role-action--remove" onclick="return confirm('Administrator-Rechte von {{ user.name }} entfernen?')">
+                    <span aria-hidden="true">❌</span>
+                    <span>Rechte entfernen</span>
+                  </button>
+                </form>
+                {% endif %}
+              </div>
               {% else %}
-                <span class="user-actions-hint">Nur Super-Admins können Benutzerrollen ändern</span>
+              <span class="user-card__hint">Nur Super-Admins können Benutzerrollen ändern</span>
               {% endif %}
             </td>
           </tr>
@@ -183,27 +1414,67 @@
         </tbody>
       </table>
     </div>
-    {% else %}
-    <div class="empty-state">
-      <div class="empty-state-icon">👥</div>
-      <h3>Keine Benutzer gefunden</h3>
-      <p>Es sind noch keine Benutzer im System registriert.</p>
-    </div>
     {% endif %}
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-state-icon" aria-hidden="true">👥</div>
+    <h3>Keine Benutzer gefunden</h3>
+    <p>Mit den aktuellen Filtern wurden keine Benutzer gefunden. Passen Sie die Suche an.</p>
+  </div>
+  {% endif %}
+
+  {% if department_overview %}
+  <section class="department-overview-board">
+    <div class="role-overview__header">
+      <div>
+        <h2>Abteilungsübersicht</h2>
+        <p>Wie viele Logins je Team aktiv sind – inklusive Verantwortliche.</p>
+      </div>
+    </div>
+    <div class="department-overview-grid">
+      {% for department in department_overview %}
+      <article class="department-card">
+        <div class="department-card__header">
+          <span class="department-dot"{% if department.color %} style="background-color: {{ department.color }};"{% endif %}></span>
+          <span>{{ department.name }}</span>
+        </div>
+        <div class="department-card__stats">
+          <span>{{ department.total }} Benutzer</span>
+          <span>{{ department.admins }} Admins</span>
+        </div>
+        <a href="{{ department.url }}" class="department-card__link">
+          <span>In Liste anzeigen</span>
+          <span aria-hidden="true">→</span>
+        </a>
+      </article>
+      {% endfor %}
+    </div>
   </section>
+  {% endif %}
 
   {% if not session.get('department_id') %}
-  <aside class="admin-warning">
-    <span class="admin-warning-icon">⚠️</span>
-    <div>
-      <h3>Wichtiger Hinweis</h3>
-      <p>
-        Als Super-Administrator haben Sie die Möglichkeit, Benutzerrollen zu ändern.
-        Stellen Sie sicher, dass immer mindestens ein Super-Administrator im System vorhanden ist.
-        Sie können sich nicht selbst degradieren, wenn Sie der einzige Super-Administrator sind.
-      </p>
+  <aside class="user-callout user-callout--info">
+    <div class="user-callout__icon" aria-hidden="true">ℹ️</div>
+    <div class="user-callout__content">
+      <h3>Hinweis für Super-Admins</h3>
+      <p>Stellen Sie sicher, dass mindestens zwei Personen Vollzugriff besitzen. Der letzte Super-Admin kann sich nicht selbst degradieren.</p>
     </div>
   </aside>
   {% endif %}
 </section>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const filterForm = document.querySelector('[data-user-filter-form]');
+    if (!filterForm) {
+      return;
+    }
+
+    filterForm.querySelectorAll('[data-auto-submit]').forEach(element => {
+      element.addEventListener('change', () => {
+        filterForm.requestSubmit();
+      });
+    });
+  });
+</script>
 {% endblock %}
