@@ -113,22 +113,23 @@
           </tr>
         </thead>
         <tbody id="employeeGroupsContainer">
-          {% set group_icons = {'Vollzeit': '👔', 'Teilzeit': '⏰', 'Aushilfe': '🤝'} %}
-          {% set group_colors = {'Vollzeit': '#3b82f6', 'Teilzeit': '#10b981', 'Aushilfe': '#f59e0b'} %}
-          {% set group_bg_colors = {'Vollzeit': '#eff6ff', 'Teilzeit': '#ecfdf5', 'Aushilfe': '#fffbeb'} %}
-          {% set group_total_bg = {'Vollzeit': '#dbeafe', 'Teilzeit': '#d1fae5', 'Aushilfe': '#fef3c7'} %}
-          
           {% for group_name in ordered_group_names %}
             {% set group_employees = employee_groups.get(group_name, []) %}
             {% if group_employees %}
+            {% set meta = group_meta.get(group_name, {}) %}
+            {% set header_color = meta.get('header_color', '#2563eb') %}
+            {% set header_text_color = meta.get('header_text_color', '#ffffff') %}
+            {% set icon = meta.get('icon', '🏷️') %}
+            {% set row_bg_color = meta.get('row_bg_color', '#eff6ff') %}
+            {% set total_bg_color = meta.get('total_bg_color', '#dbeafe') %}
           <tr>
-            <td colspan="{{ month_days|length + 2 }}" class="text-center fw-bold" style="background-color: {{ group_colors[group_name] }}; color: white; padding: 0.5rem;">
-              {{ group_icons[group_name] }} {{ group_name|upper }} MITARBEITER ({{ group_employees|length }})
+            <td colspan="{{ month_days|length + 2 }}" class="text-center fw-bold" style="background-color: {{ header_color }}; color: {{ header_text_color }}; padding: 0.5rem;">
+              {{ icon }} {{ group_name|upper }} MITARBEITER ({{ group_employees|length }})
             </td>
           </tr>
               {% for emp in group_employees %}
           <tr>
-            <td class="fw-bold" style="background-color: {{ group_bg_colors[group_name] }}; width: {{ employee_col_width }}%;">
+            <td class="fw-bold" style="background-color: {{ row_bg_color }}; width: {{ employee_col_width }}%;">
               <a href="{{ url_for('employee_profile', emp_id=emp.id) }}" class="text-decoration-none">{{ emp.name }}</a>
             </td>
             {% for day in month_days %}
@@ -177,7 +178,7 @@
               {% endif %}
             </td>
             {% endfor %}
-            <td class="text-center fw-bold" style="background-color: {{ group_total_bg[group_name] }}; width: {{ total_col_width }}%;">
+            <td class="text-center fw-bold" style="background-color: {{ total_bg_color }}; width: {{ total_col_width }}%;">
               {% if group_name == 'Vollzeit' and emp.monthly_hours and emp.monthly_hours >= 160 %}
                 {{ employee_totals.get(emp.id, 0) }}h (Vollzeit)
               {% else %}
@@ -293,17 +294,17 @@
       </div>
     </div>
 
-    {% set group_icons = {'Vollzeit': '👔', 'Teilzeit': '⏰', 'Aushilfe': '🤝'} %}
-    {% set group_colors = {'Vollzeit': '#3b82f6', 'Teilzeit': '#10b981', 'Aushilfe': '#f59e0b'} %}
-
     <div class="week-groups">
       {% for group_name in ordered_group_names %}
         {% set group_employees = employee_groups.get(group_name, []) %}
         {% if group_employees %}
-        <section class="week-group" style="--group-accent: {{ group_colors.get(group_name, '#2563eb') }};">
-          <header class="week-group-header" style="background: linear-gradient(120deg, {{ group_colors.get(group_name, '#2563eb') }}1a, transparent); border-bottom: 1px solid {{ group_colors.get(group_name, '#2563eb') }}33;">
+        {% set meta = group_meta.get(group_name, {}) %}
+        {% set accent = meta.get('accent_color', '#2563eb') %}
+        {% set icon = meta.get('icon', '👥') %}
+        <section class="week-group" style="--group-accent: {{ accent }};">
+          <header class="week-group-header" style="background: linear-gradient(120deg, {{ accent }}1a, transparent); border-bottom: 1px solid {{ accent }}33;">
             <div class="week-group-title">
-              <span class="week-group-icon">{{ group_icons.get(group_name, '👥') }}</span>
+              <span class="week-group-icon">{{ icon }}</span>
               <div class="week-group-title-text">
                 <span class="week-group-name">{{ group_name }}</span>
                 <span class="week-group-count">{{ group_employees|length }} Mitarbeitende</span>
@@ -488,8 +489,9 @@
         <p>Ziehen Sie die Gruppen, um die Reihenfolge zu ändern:</p>
         <ul id="sortableGroups" class="list-group">
           {% for group_name in ordered_group_names %}
+          {% set meta = group_meta.get(group_name, {}) %}
           <li class="list-group-item" data-group="{{ group_name }}" style="cursor: move;">
-            <span class="handle">☰</span> {{ group_icons.get(group_name, '') }} {{ group_name }}
+            <span class="handle">☰</span> {{ meta.get('icon', '🏷️') }} {{ group_name }}
           </li>
           {% endfor %}
         </ul>
