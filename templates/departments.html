@@ -1,213 +1,570 @@
 {% extends "layout.html" %}
-{% block title %}Abteilungen verwalten - Xerxes{% endblock %}
+{% block title %}Abteilungen & Teams - Xerxes{% endblock %}
 {% block content %}
-<div style="margin-bottom: 2rem;">
-  <h1 style="display: flex; align-items: center; margin-bottom: 0.5rem;">
-    <span style="margin-right: 0.75rem; font-size: 2rem;">🏢</span>
-    Abteilungen verwalten
-  </h1>
-  <p style="color: #64748b; font-size: 1.125rem; margin: 0;">Organisationsstruktur und Abteilungsverwaltung</p>
-</div>
+<div class="departments-page">
+  <section class="departments-hero">
+    <article class="departments-hero-main">
+      <span class="departments-hero-eyebrow">Organisation</span>
+      <h1>Abteilungen &amp; Teams</h1>
+      <p class="departments-hero-subtitle">
+        Gestalten Sie eine klare Struktur für Ihre Organisation und schaffen Sie transparente Zuständigkeiten –
+        moderne Karten, schnelle Bearbeitung und aussagekräftige Kennzahlen unterstützen Sie bei jeder Entscheidung.
+      </p>
+      <div class="departments-hero-metrics">
+        <div class="departments-hero-metric">
+          <span class="departments-hero-metric-label">Abteilungen</span>
+          <span class="departments-hero-metric-value">{{ metrics.total_departments }}</span>
+        </div>
+        <div class="departments-hero-metric">
+          <span class="departments-hero-metric-label">Mitarbeiter gesamt</span>
+          <span class="departments-hero-metric-value">{{ metrics.total_employees }}</span>
+        </div>
+        <div class="departments-hero-metric">
+          <span class="departments-hero-metric-label">Aktive Bereiche</span>
+          <span class="departments-hero-metric-value">{{ metrics.unique_areas }}</span>
+        </div>
+        {% if metrics.unassigned_employees is not none %}
+        <div class="departments-hero-metric">
+          <span class="departments-hero-metric-label">Ohne Abteilung</span>
+          <span class="departments-hero-metric-value">{{ metrics.unassigned_employees }}</span>
+        </div>
+        {% endif %}
+      </div>
+    </article>
+    <aside class="departments-hero-side">
+      <div class="departments-spotlight">
+        <div class="departments-spotlight-header">
+          <span class="departments-spotlight-icon" aria-hidden="true">✨</span>
+          <div>
+            <h2>Team-Insights</h2>
+            <p>Erkennen Sie auf einen Blick, wo Dynamik entsteht.</p>
+          </div>
+        </div>
+        <ul class="departments-spotlight-list">
+          {% if top_department %}
+          <li>
+            <span class="spotlight-label">Größtes Team</span>
+            <span class="spotlight-value">{{ top_department.name }} · {{ top_department.employees|length }} Mitarbeitende</span>
+          </li>
+          {% else %}
+          <li>
+            <span class="spotlight-label">Größtes Team</span>
+            <span class="spotlight-value">Noch keine Abteilungen vorhanden</span>
+          </li>
+          {% endif %}
+          <li>
+            <span class="spotlight-label">Struktur</span>
+            <span class="spotlight-value">{{ metrics.unique_areas }} aktive Bereiche</span>
+          </li>
+          {% if metrics.unassigned_employees %}
+          <li>
+            <span class="spotlight-label">Zu verteilen</span>
+            <span class="spotlight-value">{{ metrics.unassigned_employees }} Mitarbeitende ohne Zuordnung</span>
+          </li>
+          {% endif %}
+        </ul>
+        {% if areas %}
+        <div class="departments-spotlight-areas">
+          <span class="spotlight-label">Bereiche</span>
+          <div class="spotlight-area-tags">
+            {% for area in areas %}
+            <span class="spotlight-area-tag">{{ area }}</span>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </aside>
+  </section>
 
-<!-- Abteilungen-Tabelle -->
-<div class="card" style="margin-bottom: 3rem;">
-  <div class="card-header">
-    <h3 style="margin: 0; display: flex; align-items: center;">
-      <span style="margin-right: 0.75rem;">📋</span>
-      Aktuelle Abteilungen ({{ departments|length }})
-    </h3>
-  </div>
-  <div class="card-body" style="padding: 0;">
+  <section class="departments-toolbar">
+    <div class="departments-search">
+      <label for="departmentSearch" class="departments-search-label">Teams durchsuchen</label>
+      <div class="departments-search-field">
+        <span aria-hidden="true">🔍</span>
+        <input
+          id="departmentSearch"
+          type="search"
+          placeholder="Abteilung oder Bereich suchen"
+          autocomplete="off"
+          spellcheck="false"
+        />
+      </div>
+    </div>
+    <div class="departments-toolbar-actions">
+      {% if areas %}
+      <label class="departments-filter-label" for="departmentAreaFilter">Bereich</label>
+      <select id="departmentAreaFilter" class="departments-filter-select">
+        <option value="">Alle Bereiche</option>
+        {% for area in areas %}
+        <option value="{{ area|lower }}">{{ area }}</option>
+        {% endfor %}
+      </select>
+      {% endif %}
+      {% if not is_department_admin %}
+      <a class="btn btn-primary departments-toolbar-button" href="#new-department">Neue Abteilung</a>
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="departments-grid-wrapper">
     {% if departments %}
-    <div style="overflow-x: auto;">
-      <table class="table" style="margin: 0;">
-        <thead>
-          <tr>
-            <th style="padding: 1.5rem 1rem;">
-              <span style="margin-right: 0.5rem;">🏢</span>Name
-            </th>
-            <th style="padding: 1.5rem 1rem;">
-              <span style="margin-right: 0.5rem;">🎨</span>Farbe
-            </th>
-            <th style="padding: 1.5rem 1rem;">
-              <span style="margin-right: 0.5rem;">📍</span>Bereich
-            </th>
-            <th style="padding: 1.5rem 1rem;">
-              <span style="margin-right: 0.5rem;">👥</span>Mitarbeiter
-            </th>
-            <th style="padding: 1.5rem 1rem; text-align: center;">
-              <span style="margin-right: 0.5rem;">⚙️</span>Aktionen
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for dept in departments %}
-          <tr>
-            <td style="padding: 1rem; font-weight: 600;">{{ dept.name }}</td>
-            <td style="padding: 1rem;">
-              {% if dept.color %}
-                <div style="display: flex; align-items: center; gap: 0.5rem;">
-                  <div style="width: 20px; height: 20px; border-radius: 50%; background-color: {{ dept.color }}; border: 2px solid #e2e8f0;"></div>
-                  <span style="font-family: monospace; font-size: 0.875rem; color: #64748b;">{{ dept.color }}</span>
-                </div>
-              {% else %}
-                <span style="color: #9ca3af;">–</span>
-              {% endif %}
-            </td>
-            <td style="padding: 1rem;">
-              {% if dept.area %}
-                <span style="color: #059669; font-weight: 500;">{{ dept.area }}</span>
-              {% else %}
-                <span style="color: #9ca3af;">–</span>
-              {% endif %}
-            </td>
-            <td style="padding: 1rem;">
-              {% if dept.employees|length > 0 %}
-                <span class="badge" style="background-color: #3b82f6; font-size: 0.875rem;">
-                  {{ dept.employees|length }} Mitarbeiter
+    <div class="departments-grid" data-departments-grid>
+      {% for dept in departments %}
+      {% set visuals = department_visuals.get(dept.id) %}
+      <article
+        class="department-card"
+        data-department-card
+        data-name="{{ dept.name|lower }}"
+        data-area="{{ dept.area|lower if dept.area else '' }}"
+        style="--dept-base: {{ visuals.base }}; --dept-surface: {{ visuals.surface }}; --dept-accent: {{ visuals.accent }}; --dept-text: {{ visuals.text }};"
+      >
+        <header class="department-card-header">
+          <div class="department-card-title">
+            <span class="department-card-icon" aria-hidden="true">🏢</span>
+            <div>
+              <h2>{{ dept.name }}</h2>
+              <div class="department-card-meta">
+                <span class="department-chip">
+                  <span aria-hidden="true">📍</span>
+                  {{ dept.area or "Bereich offen" }}
                 </span>
-              {% else %}
-                <span style="color: #9ca3af;">Keine Mitarbeiter</span>
-              {% endif %}
-            </td>
-            <td style="padding: 1rem; text-align: center;">
-              <a href="{{ url_for('delete_department', dept_id=dept.id) }}" 
-                 class="btn btn-outline-danger" 
-                 style="padding: 0.5rem 1rem; font-size: 0.875rem;"
-                 onclick="return confirm('Abteilung {{ dept.name }} wirklich löschen?')">
-                <span style="margin-right: 0.25rem;">🗑️</span>Löschen
-              </a>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+                <span class="department-chip">
+                  <span class="department-color-dot" style="background-color: {{ visuals.base }}"></span>
+                  {% if dept.color %}
+                    {{ dept.color }}
+                  {% else %}
+                    Automatische Farbe
+                  {% endif %}
+                </span>
+              </div>
+            </div>
+          </div>
+          <div class="department-card-count">
+            <span class="department-count-value">{{ dept.employees|length }}</span>
+            <span class="department-count-label">Mitarbeitende</span>
+          </div>
+        </header>
+
+        {% if dept.employees %}
+        <div class="department-card-team">
+          <span class="department-team-label">Teammitglieder</span>
+          <div class="department-team-list">
+            {% for employee in dept.employees[:4] %}
+            <span class="department-team-chip">{{ employee.name }}</span>
+            {% endfor %}
+            {% if dept.employees|length > 4 %}
+            <span class="department-team-chip department-team-chip-more">+{{ dept.employees|length - 4 }}</span>
+            {% endif %}
+          </div>
+        </div>
+        {% else %}
+        <div class="department-card-empty">
+          <span class="department-card-empty-icon" aria-hidden="true">🧭</span>
+          <span>Noch keine Mitarbeitenden zugeordnet</span>
+        </div>
+        {% endif %}
+
+        <div class="department-card-actions">
+          <button
+            type="button"
+            class="department-card-action"
+            data-edit-trigger
+            aria-expanded="false"
+            aria-controls="departmentEditor-{{ dept.id }}"
+          >
+            ✏️ Bearbeiten
+          </button>
+          {% if is_super_admin %}
+          <form
+            method="post"
+            action="{{ url_for('delete_department', dept_id=dept.id) }}"
+            class="department-delete-form"
+            onsubmit="return confirm('Abteilung {{ dept.name }} wirklich löschen?');"
+          >
+            <button type="submit" class="department-card-action department-card-action-danger">🗑️ Löschen</button>
+          </form>
+          {% endif %}
+        </div>
+
+        <div class="department-card-editor" id="departmentEditor-{{ dept.id }}" data-department-editor hidden>
+          <form method="post" action="{{ url_for('update_department', dept_id=dept.id) }}" class="department-form" data-color-group data-preview-target="departmentPreview-{{ dept.id }}">
+            <div class="department-form-grid">
+              <label for="department-name-{{ dept.id }}" class="form-label">Abteilungsname *</label>
+              <input
+                type="text"
+                class="form-control"
+                id="department-name-{{ dept.id }}"
+                name="name"
+                value="{{ dept.name }}"
+                required
+              />
+
+              <label for="department-area-{{ dept.id }}" class="form-label">Bereich</label>
+              <input
+                type="text"
+                class="form-control"
+                id="department-area-{{ dept.id }}"
+                name="area"
+                value="{{ dept.area or '' }}"
+                placeholder="z.B. Werk 1 oder Hauptstandort"
+              />
+
+              <label class="form-label">Farbe</label>
+              <div class="department-color-input">
+                <input type="hidden" name="color" value="{{ dept.color or '' }}" data-color-value />
+                <div class="department-color-picker">
+                  <input
+                    type="color"
+                    value="{{ dept.color or visuals.base }}"
+                    aria-label="Farbe auswählen"
+                    data-color-picker
+                  />
+                  <input
+                    type="text"
+                    class="form-control"
+                    value="{{ dept.color or '' }}"
+                    placeholder="#2563eb"
+                    data-color-text
+                  />
+                </div>
+                <button type="button" class="department-color-clear" data-color-clear>Farbe entfernen</button>
+              </div>
+            </div>
+
+            <div class="department-preview" id="departmentPreview-{{ dept.id }}" style="--preview-color: {{ dept.color or visuals.base }}; --preview-soft: {{ visuals.surface }};">
+              <span class="department-preview-icon" aria-hidden="true">🏢</span>
+              <div>
+                <p class="department-preview-title">{{ dept.name }}</p>
+                <p class="department-preview-subtitle">So erscheint die Abteilung im System</p>
+              </div>
+            </div>
+
+            <div class="department-editor-actions">
+              <button type="submit" class="btn btn-success">Speichern</button>
+              <button type="button" class="btn btn-outline-secondary" data-edit-cancel>Abbrechen</button>
+            </div>
+          </form>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+    <div class="departments-empty" data-departments-empty hidden>
+      <div class="departments-empty-icon" aria-hidden="true">🏢</div>
+      <h3>Keine Abteilungen gefunden</h3>
+      <p>Ändern Sie die Suche oder heben Sie den Filter auf, um wieder alle Abteilungen zu sehen.</p>
     </div>
     {% else %}
-    <div style="text-align: center; padding: 3rem 2rem; color: #64748b;">
-      <div style="font-size: 4rem; margin-bottom: 1rem;">🏢</div>
-      <h3 style="margin-bottom: 0.5rem;">Noch keine Abteilungen</h3>
-      <p style="margin: 0;">Erstellen Sie die erste Abteilung über das Formular unten.</p>
+    <div class="departments-empty is-initial">
+      <div class="departments-empty-icon" aria-hidden="true">🏢</div>
+      <h3>Noch keine Abteilungen</h3>
+      <p>Erstellen Sie die erste Abteilung, um den Dienstplan zu strukturieren.</p>
     </div>
     {% endif %}
-  </div>
-</div>
+  </section>
 
-<!-- Neue Abteilung anlegen - nur für Super-Admins -->
-{% if not session.get('department_id') %}
-<div class="card">
-  <div class="card-header">
-    <h3 style="margin: 0; display: flex; align-items: center;">
-      <span style="margin-right: 0.75rem;">➕</span>
-      Neue Abteilung anlegen
-    </h3>
-  </div>
-  <div class="card-body">
-    <form method="post" action="{{ url_for('add_department') }}">
-      <div class="row">
-        <div class="col-md-4">
-          <label for="name" class="form-label">
-            <span style="margin-right: 0.5rem;">🏢</span>Abteilungsname *
-          </label>
-          <input 
-            type="text" 
-            class="form-control" 
-            id="name" 
-            name="name" 
-            required 
-            placeholder="z.B. Verwaltung, IT, Produktion"
-            style="font-weight: 500;"
-          />
+  {% if not is_department_admin %}
+  <section id="new-department" class="departments-create">
+    <div class="departments-create-card">
+      <div class="departments-create-header">
+        <div>
+          <h2>Neue Abteilung anlegen</h2>
+          <p>Definieren Sie Namen, Bereich und Farbe – die Vorschau zeigt sofort, wie die Abteilung wirkt.</p>
         </div>
-        
-        <div class="col-md-4">
-          <label for="color" class="form-label">
-            <span style="margin-right: 0.5rem;">🎨</span>Farbe
-          </label>
-          <div style="display: flex; gap: 0.5rem;">
-            <input 
-              type="color" 
-              class="form-control" 
-              id="color" 
-              name="color" 
-              style="width: 60px; height: 48px; padding: 0.25rem; border-radius: 0.5rem;"
-              value="#3b82f6"
-            />
-            <input 
-              type="text" 
-              class="form-control" 
-              placeholder="#3b82f6" 
-              style="font-family: monospace;"
-              onchange="document.getElementById('color').value = this.value"
-              oninput="document.getElementById('color').value = this.value"
-            />
-          </div>
-          <small style="color: #64748b; font-size: 0.75rem;">Farbe für die Darstellung im Dienstplan</small>
-        </div>
-        
-        <div class="col-md-4">
-          <label for="area" class="form-label">
-            <span style="margin-right: 0.5rem;">📍</span>Bereich
-          </label>
-          <input 
-            type="text" 
-            class="form-control" 
-            id="area" 
-            name="area" 
-            placeholder="z.B. Hauptgebäude, Werk 1, Außenstelle"
-          />
-        </div>
+        <span class="departments-create-icon" aria-hidden="true">➕</span>
       </div>
-      
-      <!-- Vorschau-Bereich -->
-      <div style="margin-top: 2rem; padding: 1.5rem; background-color: #f8fafc; border-radius: 0.5rem; border: 1px solid #e2e8f0;">
-        <h4 style="margin-bottom: 1rem; color: #374151; display: flex; align-items: center;">
-          <span style="margin-right: 0.5rem;">👁️</span>Vorschau
-        </h4>
-        <div style="display: flex; align-items: center; gap: 1rem;">
-          <div id="colorPreview" style="width: 40px; height: 40px; border-radius: 50%; background-color: #3b82f6; border: 2px solid #e2e8f0;"></div>
+      <form method="post" action="{{ url_for('add_department') }}" class="department-form" data-color-group data-preview-target="newDepartmentPreview">
+        <div class="department-form-grid">
+          <label for="new-department-name" class="form-label">Abteilungsname *</label>
+          <input
+            type="text"
+            class="form-control"
+            id="new-department-name"
+            name="name"
+            required
+            placeholder="z.B. Verwaltung, IT oder Produktion"
+          />
+
+          <label for="new-department-area" class="form-label">Bereich</label>
+          <input
+            type="text"
+            class="form-control"
+            id="new-department-area"
+            name="area"
+            placeholder="z.B. Hauptgebäude oder Werk 2"
+          />
+
+          <label class="form-label">Farbe</label>
+          <div class="department-color-input">
+            <input type="hidden" name="color" value="" data-color-value />
+            <div class="department-color-picker">
+              <input
+                type="color"
+                value="#2563eb"
+                aria-label="Farbe auswählen"
+                data-color-picker
+              />
+              <input
+                type="text"
+                class="form-control"
+                value=""
+                placeholder="#2563eb"
+                data-color-text
+              />
+            </div>
+            <button type="button" class="department-color-clear" data-color-clear>Farbe entfernen</button>
+          </div>
+        </div>
+
+        <div class="department-preview" id="newDepartmentPreview" style="--preview-color: #2563eb; --preview-soft: #d4e3fd;">
+          <span class="department-preview-icon" aria-hidden="true">🏢</span>
           <div>
-            <div style="font-weight: 600; color: #1e293b;">Abteilungsname</div>
-            <div style="color: #64748b; font-size: 0.875rem;">So wird die Abteilung im System angezeigt</div>
+            <p class="department-preview-title">Neue Abteilung</p>
+            <p class="department-preview-subtitle">Vorschau für Darstellung im System</p>
           </div>
         </div>
-      </div>
 
-      <!-- Submit Button -->
-      <div style="text-align: center; padding-top: 2rem; border-top: 1px solid #e2e8f0; margin-top: 2rem;">
-        <button type="submit" class="btn btn-success" style="padding: 1rem 2rem; font-size: 1.1rem; font-weight: 600;">
-          <span style="margin-right: 0.5rem;">💾</span>Abteilung speichern
-        </button>
-      </div>
-    </form>
-  </div>
+        <div class="department-editor-actions">
+          <button type="submit" class="btn btn-success">Abteilung speichern</button>
+        </div>
+      </form>
+    </div>
+  </section>
+  {% else %}
+  <section class="departments-limited">
+    <div class="departments-limited-card">
+      <div class="departments-limited-icon" aria-hidden="true">🏢</div>
+      <h2>Abteilungsverwaltung</h2>
+      <p>
+        Als Abteilungsadministrator verwalten Sie die Details Ihres eigenen Teams. Neue Abteilungen können ausschließlich
+        von Super-Administratoren angelegt werden.
+      </p>
+    </div>
+  </section>
+  {% endif %}
 </div>
-{% else %}
-<!-- Hinweis für Abteilungsadministratoren -->
-<div class="card">
-  <div class="card-body text-center" style="padding: 3rem;">
-    <div style="font-size: 3rem; margin-bottom: 1rem;">🏢</div>
-    <h4 style="color: #64748b; margin-bottom: 1rem;">Abteilungsverwaltung</h4>
-    <p style="color: #64748b; margin-bottom: 0;">
-      Als Abteilungsadministrator können Sie Ihre eigene Abteilung verwalten.<br>
-      Neue Abteilungen können nur von Super-Administratoren erstellt werden.
-    </p>
-  </div>
-</div>
-{% endif %}
 
-<!-- JavaScript für Live-Vorschau -->
 <script>
-  // Live-Vorschau für Farbe
-  document.getElementById('color').addEventListener('input', function() {
-    document.getElementById('colorPreview').style.backgroundColor = this.value;
-  });
-  
-  // Synchronisation zwischen Color-Picker und Text-Input
-  document.getElementById('color').addEventListener('change', function() {
-    const textInput = document.querySelector('input[placeholder="#3b82f6"]');
-    textInput.value = this.value;
+  const normalizeHex = (value) => {
+    if (!value) {
+      return "";
+    }
+    let color = value.trim();
+    if (!color) {
+      return "";
+    }
+    if (color.startsWith("#")) {
+      color = color.slice(1);
+    }
+    if (color.length === 3) {
+      color = color.split("").map((char) => char + char).join("");
+    }
+    if (!/^([0-9a-fA-F]{6})$/.test(color)) {
+      return "";
+    }
+    return `#${color.toLowerCase()}`;
+  };
+
+  const lightenHex = (color, factor) => {
+    const normalized = normalizeHex(color);
+    if (!normalized) {
+      return "";
+    }
+    const clamp = (val) => Math.max(0, Math.min(255, val));
+    const hex = normalized.slice(1);
+    const rgb = [
+      parseInt(hex.slice(0, 2), 16),
+      parseInt(hex.slice(2, 4), 16),
+      parseInt(hex.slice(4, 6), 16),
+    ];
+    return (
+      "#" +
+      rgb
+        .map((component) => {
+          const lightened = clamp(Math.round(component + (255 - component) * factor));
+          return lightened.toString(16).padStart(2, "0");
+        })
+        .join("")
+    );
+  };
+
+  const applyColorPreview = (element, color) => {
+    if (!element) {
+      return;
+    }
+    const base = normalizeHex(color) || "#2563eb";
+    element.style.setProperty("--preview-color", base);
+    element.style.setProperty("--preview-soft", lightenHex(base, 0.82) || "#d4e3fd");
+  };
+
+  const setupColorGroups = () => {
+    document.querySelectorAll('[data-color-group]').forEach((group) => {
+      const picker = group.querySelector('[data-color-picker]');
+      const valueInput = group.querySelector('[data-color-value]');
+      const textInput = group.querySelector('[data-color-text]');
+      const previewTarget = group.getAttribute('data-preview-target');
+      const previewElement = previewTarget ? document.getElementById(previewTarget) : null;
+      const clearButton = group.querySelector('[data-color-clear]');
+
+      const syncFromValue = () => {
+        const normalized = normalizeHex(valueInput.value);
+        if (textInput) {
+          textInput.value = normalized;
+        }
+        if (picker && normalized) {
+          picker.value = normalized;
+        }
+        if (previewElement) {
+          applyColorPreview(previewElement, normalized);
+        }
+      };
+
+      const updateColor = (newValue) => {
+        const normalized = normalizeHex(newValue);
+        valueInput.value = normalized;
+        if (textInput && document.activeElement !== textInput) {
+          textInput.value = normalized;
+        }
+        if (picker && document.activeElement !== picker && normalized) {
+          picker.value = normalized;
+        }
+        if (previewElement) {
+          applyColorPreview(previewElement, normalized);
+        }
+      };
+
+      if (picker) {
+        picker.addEventListener('input', () => updateColor(picker.value));
+      }
+
+      if (textInput) {
+        textInput.addEventListener('input', () => {
+          const normalized = normalizeHex(textInput.value);
+          if (normalized || textInput.value === '') {
+            updateColor(textInput.value);
+          }
+        });
+        textInput.addEventListener('blur', () => {
+          const normalized = normalizeHex(textInput.value);
+          textInput.value = normalized;
+          updateColor(normalized);
+        });
+      }
+
+      if (clearButton) {
+        clearButton.addEventListener('click', () => {
+          valueInput.value = '';
+          if (textInput) {
+            textInput.value = '';
+          }
+          if (picker) {
+            picker.value = '#2563eb';
+          }
+          if (previewElement) {
+            applyColorPreview(previewElement, '#2563eb');
+          }
+        });
+      }
+
+      syncFromValue();
+    });
+  };
+
+  const setupEditors = () => {
+    const cards = document.querySelectorAll('[data-department-card]');
+
+    const closeEditor = (card) => {
+      const editor = card.querySelector('[data-department-editor]');
+      const trigger = card.querySelector('[data-edit-trigger]');
+      if (editor && !editor.hasAttribute('hidden')) {
+        editor.setAttribute('hidden', 'hidden');
+        card.classList.remove('department-card-editing');
+      }
+      if (trigger) {
+        trigger.setAttribute('aria-expanded', 'false');
+      }
+    };
+
+    cards.forEach((card) => {
+      const editor = card.querySelector('[data-department-editor]');
+      const trigger = card.querySelector('[data-edit-trigger]');
+      const cancelButton = card.querySelector('[data-edit-cancel]');
+
+      if (!editor || !trigger) {
+        return;
+      }
+
+      trigger.addEventListener('click', () => {
+        const isOpen = !editor.hasAttribute('hidden');
+        document.querySelectorAll('[data-department-card]').forEach((otherCard) => {
+          if (otherCard !== card) {
+            closeEditor(otherCard);
+          }
+        });
+
+        if (isOpen) {
+          closeEditor(card);
+        } else {
+          editor.removeAttribute('hidden');
+          trigger.setAttribute('aria-expanded', 'true');
+          card.classList.add('department-card-editing');
+        }
+      });
+
+      if (cancelButton) {
+        cancelButton.addEventListener('click', () => {
+          closeEditor(card);
+        });
+      }
+    });
+  };
+
+  const setupFilters = () => {
+    const searchInput = document.getElementById('departmentSearch');
+    const areaFilter = document.getElementById('departmentAreaFilter');
+    const cards = document.querySelectorAll('[data-department-card]');
+    const emptyState = document.querySelector('[data-departments-empty]');
+
+    const applyFilters = () => {
+      const searchTerm = (searchInput?.value || '').trim().toLowerCase();
+      const areaValue = areaFilter?.value || '';
+      let visibleCount = 0;
+
+      cards.forEach((card) => {
+        const matchesSearch = !searchTerm || card.dataset.name.includes(searchTerm);
+        const matchesArea = !areaValue || card.dataset.area === areaValue;
+        const shouldShow = matchesSearch && matchesArea;
+
+        card.style.display = shouldShow ? '' : 'none';
+        if (shouldShow) {
+          visibleCount += 1;
+        }
+      });
+
+      if (emptyState) {
+        if (visibleCount === 0) {
+          emptyState.removeAttribute('hidden');
+        } else {
+          emptyState.setAttribute('hidden', 'hidden');
+        }
+      }
+    };
+
+    if (searchInput) {
+      searchInput.addEventListener('input', applyFilters);
+    }
+
+    if (areaFilter) {
+      areaFilter.addEventListener('change', applyFilters);
+    }
+
+    applyFilters();
+  };
+
+  document.addEventListener('DOMContentLoaded', () => {
+    setupColorGroups();
+    setupEditors();
+    setupFilters();
   });
 </script>
 {% endblock %}
-
