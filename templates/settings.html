@@ -7,13 +7,13 @@
       <span class="settings-eyebrow">Systembereich</span>
       <h1>Systemeinstellungen</h1>
       <p>
-        Konfigurieren Sie globale Richtlinien, planen Sie künftige Automatisierungen und
-        behalten Sie Wartungsfenster im Blick. Alle Änderungen werden zentral protokolliert
-        und stehen für kommende Releases zur Verfügung.
+        Konfigurieren Sie modulare Plattformfunktionen, definieren Sie Arbeitsmodelle und
+        behalten Sie Infrastruktur-Integrationen im Blick. Alle Anpassungen sind mandantenfähig
+        und für den Einsatz im eigenen Unternehmensnetzwerk vorbereitet.
       </p>
       <div class="settings-meta">
         <span>Nur für Systemadministratoren sichtbar</span>
-        <span>Letzte Aktualisierung: {{ last_updated.strftime('%d.%m.%Y %H:%M') }} Uhr</span>
+        <span>Letzte Aktualisierung: {{ last_updated.strftime('%d.%m.%Y %H:%M') }} Uhr · Bereit für On-Premises</span>
       </div>
     </div>
     <div class="settings-hero-stats" role="group" aria-label="Systemstatus">
@@ -29,23 +29,39 @@
   <section class="settings-quick-actions" aria-label="Direktaktionen">
     <div class="settings-section-header">
       <h2>Direktaktionen</h2>
-      <p>Bereiten Sie Automatisierungen und wiederkehrende Verwaltungsaufgaben vor.</p>
+      <p>Beschleunigen Sie zentrale Verwaltungsaufgaben für neue Mandanten und Standorte.</p>
     </div>
     <div class="settings-quick-grid">
       {% for action in quick_actions %}
+      {% set is_link = action.href is defined and action.href %}
+      {% set is_live = action.state == 'Verfügbar' %}
+      {% if is_link %}
+      <a
+        href="{{ action.href }}"
+        class="settings-quick-action{% if is_live %} settings-quick-action--live{% endif %}"
+        data-action="{{ action.id }}"
+      >
+      {% else %}
       <button
         type="button"
-        class="settings-quick-action"
+        class="settings-quick-action{% if is_live %} settings-quick-action--live{% endif %}"
         data-action="{{ action.id }}"
         title="Funktion wird in Kürze verfügbar sein"
       >
+      {% endif %}
         <span class="settings-quick-icon" aria-hidden="true">{{ action.icon }}</span>
         <span class="settings-quick-content">
           <span class="settings-quick-title">{{ action.title }}</span>
           <span class="settings-quick-description">{{ action.description }}</span>
         </span>
-        <span class="settings-quick-hint">Demnächst</span>
+        {% if action.state %}
+        <span class="settings-quick-hint{% if is_live %} settings-quick-hint--live{% endif %}">{{ action.state }}</span>
+        {% endif %}
+      {% if is_link %}
+      </a>
+      {% else %}
       </button>
+      {% endif %}
       {% endfor %}
     </div>
   </section>
@@ -70,11 +86,159 @@
 
   <section class="settings-grid">
     <div class="settings-column">
+      <article class="settings-card settings-card--form" id="work-class-manager">
+        <header class="settings-card-header">
+          <div>
+            <h3>Arbeitsklassen</h3>
+            <p>Standardisierte Arbeitszeitmodelle für wiederkehrende Einsatzpläne.</p>
+          </div>
+          <span class="settings-chip">
+            {{ active_work_classes|length }} aktiv
+            {% if inactive_work_classes %}
+              · {{ inactive_work_classes|length }} pausiert
+            {% endif %}
+          </span>
+        </header>
+
+        <form method="post" action="{{ url_for('create_work_class') }}" class="work-class-form">
+          <div class="work-class-form-grid">
+            <label>
+              <span>Bezeichnung</span>
+              <input type="text" name="name" placeholder="z. B. Vollzeit" required>
+            </label>
+            <label>
+              <span>Wochenstunden</span>
+              <input type="number" name="hours_per_week" step="0.5" min="0" placeholder="40">
+            </label>
+            <label>
+              <span>Monatsstunden</span>
+              <input type="number" name="hours_per_month" step="0.5" min="0" placeholder="160">
+            </label>
+            <label>
+              <span>Farbcode</span>
+              <input type="text" name="color" placeholder="#1d4ed8">
+            </label>
+          </div>
+          <label class="work-class-textarea">
+            <span>Beschreibung</span>
+            <textarea name="description" rows="2" placeholder="Optionaler Hinweis für Teams"></textarea>
+          </label>
+          <label class="work-class-checkbox">
+            <input type="checkbox" name="is_default">
+            <span>Als Standard-Arbeitsklasse festlegen</span>
+          </label>
+          <div class="work-class-action-row">
+            <button type="submit" class="btn-primary">Arbeitsklasse anlegen</button>
+          </div>
+        </form>
+
+        {% if recommended_work_classes %}
+        <div class="work-class-suggestions" role="group" aria-label="Vorlagen für Arbeitsklassen">
+          <span>Vorlagen übernehmen:</span>
+          <div class="work-class-suggestion-list">
+            {% for suggestion in recommended_work_classes %}
+            <form method="post" action="{{ url_for('create_work_class') }}" class="work-class-suggestion">
+              <input type="hidden" name="name" value="{{ suggestion.name }}">
+              <input type="hidden" name="hours_per_week" value="{{ suggestion.hours_per_week }}">
+              <input type="hidden" name="hours_per_month" value="{{ suggestion.hours_per_month }}">
+              <input type="hidden" name="description" value="{{ suggestion.description }}">
+              {% if suggestion.color %}<input type="hidden" name="color" value="{{ suggestion.color }}">{% endif %}
+              <button type="submit">{{ suggestion.name }}</button>
+            </form>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
+        <div class="work-class-list">
+          {% if work_classes %}
+          <ul class="work-class-accordion">
+            {% for work_class in work_classes %}
+            <li class="work-class-item">
+              <details class="work-class-panel"{% if work_class.is_default %} open{% endif %}>
+                <summary class="work-class-summary">
+                  <span class="work-class-summary-main">
+                    {% if work_class.color %}
+                    <span class="work-class-color" style="background: {{ work_class.color }}" aria-hidden="true"></span>
+                    {% endif %}
+                    {{ work_class.name }}
+                  </span>
+                  <span class="work-class-summary-meta">
+                    {% if work_class.hours_per_week is not none %}
+                    <span class="work-class-hours">{{ '{:g}'.format(work_class.hours_per_week) }} h/Woche</span>
+                    {% endif %}
+                    {% if work_class.hours_per_month is not none %}
+                    <span class="work-class-hours">{{ '{:g}'.format(work_class.hours_per_month) }} h/Monat</span>
+                    {% endif %}
+                    {% if work_class.is_default %}
+                    <span class="work-class-badge">Standard</span>
+                    {% endif %}
+                    {% if not work_class.is_active %}
+                    <span class="work-class-badge work-class-badge--inactive">Pausiert</span>
+                    {% endif %}
+                  </span>
+                </summary>
+                <div class="work-class-detail-body">
+                  <form method="post" action="{{ url_for('update_work_class', class_id=work_class.id) }}" class="work-class-edit-form">
+                    <div class="work-class-form-grid">
+                      <label>
+                        <span>Bezeichnung</span>
+                        <input type="text" name="name" value="{{ work_class.name }}" required>
+                      </label>
+                      <label>
+                        <span>Wochenstunden</span>
+                        <input type="number" name="hours_per_week" step="0.5" min="0" value="{{ work_class.hours_per_week if work_class.hours_per_week is not none else '' }}">
+                      </label>
+                      <label>
+                        <span>Monatsstunden</span>
+                        <input type="number" name="hours_per_month" step="0.5" min="0" value="{{ work_class.hours_per_month if work_class.hours_per_month is not none else '' }}">
+                      </label>
+                      <label>
+                        <span>Farbcode</span>
+                        <input type="text" name="color" value="{{ work_class.color or '' }}" placeholder="#1d4ed8">
+                      </label>
+                    </div>
+                    <label class="work-class-checkbox">
+                      <input type="checkbox" name="is_default"{% if work_class.is_default %} checked{% endif %}>
+                      <span>Als Standard-Arbeitsklasse verwenden</span>
+                    </label>
+                    <label class="work-class-textarea">
+                      <span>Beschreibung</span>
+                      <textarea name="description" rows="2" placeholder="Optionaler Hinweis für Teams">{{ work_class.description or '' }}</textarea>
+                    </label>
+                    <div class="work-class-action-row">
+                      <button type="submit" class="btn-primary">Änderungen speichern</button>
+                    </div>
+                  </form>
+                  <div class="work-class-secondary-actions">
+                    <form method="post" action="{{ url_for('toggle_work_class', class_id=work_class.id) }}">
+                      <button type="submit" class="btn-secondary">
+                        {% if work_class.is_active %}Deaktivieren{% else %}Reaktivieren{% endif %}
+                      </button>
+                    </form>
+                    <form method="post" action="{{ url_for('set_default_work_class', class_id=work_class.id) }}">
+                      <button type="submit" class="btn-secondary" {% if work_class.is_default %}disabled{% endif %}>Als Standard setzen</button>
+                    </form>
+                    <form method="post" action="{{ url_for('delete_work_class', class_id=work_class.id) }}" onsubmit="return confirm('Arbeitsklasse {{ work_class.name }} wirklich löschen?');">
+                      <button type="submit" class="btn-ghost">Löschen</button>
+                    </form>
+                  </div>
+                </div>
+              </details>
+            </li>
+            {% endfor %}
+          </ul>
+          {% else %}
+          <p class="work-class-empty">Noch keine Arbeitsklassen angelegt. Nutzen Sie die Vorlagen oder erstellen Sie Ihr eigenes Modell.</p>
+          {% endif %}
+        </div>
+      </article>
+
       <article class="settings-card">
         <header class="settings-card-header">
           <div>
-            <h3>Module &amp; Richtlinien</h3>
-            <p>Überblick über aktive Bereiche der Plattform.</p>
+            <h3>Module &amp; Plattformbereiche</h3>
+            <p>Überblick über produktionsreife Module für Unternehmenskunden.</p>
           </div>
           <span class="settings-chip">Live</span>
         </header>

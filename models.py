@@ -174,6 +174,30 @@ class ProductivitySettings(db.Model):
         return f"<ProductivitySettings {self.productivity_value}>"
 
 
+class WorkClass(db.Model):
+    """Beschreibt eine Arbeitszeit-Klassifikation wie Vollzeit oder Teilzeit."""
+
+    __tablename__ = "work_class"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), nullable=False, unique=True)
+    hours_per_week = db.Column(db.Float, nullable=True)
+    hours_per_month = db.Column(db.Float, nullable=True)
+    description = db.Column(db.Text, nullable=True)
+    color = db.Column(db.String(20), nullable=True)
+    is_default = db.Column(db.Boolean, default=False)
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+    )
+
+    def __repr__(self) -> str:
+        return f"<WorkClass {self.name}>"
+
+
 class BlockedDay(db.Model):
     """Gesperrte Tage wie Feiertage oder Betriebsferien.
 
