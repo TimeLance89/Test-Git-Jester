@@ -385,14 +385,24 @@
             </div>
             <div class="col-md-6">
               <label for="position" class="form-label">Arbeitsklasse / Position{% if work_classes %}*{% endif %}</label>
-              <select class="form-select" id="position" name="position" {% if work_classes %}required{% endif %}>
+              <select class="form-select" id="position" name="position" {% if work_classes %}required{% else %}disabled{% endif %}>
+                {% if work_classes %}
                 <option value="">Arbeitsklasse wählen</option>
                 {% for work_class in work_classes %}
                 <option value="{{ work_class.name }}">{{ work_class.name }}</option>
                 {% endfor %}
+                {% else %}
+                <option value="">Keine Arbeitsklassen vorhanden</option>
+                {% endif %}
               </select>
               {% if not work_classes %}
-              <small class="form-text text-muted">Lege im Bereich <a href="{{ url_for('system_settings') }}#work-class-manager">Einstellungen &rsaquo; Arbeitsklassen</a> zunächst eine Arbeitsklasse an.</small>
+              <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mt-2">
+                <small class="text-muted">Noch keine Arbeitsklassen angelegt.</small>
+                <a class="btn btn-outline-primary btn-sm" href="{{ url_for('system_settings') }}#work-class-manager">
+                  <span aria-hidden="true">➕</span>
+                  Arbeitsklasse hinzufügen
+                </a>
+              </div>
               {% endif %}
             </div>
             <div class="col-md-6">
