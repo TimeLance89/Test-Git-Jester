@@ -975,13 +975,13 @@
       </article>
       <article class="hero-metric">
         <span class="hero-metric__label">Kontaktvollständigkeit</span>
-        <span class="hero-metric__value">{{ contact_completion_rate|round(0, 'half_up') }}%</span>
+        <span class="hero-metric__value">{{ contact_completion_rate|round_half_up }}%</span>
         <span class="hero-metric__meta">{{ contact_counts['complete'] }} Profile mit E-Mail &amp; Telefon</span>
       </article>
       <article class="hero-metric">
         <span class="hero-metric__label">Admins gesamt</span>
         <span class="hero-metric__value">{{ admin_total }}</span>
-        <span class="hero-metric__meta">{{ admin_ratio|round(0, 'half_up') }}% Anteil im Team</span>
+        <span class="hero-metric__meta">{{ admin_ratio|round_half_up }}% Anteil im Team</span>
       </article>
     </div>
   </header>
@@ -1015,7 +1015,7 @@
           <div class="department-snapshot__title">
             <span class="department-dot"{% if department.color %} style="background-color: {{ department.color }};"{% endif %}></span>
             <span>{{ department.name }}</span>
-            <span class="department-snapshot__share">{{ department.share|round(0, 'half_up') }}%</span>
+            <span class="department-snapshot__share">{{ department.share|round_half_up }}%</span>
           </div>
           <div class="department-snapshot__meta">
             <span>{{ department.total }} Benutzer · {{ department.admins }} Admins</span>
@@ -1055,9 +1055,9 @@
           </span>
         </div>
         <div class="role-card__progress">
-          <div class="role-card__progress-bar" style="--role-progress: {{ card.progress|round(0, 'half_up') }}%;"></div>
+          <div class="role-card__progress-bar" style="--role-progress: {{ card.progress|round_half_up }}%;"></div>
           <div class="role-card__progress-meta">
-            <span>{{ card.progress|round(0, 'half_up') }}% sichtbar</span>
+            <span>{{ card.progress|round_half_up }}% sichtbar</span>
             <span>{% if card.missing > 0 %}{{ card.missing }} ausgeblendet{% else %}Alles sichtbar{% endif %}</span>
           </div>
         </div>
