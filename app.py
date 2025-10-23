@@ -2345,13 +2345,56 @@ def create_app() -> Flask:
         """Liste der Abteilungen mit Formular zum Hinzufügen neuer Abteilungen."""
         # Abteilungsbasierte Einschränkung
         current_user = get_current_user()
-        if current_user and current_user.department_id:
+        is_department_admin = bool(current_user and current_user.department_id)
+        is_super_admin = bool(current_user and current_user.is_admin and not current_user.department_id)
+
+        if is_department_admin:
             # Abteilungsadmin sieht nur seine eigene Abteilung
             departments = Department.query.filter_by(id=current_user.department_id).all()
         else:
             # Super-Admin ohne Abteilung sieht alle
             departments = Department.query.order_by(Department.name).all()
-        return render_template("departments.html", departments=departments)
+
+        total_employees = sum(len(dept.employees) for dept in departments)
+        areas = sorted(
+            {
+                dept.area.strip()
+                for dept in departments
+                if dept.area and dept.area.strip()
+            }
+        )
+        metrics = {
+            "total_departments": len(departments),
+            "total_employees": total_employees,
+            "unique_areas": len(areas),
+            "unassigned_employees": Employee.query.filter_by(department_id=None).count()
+            if is_super_admin
+            else None,
+        }
+
+        department_visuals = {}
+        top_department = None
+        for index, dept in enumerate(departments):
+            base_color = _normalize_hex_color(dept.color) or _COLOR_PALETTE[index % len(_COLOR_PALETTE)]
+            department_visuals[dept.id] = {
+                "base": base_color,
+                "surface": _lighten_hex(base_color, 0.85),
+                "accent": _lighten_hex(base_color, 0.6),
+                "text": _get_contrast_text_color(base_color),
+            }
+            if top_department is None or len(dept.employees) > len(top_department.employees):
+                top_department = dept
+
+        return render_template(
+            "departments.html",
+            departments=departments,
+            department_visuals=department_visuals,
+            metrics=metrics,
+            areas=areas,
+            top_department=top_department,
+            is_department_admin=is_department_admin,
+            is_super_admin=is_super_admin,
+        )
 
     @app.route("/abteilungen/hinzufuegen", methods=["POST"])
     @admin_required
@@ -2367,7 +2410,7 @@ def create_app() -> Flask:
         if not name:
             flash("Bitte geben Sie einen Namen an.", "warning")
             return redirect(url_for("departments"))
-        color = request.form.get("color", "").strip() or None
+        color = _normalize_hex_color(request.form.get("color"))
         area = request.form.get("area", "").strip() or None
         dept = Department(name=name, color=color, area=area)
         db.session.add(dept)
@@ -2375,11 +2418,49 @@ def create_app() -> Flask:
         flash(f"Abteilung {name} wurde gespeichert.", "success")
         return redirect(url_for("departments"))
 
-    @app.route("/abteilungen/loeschen/<int:dept_id>")
+    @app.route("/abteilungen/aktualisieren/<int:dept_id>", methods=["POST"])
+    @admin_required
+    def update_department(dept_id: int) -> str:
+        """Aktualisiert eine bestehende Abteilung."""
+        current_user = get_current_user()
+        dept = Department.query.get_or_404(dept_id)
+
+        if current_user and current_user.department_id and current_user.department_id != dept_id:
+            flash("Sie können nur Ihre eigene Abteilung bearbeiten.", "warning")
+            return redirect(url_for("departments"))
+
+        name = request.form.get("name", "").strip()
+        if not name:
+            flash("Bitte geben Sie einen Namen an.", "warning")
+            return redirect(url_for("departments"))
+
+        color = _normalize_hex_color(request.form.get("color"))
+        area = request.form.get("area", "").strip() or None
+
+        dept.name = name
+        dept.color = color
+        dept.area = area
+        db.session.commit()
+        flash(f"Abteilung {name} wurde aktualisiert.", "success")
+        return redirect(url_for("departments"))
+
+    @app.route("/abteilungen/loeschen/<int:dept_id>", methods=["POST"])
     @admin_required
     def delete_department(dept_id: int) -> str:
         """Löscht eine Abteilung."""
+        current_user = get_current_user()
+        if current_user and current_user.department_id:
+            flash("Abteilungsadministratoren können keine Abteilungen löschen.", "warning")
+            return redirect(url_for("departments"))
+
         dept = Department.query.get_or_404(dept_id)
+        if dept.employees:
+            flash(
+                "Die Abteilung kann nicht gelöscht werden, solange Mitarbeiter zugeordnet sind.",
+                "danger",
+            )
+            return redirect(url_for("departments"))
+
         db.session.delete(dept)
         db.session.commit()
         flash(f"Abteilung {dept.name} wurde gelöscht.", "info")
