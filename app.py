@@ -12,15 +12,17 @@ vereinfachen.
 from __future__ import annotations
 
 import calendar
+import csv
 import secrets
 import threading
 import time as time_module
 from collections import Counter, defaultdict
 from datetime import date, datetime, timedelta
+from io import StringIO
 from typing import Dict, List, Tuple
 import pandas as pd
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import or_, and_, func
+from sqlalchemy import or_, and_, func, case
 from sqlalchemy.orm import joinedload
 
 from flask import (
@@ -4234,31 +4236,652 @@ def create_app() -> Flask:
         blocked_day = BlockedDay.query.get_or_404(blocked_day_id)
         name = blocked_day.name
         date_str = blocked_day.date.strftime('%d.%m.%Y')
-        
+
         db.session.delete(blocked_day)
         db.session.commit()
         flash(f"Gesperrter Tag '{name}' vom {date_str} wurde gelöscht.", "info")
         return redirect(url_for("blocked_days"))
+
+    ROLE_META = {
+        "super_admin": {"label": "Super-Admin", "icon": "🔥", "accent": "danger"},
+        "department_admin": {"label": "Abteilungs-Admin", "icon": "🏢", "accent": "primary"},
+        "employee": {"label": "Mitarbeiter", "icon": "👤", "accent": "muted"},
+    }
+
+    ROLE_LABELS = {key: value["label"] for key, value in ROLE_META.items()}
+
+    ROLE_CARD_DESCRIPTIONS = {
+        "super_admin": "Vollzugriff auf Einstellungen und alle Abteilungen.",
+        "department_admin": "Verantwortlich für Planung und Freigaben der eigenen Abteilung.",
+        "employee": "Hat Zugriff auf persönliche Daten, Abwesenheiten und Dienstpläne.",
+    }
+
+    def _resolve_user_role(user: Employee) -> str:
+        """Gibt die logische Rolle eines Benutzers zurück."""
+
+        if user.is_admin and not user.department_id:
+            return "super_admin"
+        if user.is_admin and user.department_id:
+            return "department_admin"
+        return "employee"
+
+    def _calculate_role_counts(user_list: List[Employee]) -> Dict[str, int]:
+        """Zählt, wie viele Benutzer je Rolle vorhanden sind."""
+
+        counts = {
+            "total": len(user_list),
+            "super_admin": 0,
+            "department_admin": 0,
+            "employee": 0,
+        }
+
+        for user in user_list:
+            role_key = _resolve_user_role(user)
+            counts[role_key] += 1
+
+        return counts
+
+    def _apply_user_filters(
+        query,
+        *,
+        search_query: str = "",
+        role: str = "all",
+        department: str = "all",
+        contact: str = "all",
+    ):
+        """Wendet Such- und Filterparameter auf die Benutzerabfrage an."""
+
+        if search_query:
+            like_pattern = f"%{search_query.lower()}%"
+            query = query.filter(
+                or_(
+                    func.lower(Employee.name).like(like_pattern),
+                    func.lower(Employee.username).like(like_pattern),
+                    func.lower(Employee.email).like(like_pattern),
+                )
+            )
+
+        if role == "super_admin":
+            query = query.filter(Employee.is_admin.is_(True), Employee.department_id.is_(None))
+        elif role == "department_admin":
+            query = query.filter(Employee.is_admin.is_(True), Employee.department_id.isnot(None))
+        elif role == "employee":
+            query = query.filter(or_(Employee.is_admin.is_(False), Employee.is_admin.is_(None)))
+
+        if department == "none":
+            query = query.filter(Employee.department_id.is_(None))
+        else:
+            try:
+                department_id = int(department)
+            except (TypeError, ValueError):
+                department_id = None
+
+            if department_id:
+                query = query.filter(Employee.department_id == department_id)
+
+        trimmed_email = func.trim(func.coalesce(Employee.email, ""))
+        trimmed_phone = func.trim(func.coalesce(Employee.phone, ""))
+
+        if contact == "complete":
+            query = query.filter(
+                func.length(trimmed_email) > 0,
+                func.length(trimmed_phone) > 0,
+            )
+        elif contact == "missing_email":
+            query = query.filter(func.length(trimmed_email) == 0)
+        elif contact == "missing_phone":
+            query = query.filter(func.length(trimmed_phone) == 0)
+        elif contact == "incomplete":
+            query = query.filter(
+                or_(
+                    func.length(trimmed_email) == 0,
+                    func.length(trimmed_phone) == 0,
+                )
+            )
+
+        return query
+
+    def _apply_user_sort(query, sort_option: str):
+        """Sortiert die Benutzerliste entsprechend der Auswahl."""
+
+        sort_option = sort_option or "name_asc"
+
+        if sort_option == "name_desc":
+            return query.order_by(func.lower(Employee.name).desc())
+        if sort_option == "newest":
+            return query.order_by(Employee.id.desc())
+        if sort_option == "oldest":
+            return query.order_by(Employee.id.asc())
+        if sort_option == "role":
+            role_case = case(
+                (
+                    and_(Employee.is_admin.is_(True), Employee.department_id.is_(None)),
+                    0,
+                ),
+                (
+                    and_(Employee.is_admin.is_(True), Employee.department_id.isnot(None)),
+                    1,
+                ),
+                else_=2,
+            )
+            return query.order_by(role_case, func.lower(Employee.name).asc())
+        if sort_option == "department":
+            return query.outerjoin(Department).order_by(
+                func.lower(Department.name).asc(),
+                func.lower(Employee.name).asc(),
+            )
+
+        # Standard: alphabetisch nach Name
+        return query.order_by(func.lower(Employee.name).asc())
 
     @app.route("/system/benutzer")
     @admin_required
     def user_management() -> str:
         """Benutzerverwaltung - nur für Administratoren."""
         current_user = get_current_user()
-        
-        # Nur Super-Admins können alle Benutzer verwalten
+
+        base_query = Employee.query.filter(Employee.username.isnot(None))
+
+        # Abteilungsadministratoren sehen nur ihre eigene Abteilung
         if current_user and current_user.department_id:
-            # Abteilungsadmin sieht nur Benutzer seiner Abteilung
-            users = Employee.query.filter(
-                Employee.username.isnot(None),
-                Employee.department_id == current_user.department_id
-            ).order_by(Employee.name).all()
-        else:
-            # Super-Admin sieht alle Benutzer
-            users = Employee.query.filter(Employee.username.isnot(None)).order_by(Employee.name).all()
-        
+            base_query = base_query.filter(Employee.department_id == current_user.department_id)
+
         departments = Department.query.order_by(Department.name).all()
-        return render_template("user_management.html", users=users, departments=departments)
+        department_ids = {str(department.id) for department in departments}
+
+        search_query = request.args.get("q", "").strip()
+        role_filter = request.args.get("role", "all")
+        department_filter = request.args.get("department", "all")
+        sort_option = request.args.get("sort", "name_asc")
+        contact_filter = request.args.get("contact", "all")
+        view_mode = request.args.get("view", "table")
+
+        if role_filter not in {"all", "super_admin", "department_admin", "employee"}:
+            role_filter = "all"
+
+        if department_filter not in department_ids | {"all", "none"}:
+            department_filter = "all"
+
+        if sort_option not in {"name_asc", "name_desc", "newest", "oldest", "role", "department"}:
+            sort_option = "name_asc"
+
+        if contact_filter not in {"all", "complete", "missing_email", "missing_phone", "incomplete"}:
+            contact_filter = "all"
+
+        if view_mode not in {"table", "cards"}:
+            view_mode = "table"
+
+        scoped_users = base_query.options(joinedload(Employee.department)).all()
+
+        filtered_query = _apply_user_filters(
+            base_query,
+            search_query=search_query,
+            role=role_filter,
+            department=department_filter,
+            contact=contact_filter,
+        )
+        sorted_query = _apply_user_sort(filtered_query, sort_option)
+        users = sorted_query.options(joinedload(Employee.department)).all()
+
+        role_counts_total = _calculate_role_counts(scoped_users)
+        role_counts_visible = _calculate_role_counts(users)
+
+        contact_counts: Dict[str, int] = {
+            "complete": 0,
+            "missing_email": 0,
+            "missing_phone": 0,
+        }
+
+        for user in scoped_users:
+            has_email = bool(user.email and user.email.strip())
+            has_phone = bool(user.phone and user.phone.strip())
+
+            if has_email and has_phone:
+                contact_counts["complete"] += 1
+            else:
+                if not has_email:
+                    contact_counts["missing_email"] += 1
+                if not has_phone:
+                    contact_counts["missing_phone"] += 1
+
+        contact_counts["incomplete"] = role_counts_total["total"] - contact_counts["complete"]
+        contact_counts["all"] = role_counts_total["total"]
+
+        department_counts: Dict[str, Dict[str, int]] = defaultdict(lambda: {"total": 0, "admins": 0})
+        for user in scoped_users:
+            key = str(user.department_id) if user.department_id is not None else "none"
+            department_counts[key]["total"] += 1
+            if user.is_admin:
+                department_counts[key]["admins"] += 1
+
+        department_overview = []
+        for department in departments:
+            stats = department_counts.get(str(department.id))
+            if not stats:
+                continue
+            department_overview.append(
+                {
+                    "id": str(department.id),
+                    "name": department.name,
+                    "color": department.color,
+                    "total": stats["total"],
+                    "admins": stats["admins"],
+                }
+            )
+
+        system_stats = department_counts.get("none")
+        if system_stats:
+            department_overview.insert(
+                0,
+                {
+                    "id": "none",
+                    "name": "Systemweit / ohne Abteilung",
+                    "color": None,
+                    "total": system_stats["total"],
+                    "admins": system_stats["admins"],
+                },
+            )
+
+        department_lookup = {item["id"]: item for item in department_overview}
+
+        stats = {
+            "total": role_counts_total["total"],
+            "visible": role_counts_visible["total"],
+        }
+
+        filter_values = {
+            "q": search_query,
+            "role": role_filter,
+            "department": department_filter,
+            "sort": sort_option,
+            "contact": contact_filter,
+            "view": view_mode,
+        }
+
+        base_link_params = {}
+        if search_query:
+            base_link_params["q"] = search_query
+        if department_filter not in {"all"}:
+            base_link_params["department"] = department_filter
+        if sort_option and sort_option != "name_asc":
+            base_link_params["sort"] = sort_option
+        if contact_filter != "all":
+            base_link_params["contact"] = contact_filter
+        if view_mode != "table":
+            base_link_params["view"] = view_mode
+
+        sort_options = [
+            ("name_asc", "Name (A-Z)"),
+            ("name_desc", "Name (Z-A)"),
+            ("role", "Rollenpriorität"),
+            ("department", "Abteilung"),
+            ("newest", "Neueste zuerst"),
+            ("oldest", "Älteste zuerst"),
+        ]
+
+        contact_filter_options = [
+            {
+                "value": "all",
+                "label": "Alle Kontaktzustände",
+                "description": "Keine Einschränkung",
+                "count_key": "all",
+            },
+            {
+                "value": "complete",
+                "label": "Kontakt vollständig",
+                "description": "E-Mail und Telefon vorhanden",
+                "count_key": "complete",
+            },
+            {
+                "value": "incomplete",
+                "label": "Kontakt offen",
+                "description": "Mindestens eine Angabe fehlt",
+                "count_key": "incomplete",
+            },
+            {
+                "value": "missing_email",
+                "label": "Ohne E-Mail",
+                "description": "E-Mail-Adresse fehlt",
+                "count_key": "missing_email",
+            },
+            {
+                "value": "missing_phone",
+                "label": "Ohne Telefonnummer",
+                "description": "Telefonnummer fehlt",
+                "count_key": "missing_phone",
+            },
+        ]
+
+        role_cards = [
+            {
+                "id": "all",
+                "label": "Alle Benutzer",
+                "icon": "👥",
+                "description": "Systemweiter Überblick über alle aktiven Benutzer.",
+                "total": role_counts_total["total"],
+                "visible": role_counts_visible["total"],
+                "url": url_for("user_management", **base_link_params),
+                "active": role_filter == "all",
+                "accent": "primary",
+                "progress": (
+                    (role_counts_visible["total"] / role_counts_total["total"]) * 100
+                    if role_counts_total["total"]
+                    else 0
+                ),
+                "missing": role_counts_total["total"] - role_counts_visible["total"],
+            }
+        ]
+
+        for role_key in ("super_admin", "department_admin", "employee"):
+            params = dict(base_link_params)
+            params["role"] = role_key
+            total_for_role = role_counts_total[role_key]
+            visible_for_role = role_counts_visible[role_key]
+            role_cards.append(
+                {
+                    "id": role_key,
+                    "label": ROLE_META[role_key]["label"],
+                    "icon": ROLE_META[role_key]["icon"],
+                    "description": ROLE_CARD_DESCRIPTIONS[role_key],
+                    "total": role_counts_total[role_key],
+                    "visible": role_counts_visible[role_key],
+                    "url": url_for("user_management", **params),
+                    "active": role_filter == role_key,
+                    "accent": ROLE_META[role_key]["accent"],
+                    "progress": (
+                        (visible_for_role / total_for_role) * 100
+                        if total_for_role
+                        else 0
+                    ),
+                    "missing": total_for_role - visible_for_role,
+                }
+            )
+
+        department_link_base = dict(base_link_params)
+        department_link_base.pop("department", None)
+        if role_filter != "all":
+            department_link_base["role"] = role_filter
+        for item in department_overview:
+            params = dict(department_link_base)
+            params["department"] = item["id"]
+            item["url"] = url_for("user_management", **params)
+
+        total_users = stats["total"]
+        admin_total = role_counts_total["super_admin"] + role_counts_total["department_admin"]
+        contact_completion_rate = (
+            round((contact_counts["complete"] / total_users) * 100, 1)
+            if total_users
+            else 0.0
+        )
+        admin_ratio = (
+            round((admin_total / total_users) * 100, 1)
+            if total_users
+            else 0.0
+        )
+
+        insights = [
+            {
+                "icon": "🔎",
+                "label": "Aktuelle Ansicht",
+                "value": stats["visible"],
+                "subtext": f"von {total_users} Benutzer:innen gesamt" if total_users else "Keine Benutzer vorhanden",
+            },
+            {
+                "icon": "✅",
+                "label": "Kontakt vollständig",
+                "value": contact_counts["complete"],
+                "subtext": (
+                    f"{contact_completion_rate:.0f}% mit E-Mail & Telefon"
+                    if total_users
+                    else "Noch keine Kontaktdaten hinterlegt"
+                ),
+            },
+            {
+                "icon": "🛡️",
+                "label": "Admins gesamt",
+                "value": admin_total,
+                "subtext": (
+                    f"{admin_ratio:.0f}% Anteil am Team"
+                    if total_users
+                    else "Noch keine Administratoren ernannt"
+                ),
+            },
+            {
+                "icon": "📭",
+                "label": "Kontakt offen",
+                "value": contact_counts["incomplete"],
+                "subtext": (
+                    "Keine offenen Kontaktdaten"
+                    if contact_counts["incomplete"] == 0
+                    else f"{contact_counts['missing_email']} ohne E-Mail · {contact_counts['missing_phone']} ohne Telefon"
+                ),
+            },
+        ]
+
+        top_departments = [
+            {
+                **item,
+                "share": (
+                    round((item["total"] / total_users) * 100, 1)
+                    if total_users
+                    else 0.0
+                ),
+            }
+            for item in department_overview
+            if item["id"] != "none"
+        ]
+        top_departments.sort(key=lambda entry: entry["total"], reverse=True)
+        top_departments = top_departments[:3]
+
+        def build_filter_url(exclude: str | None = None) -> str:
+            params = {}
+            if search_query and exclude != "q":
+                params["q"] = search_query
+            if role_filter != "all" and exclude != "role":
+                params["role"] = role_filter
+            if department_filter not in {"all"} and exclude != "department":
+                params["department"] = department_filter
+            if sort_option and sort_option != "name_asc" and exclude != "sort":
+                params["sort"] = sort_option
+            if contact_filter != "all" and exclude != "contact":
+                params["contact"] = contact_filter
+            if view_mode != "table":
+                params["view"] = view_mode
+            return url_for("user_management", **params)
+
+        active_filters = []
+        if search_query:
+            active_filters.append(
+                {
+                    "label": "Suche",
+                    "value": f"„{search_query}“",
+                    "remove_url": build_filter_url("q"),
+                }
+            )
+        if role_filter != "all":
+            active_filters.append(
+                {
+                    "label": "Rolle",
+                    "value": ROLE_LABELS.get(role_filter, role_filter),
+                    "remove_url": build_filter_url("role"),
+                }
+            )
+        if department_filter not in {"all"}:
+            if department_filter == "none":
+                department_label = "Ohne Abteilung"
+            else:
+                department_label = next(
+                    (
+                        department.name
+                        for department in departments
+                        if str(department.id) == department_filter
+                    ),
+                    "Abteilung",
+                )
+            active_filters.append(
+                {
+                    "label": "Abteilung",
+                    "value": department_label,
+                    "remove_url": build_filter_url("department"),
+                }
+            )
+        if contact_filter != "all":
+            contact_label = next(
+                (
+                    option["label"]
+                    for option in contact_filter_options
+                    if option["value"] == contact_filter
+                ),
+                "Kontaktstatus",
+            )
+            active_filters.append(
+                {
+                    "label": "Kontakt",
+                    "value": contact_label,
+                    "remove_url": build_filter_url("contact"),
+                }
+            )
+
+        clear_params = {}
+        if sort_option != "name_asc":
+            clear_params["sort"] = sort_option
+        if view_mode != "table":
+            clear_params["view"] = view_mode
+        clear_filters_url = url_for("user_management", **clear_params)
+
+        export_params = {}
+        if search_query:
+            export_params["q"] = search_query
+        if role_filter != "all":
+            export_params["role"] = role_filter
+        if department_filter not in {"all"}:
+            export_params["department"] = department_filter
+        if contact_filter != "all":
+            export_params["contact"] = contact_filter
+        export_params["sort"] = sort_option
+
+        export_url = url_for("export_users", **export_params)
+
+        view_toggle_params = dict(base_link_params)
+        view_toggle_params.pop("view", None)
+        view_modes = []
+        for view_id, label, icon in (
+            ("table", "Tabellenansicht", "📋"),
+            ("cards", "Kartenansicht", "🗂️"),
+        ):
+            params = dict(view_toggle_params)
+            if view_id != "table":
+                params["view"] = view_id
+            view_modes.append(
+                {
+                    "id": view_id,
+                    "label": label,
+                    "icon": icon,
+                    "active": view_mode == view_id,
+                    "url": url_for("user_management", **params),
+                }
+            )
+
+        missing_contact_params = dict(base_link_params)
+        if "contact" in missing_contact_params:
+            missing_contact_params.pop("contact")
+        missing_contact_params["contact"] = "incomplete"
+        missing_contact_url = url_for("user_management", **missing_contact_params)
+
+        role_lookup = {user.id: _resolve_user_role(user) for user in users}
+
+        return render_template(
+            "user_management.html",
+            users=users,
+            departments=departments,
+            stats=stats,
+            role_cards=role_cards,
+            role_counts_total=role_counts_total,
+            role_counts_visible=role_counts_visible,
+            filter_values=filter_values,
+            active_filters=active_filters,
+            clear_filters_url=clear_filters_url,
+            export_url=export_url,
+            department_overview=department_overview,
+            department_lookup=department_lookup,
+            role_meta=ROLE_META,
+            role_lookup=role_lookup,
+            sort_options=sort_options,
+            contact_filter_options=contact_filter_options,
+            contact_counts=contact_counts,
+            insights=insights,
+            contact_completion_rate=contact_completion_rate,
+            admin_ratio=admin_ratio,
+            admin_total=admin_total,
+            top_departments=top_departments,
+            view_mode=view_mode,
+            view_modes=view_modes,
+            missing_contact_url=missing_contact_url,
+        )
+
+    @app.route("/system/benutzer/export")
+    @admin_required
+    def export_users() -> Response:
+        """Exportiert die aktuelle Benutzerliste als CSV."""
+
+        current_user = get_current_user()
+
+        base_query = Employee.query.filter(Employee.username.isnot(None))
+        if current_user and current_user.department_id:
+            base_query = base_query.filter(Employee.department_id == current_user.department_id)
+
+        search_query = request.args.get("q", "").strip()
+        role_filter = request.args.get("role", "all")
+        department_filter = request.args.get("department", "all")
+        sort_option = request.args.get("sort", "name_asc")
+        contact_filter = request.args.get("contact", "all")
+
+        if contact_filter not in {"all", "complete", "missing_email", "missing_phone", "incomplete"}:
+            contact_filter = "all"
+
+        filtered_query = _apply_user_filters(
+            base_query,
+            search_query=search_query,
+            role=role_filter,
+            department=department_filter,
+            contact=contact_filter,
+        )
+        sorted_query = _apply_user_sort(filtered_query, sort_option)
+        users = sorted_query.options(joinedload(Employee.department)).all()
+
+        output = StringIO()
+        writer = csv.writer(output, delimiter=";")
+        writer.writerow(["Name", "Benutzername", "E-Mail", "Telefon", "Rolle", "Abteilung"])
+
+        for user in users:
+            role_key = _resolve_user_role(user)
+            role_label = ROLE_LABELS.get(role_key, "Unbekannt")
+            department_label = (
+                user.department.name
+                if user.department
+                else ("Alle Abteilungen" if user.is_admin else "Keine Zuordnung")
+            )
+
+            writer.writerow(
+                [
+                    user.name,
+                    user.username or "",
+                    user.email or "",
+                    user.phone or "",
+                    role_label,
+                    department_label,
+                ]
+            )
+
+        csv_data = output.getvalue()
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        filename = f"benutzer-{timestamp}.csv"
+
+        return Response(
+            csv_data,
+            mimetype="text/csv",
+            headers={"Content-Disposition": f"attachment; filename={filename}"},
+        )
 
     @app.route("/system/benutzer/<int:user_id>/super-admin", methods=["POST"])
     @admin_required
