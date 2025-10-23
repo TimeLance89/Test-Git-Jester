@@ -46,6 +46,7 @@ from models import (
     Shift,
     Leave,
     ProductivitySettings,
+    WorkClass,
     BlockedDay,
     Notification,
     ApprovalAutomation,
@@ -3040,45 +3041,86 @@ def create_app() -> Flask:
     def system_settings() -> str:
         """Übersichtsseite für künftige globale Einstellungen."""
 
+        work_classes = (
+            WorkClass.query.order_by(WorkClass.is_default.desc(), WorkClass.name.asc()).all()
+        )
+        active_work_classes = [wc for wc in work_classes if wc.is_active]
+        inactive_work_classes = [wc for wc in work_classes if not wc.is_active]
+
+        suggested_work_classes = [
+            {
+                "name": "Vollzeit",
+                "hours_per_week": 40,
+                "hours_per_month": 160,
+                "description": "Standardmodell für Mitarbeitende mit regulärem Pensum.",
+                "color": "#1d4ed8",
+            },
+            {
+                "name": "Teilzeit",
+                "hours_per_week": 25,
+                "hours_per_month": 100,
+                "description": "Flexible Arbeitszeitmodelle für geteilte Rollen.",
+                "color": "#10b981",
+            },
+            {
+                "name": "Minijob",
+                "hours_per_week": 10,
+                "hours_per_month": 40,
+                "description": "Geringfügige Beschäftigungen für Stoßzeiten.",
+                "color": "#f97316",
+            },
+        ]
+
+        existing_names = {wc.name.lower() for wc in work_classes}
+        recommended_work_classes = [
+            suggestion
+            for suggestion in suggested_work_classes
+            if suggestion["name"].lower() not in existing_names
+        ]
+
         quick_actions = [
             {
+                "id": "work-classes",
+                "icon": "🧭",
+                "title": "Arbeitsklassen verwalten",
+                "description": "Standardmodelle wie Vollzeit, Teilzeit oder Minijob pflegen.",
+                "href": "#work-class-manager",
+                "state": "Verfügbar",
+            },
+            {
                 "id": "sync-policies",
-                "icon": "🔄",
+                "icon": "🛡️",
                 "title": "Richtlinien synchronisieren",
-                "description": "Aktualisiert Berechtigungen systemweit in wenigen Sekunden.",
+                "description": "Berechtigungen für neue Mandanten mit einem Klick ausrollen.",
+                "state": "In Planung",
             },
             {
                 "id": "refresh-cache",
                 "icon": "🧹",
                 "title": "Systemcache bereinigen",
-                "description": "Löscht temporäre Daten und startet Hintergrunddienste sanft neu.",
-            },
-            {
-                "id": "export-audit",
-                "icon": "📄",
-                "title": "Änderungsprotokoll exportieren",
-                "description": "Bereitet einen vollständigen Audit-Report für das Compliance-Team vor.",
+                "description": "Hält Integrationen und Hintergrundprozesse performant.",
+                "state": "Demnächst",
             },
         ]
 
         focus_areas = [
             {
-                "icon": "🛡️",
-                "title": "Sicherheitsrichtlinien",
-                "description": "Zugriffs- und Rollenmodelle verwalten sowie Mehrfaktorauthentifizierung steuern.",
-                "badge": "Stabil",
+                "icon": "🏢",
+                "title": "Mandantenverwaltung",
+                "description": "Strukturen für unterschiedliche Standorte oder Firmenbereiche abbilden.",
+                "badge": "Live",
             },
             {
-                "icon": "🔔",
-                "title": "Benachrichtigungen",
-                "description": "Globale Eskalationspfade und Zustelloptionen für kritische Hinweise konfigurieren.",
-                "badge": "Beta",
+                "icon": "📡",
+                "title": "Netzwerkintegration",
+                "description": "Anbindung an bestehende Verzeichnisdienste und VPN-fähige Nutzung.",
+                "badge": "Pilot",
             },
             {
-                "icon": "📦",
-                "title": "Integrationen",
-                "description": "Schnittstellen zu HR- und Zeiterfassungssystemen verwalten und testen.",
-                "badge": "In Planung",
+                "icon": "📊",
+                "title": "Auswertungen",
+                "description": "Berichte für Geschäftsführung, HR und Betriebsrat vorbereiten.",
+                "badge": "Roadmap",
             },
         ]
 
@@ -3087,53 +3129,53 @@ def create_app() -> Flask:
                 "icon": "🗄️",
                 "title": "Datenbank-Optimierung",
                 "window": "Jeden Sonntag · 02:00 – 03:00 Uhr",
-                "impact": "Kurzzeitige Leseunterbrechungen möglich",
+                "impact": "Kurzzeitige Warteschlangen bei Schreibzugriffen möglich",
+            },
+            {
+                "icon": "🔐",
+                "title": "Sicherheitsupdates",
+                "window": "Mittwochs · 22:00 Uhr",
+                "impact": "Dienste werden nacheinander neu gestartet",
             },
             {
                 "icon": "☁️",
-                "title": "Cloud-Sicherung",
-                "window": "Täglich · 01:30 Uhr",
-                "impact": "Automatische Sicherung aller Kernmodule",
-            },
-            {
-                "icon": "🧪",
-                "title": "Funktions-Sandbox",
-                "window": "Mittwochs · 21:00 – 22:00 Uhr",
-                "impact": "Neue Features werden ohne Produktivdaten getestet",
+                "title": "Backup-Replikation",
+                "window": "Stündlich",
+                "impact": "Kollokation in sekundäres Rechenzentrum",
             },
         ]
 
         roadmap = [
             {
-                "icon": "🧭",
-                "title": "Self-Service Portale",
-                "description": "Ermöglicht Mitarbeitenden eigene Einstellungen wie Sprache und Benachrichtigungen.",
+                "icon": "⚙️",
+                "title": "Active Directory Sync",
+                "description": "Synchronisiert Benutzer direkt aus dem Unternehmensverzeichnis.",
                 "quarter": "Q3 2024",
             },
             {
-                "icon": "🤖",
-                "title": "Automatisierte Freigaben",
-                "description": "Genehmigungsprozesse für wiederkehrende Abläufe beschleunigen.",
+                "icon": "🧾",
+                "title": "Zeiterfassungs-Export",
+                "description": "Standardisierte Formate für Lohnbuchhaltung und ERP.",
                 "quarter": "Q4 2024",
             },
             {
-                "icon": "📊",
-                "title": "Erweiterte Auswertungen",
-                "description": "Konsolidierte Reports für Vorstand und Betriebsrat vorbereiten.",
+                "icon": "📱",
+                "title": "Self-Service App",
+                "description": "Mitarbeitende passen Benachrichtigungen und Profile selbst an.",
                 "quarter": "Q1 2025",
             },
         ]
 
         audit_notes = [
-            "Tägliche Sicherung der Audit-Logs im revisionssicheren Speicher.",
-            "Export als CSV und PDF vorbereitet, Freigabe in Kürze verfügbar.",
-            "Benachrichtigungen bei ungewöhnlichen Anmeldeversuchen werden ausgebaut.",
+            "Revisionssichere Archivierung der Audit-Logs für mindestens 24 Monate.",
+            "Export als CSV und PDF inklusive digitaler Signatur in Vorbereitung.",
+            "Alarmierung bei ungewöhnlichen Anmeldeversuchen über E-Mail und Webhooks.",
         ]
 
         stats = [
-            {"label": "Aktive Module", "value": len(focus_areas)},
-            {"label": "Geplante Erweiterungen", "value": len(roadmap)},
-            {"label": "Automatisierungen", "value": len(quick_actions)},
+            {"label": "Aktive Arbeitsklassen", "value": len(active_work_classes)},
+            {"label": "Geplante Integrationen", "value": len(roadmap)},
+            {"label": "Direktaktionen", "value": len(quick_actions)},
         ]
 
         last_updated = datetime.now()
@@ -3147,7 +3189,206 @@ def create_app() -> Flask:
             audit_notes=audit_notes,
             stats=stats,
             last_updated=last_updated,
+            work_classes=work_classes,
+            active_work_classes=active_work_classes,
+            inactive_work_classes=inactive_work_classes,
+            recommended_work_classes=recommended_work_classes,
         )
+
+    def _parse_hours_value(raw_value: str | None) -> float | None:
+        if raw_value is None:
+            return None
+        value = raw_value.replace(",", ".").strip()
+        if not value:
+            return None
+        try:
+            return float(value)
+        except ValueError:
+            raise ValueError("invalid")
+
+    @app.route("/settings/work-classes/anlegen", methods=["POST"])
+    @super_admin_required
+    def create_work_class() -> str:
+        name = (request.form.get("name") or "").strip()
+        hours_per_week_raw = request.form.get("hours_per_week")
+        hours_per_month_raw = request.form.get("hours_per_month")
+        description = (request.form.get("description") or "").strip()
+        color = (request.form.get("color") or "").strip() or None
+        set_default = request.form.get("is_default") == "on"
+
+        errors: List[str] = []
+
+        if not name:
+            errors.append("Bitte geben Sie einen Namen für die Arbeitsklasse an.")
+        else:
+            existing = WorkClass.query.filter(
+                func.lower(WorkClass.name) == name.lower()
+            ).first()
+            if existing:
+                errors.append("Es existiert bereits eine Arbeitsklasse mit diesem Namen.")
+
+        hours_per_week = None
+        if hours_per_week_raw is not None:
+            try:
+                parsed = _parse_hours_value(hours_per_week_raw)
+                if parsed is not None and parsed < 0:
+                    errors.append("Wochenstunden dürfen nicht negativ sein.")
+                else:
+                    hours_per_week = parsed
+            except ValueError:
+                errors.append("Wochenstunden konnten nicht interpretiert werden.")
+
+        hours_per_month = None
+        if hours_per_month_raw is not None:
+            try:
+                parsed = _parse_hours_value(hours_per_month_raw)
+                if parsed is not None and parsed < 0:
+                    errors.append("Monatsstunden dürfen nicht negativ sein.")
+                else:
+                    hours_per_month = parsed
+            except ValueError:
+                errors.append("Monatsstunden konnten nicht interpretiert werden.")
+
+        if errors:
+            for message in errors:
+                flash(message, "danger")
+            return redirect(url_for("system_settings"))
+
+        new_work_class = WorkClass(
+            name=name,
+            hours_per_week=hours_per_week,
+            hours_per_month=hours_per_month,
+            description=description or None,
+            color=color,
+            is_active=True,
+        )
+
+        if set_default:
+            for existing_default in WorkClass.query.filter_by(is_default=True).all():
+                existing_default.is_default = False
+            new_work_class.is_default = True
+
+        try:
+            db.session.add(new_work_class)
+            db.session.commit()
+            flash(f"Arbeitsklasse '{new_work_class.name}' wurde angelegt.", "success")
+        except IntegrityError:
+            db.session.rollback()
+            flash("Die Arbeitsklasse konnte nicht gespeichert werden.", "danger")
+
+        return redirect(url_for("system_settings"))
+
+    @app.route("/settings/work-classes/<int:class_id>/aktualisieren", methods=["POST"])
+    @super_admin_required
+    def update_work_class(class_id: int) -> str:
+        work_class = WorkClass.query.get_or_404(class_id)
+
+        name = (request.form.get("name") or "").strip()
+        hours_per_week_raw = request.form.get("hours_per_week")
+        hours_per_month_raw = request.form.get("hours_per_month")
+        description = (request.form.get("description") or "").strip()
+        color = (request.form.get("color") or "").strip() or None
+        set_default = request.form.get("is_default") == "on"
+
+        errors: List[str] = []
+
+        if name:
+            existing = WorkClass.query.filter(
+                func.lower(WorkClass.name) == name.lower(),
+                WorkClass.id != work_class.id,
+            ).first()
+            if existing:
+                errors.append("Eine andere Arbeitsklasse verwendet bereits diesen Namen.")
+        else:
+            errors.append("Der Name darf nicht leer sein.")
+
+        try:
+            parsed_week = _parse_hours_value(hours_per_week_raw)
+            if parsed_week is not None and parsed_week < 0:
+                errors.append("Wochenstunden dürfen nicht negativ sein.")
+        except ValueError:
+            errors.append("Wochenstunden konnten nicht interpretiert werden.")
+            parsed_week = None
+
+        try:
+            parsed_month = _parse_hours_value(hours_per_month_raw)
+            if parsed_month is not None and parsed_month < 0:
+                errors.append("Monatsstunden dürfen nicht negativ sein.")
+        except ValueError:
+            errors.append("Monatsstunden konnten nicht interpretiert werden.")
+            parsed_month = None
+
+        if errors:
+            for message in errors:
+                flash(message, "danger")
+            return redirect(url_for("system_settings"))
+
+        work_class.name = name
+        work_class.hours_per_week = parsed_week
+        work_class.hours_per_month = parsed_month
+        work_class.description = description or None
+        work_class.color = color
+
+        if set_default:
+            for existing_default in WorkClass.query.filter_by(is_default=True).all():
+                if existing_default.id != work_class.id:
+                    existing_default.is_default = False
+            work_class.is_default = True
+            work_class.is_active = True
+
+        try:
+            db.session.commit()
+            flash(f"Arbeitsklasse '{work_class.name}' wurde aktualisiert.", "success")
+        except IntegrityError:
+            db.session.rollback()
+            flash("Die Änderungen konnten nicht gespeichert werden.", "danger")
+
+        return redirect(url_for("system_settings"))
+
+    @app.route("/settings/work-classes/<int:class_id>/umschalten", methods=["POST"])
+    @super_admin_required
+    def toggle_work_class(class_id: int) -> str:
+        work_class = WorkClass.query.get_or_404(class_id)
+        work_class.is_active = not work_class.is_active
+        if not work_class.is_active and work_class.is_default:
+            work_class.is_default = False
+
+        db.session.commit()
+
+        status = "reaktiviert" if work_class.is_active else "deaktiviert"
+        flash(f"Arbeitsklasse '{work_class.name}' wurde {status}.", "success")
+        return redirect(url_for("system_settings"))
+
+    @app.route("/settings/work-classes/<int:class_id>/standard", methods=["POST"])
+    @super_admin_required
+    def set_default_work_class(class_id: int) -> str:
+        work_class = WorkClass.query.get_or_404(class_id)
+
+        for existing_default in WorkClass.query.filter_by(is_default=True).all():
+            if existing_default.id != work_class.id:
+                existing_default.is_default = False
+
+        work_class.is_default = True
+        work_class.is_active = True
+        db.session.commit()
+
+        flash(f"'{work_class.name}' ist jetzt die Standard-Arbeitsklasse.", "success")
+        return redirect(url_for("system_settings"))
+
+    @app.route("/settings/work-classes/<int:class_id>/loeschen", methods=["POST"])
+    @super_admin_required
+    def delete_work_class(class_id: int) -> str:
+        work_class = WorkClass.query.get_or_404(class_id)
+
+        if work_class.is_default:
+            flash("Die Standard-Arbeitsklasse kann nicht gelöscht werden.", "warning")
+            return redirect(url_for("system_settings"))
+
+        db.session.delete(work_class)
+        db.session.commit()
+
+        flash(f"Arbeitsklasse '{work_class.name}' wurde entfernt.", "success")
+        return redirect(url_for("system_settings"))
 
     @app.route("/settings/automatisierte-freigaben")
     @super_admin_required
