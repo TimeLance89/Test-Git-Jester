@@ -3959,7 +3959,7 @@ def create_app() -> Flask:
     @app.route("/settings/backup-modus/datenbank-zuruecksetzen", methods=["POST"])
     @super_admin_required
     def reset_database() -> str:
-        """Leert die Datenbank und spielt Standardwerte erneut ein."""
+        """Leert die Datenbank und setzt das System in den Setup-Zustand."""
 
         confirmation = (request.form.get("confirmation") or "").strip().lower()
         acknowledge = request.form.get("acknowledge") == "on"
@@ -3976,7 +3976,6 @@ def create_app() -> Flask:
             db.session.remove()
             db.drop_all()
             db.create_all()
-            _create_default_admin_account()
         except Exception as exc:  # pragma: no cover - sicherheitsrelevante Fehlerbehandlung
             db.session.rollback()
             current_app.logger.exception("Fehler beim Zurücksetzen der Datenbank", exc_info=exc)
@@ -3998,17 +3997,16 @@ def create_app() -> Flask:
                     pass
 
         flash(
-            "Datenbank wurde gelöscht und mit Standardwerten initialisiert. Bitte melden Sie sich erneut mit admin/admin an.",
+            "Datenbank wurde gelöscht und die Installation befindet sich nun im CLEAN-Status."
+            " Bitte führen Sie das Setup erneut durch, um einen Administrator anzulegen.",
             "success",
         )
         if delete_backups:
             flash("Alle gespeicherten Backups wurden gemäß Ihrer Auswahl entfernt.", "info")
         else:
             flash("Bereits vorhandene Backups bleiben erhalten und können weiterhin genutzt werden.", "info")
-        session.pop("user_id", None)
-        session.pop("is_admin", None)
-        session.pop("department_id", None)
-        return redirect(url_for("login"))
+        session.clear()
+        return redirect(url_for("setup"))
 
     def _parse_hours_value(raw_value: str | None) -> float | None:
         if raw_value is None:
