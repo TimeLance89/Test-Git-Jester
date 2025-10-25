@@ -14,6 +14,8 @@ from __future__ import annotations
 import calendar
 import csv
 import secrets
+import shutil
+import sqlite3
 import threading
 import time as time_module
 from collections import Counter, defaultdict
@@ -38,6 +40,7 @@ from flask import (
     jsonify,
     Response,
     current_app,
+    send_from_directory,
 )
 
 from functools import wraps
@@ -101,6 +104,65 @@ def _format_file_size(num_bytes: int | None) -> str:
             return f"{value:.1f} {suffix}"
 
     return f"{num_bytes} B"
+
+
+def _get_sqlite_database_path() -> Path | None:
+    """Ermittelt den absoluten Pfad zur SQLite-Datenbank, sofern vorhanden."""
+
+    database_uri = current_app.config.get("SQLALCHEMY_DATABASE_URI", "")
+    if not database_uri.startswith("sqlite:///"):
+        return None
+
+    raw_path = database_uri.replace("sqlite:///", "", 1)
+    db_file_path = Path(raw_path)
+    if not db_file_path.is_absolute():
+        db_file_path = (Path(current_app.instance_path) / raw_path).resolve()
+
+    return db_file_path
+
+
+def _get_backup_directory() -> Path:
+    """Gibt das Verzeichnis für Datenbanksicherungen zurück."""
+
+    backup_dir = Path(current_app.instance_path) / "backups"
+    backup_dir.mkdir(parents=True, exist_ok=True)
+    return backup_dir
+
+
+def _list_available_backups() -> List[dict]:
+    """Stellt eine sortierte Liste vorhandener Sicherungsdateien bereit."""
+
+    backup_dir = _get_backup_directory()
+    backups: List[dict] = []
+
+    for file in backup_dir.glob("*"):
+        if not file.is_file():
+            continue
+
+        try:
+            stat = file.stat()
+        except OSError:
+            continue
+
+        backups.append(
+            {
+                "name": file.name,
+                "size": _format_file_size(stat.st_size),
+                "created_at": datetime.fromtimestamp(stat.st_mtime),
+            }
+        )
+
+    backups.sort(key=lambda item: item["created_at"], reverse=True)
+    return backups
+
+
+def _create_sqlite_backup(source: Path, destination: Path) -> None:
+    """Erstellt eine konsistente SQLite-Sicherung."""
+
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    with sqlite3.connect(str(source)) as source_conn:  # pragma: no cover - datenbankzugriff
+        with sqlite3.connect(str(destination)) as dest_conn:
+            source_conn.backup(dest_conn)
 
 
 def _create_default_admin_account() -> None:
@@ -3710,18 +3772,12 @@ def create_app() -> Flask:
             {"label": "Abwesenheiten", "value": leave_count},
         ]
 
-        database_uri = current_app.config.get("SQLALCHEMY_DATABASE_URI", "")
-        db_file_path: Path | None = None
-        db_display_path = "Unbekannt"
+        db_file_path = _get_sqlite_database_path()
+        is_sqlite_database = db_file_path is not None
+        db_display_path = str(db_file_path) if db_file_path else "Unbekannt"
         db_file_size = "Nicht verfügbar"
 
-        if database_uri.startswith("sqlite:///"):
-            raw_path = database_uri.replace("sqlite:///", "", 1)
-            db_file_path = Path(raw_path)
-            if not db_file_path.is_absolute():
-                db_file_path = (Path(current_app.instance_path) / raw_path).resolve()
-
-            db_display_path = str(db_file_path)
+        if db_file_path:
             if db_file_path.exists():
                 db_file_size = _format_file_size(db_file_path.stat().st_size)
             else:
@@ -3732,9 +3788,64 @@ def create_app() -> Flask:
             backup_stats=backup_stats,
             db_file_path=db_display_path,
             db_file_size=db_file_size,
-            is_sqlite_database=database_uri.startswith("sqlite:///"),
+            is_sqlite_database=is_sqlite_database,
+            backups=_list_available_backups(),
             last_checked=datetime.now(),
         )
+
+    @app.route("/settings/backup-modus/backup-erstellen", methods=["POST"])
+    @super_admin_required
+    def create_database_backup() -> str:
+        """Erstellt eine Sicherung der SQLite-Datenbank."""
+
+        db_file_path = _get_sqlite_database_path()
+        if not db_file_path:
+            flash("Backups werden nur für lokale SQLite-Installationen unterstützt.", "danger")
+            return redirect(url_for("backup_mode"))
+
+        if not db_file_path.exists():
+            flash("Die Datenbankdatei wurde nicht gefunden. Bitte prüfen Sie die Installation.", "danger")
+            return redirect(url_for("backup_mode"))
+
+        suffix = "".join(db_file_path.suffixes) or ".db"
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        backup_dir = _get_backup_directory()
+        backup_name = f"{db_file_path.stem}_{timestamp}{suffix}"
+        backup_path = backup_dir / backup_name
+        counter = 1
+
+        while backup_path.exists():
+            backup_name = f"{db_file_path.stem}_{timestamp}_{counter}{suffix}"
+            backup_path = backup_dir / backup_name
+            counter += 1
+
+        try:
+            _create_sqlite_backup(db_file_path, backup_path)
+        except sqlite3.Error as exc:  # pragma: no cover - datenbankzugriff
+            current_app.logger.exception("Fehler beim Erstellen des Backups", exc_info=exc)
+            flash("Backup konnte nicht erstellt werden. Details finden Sie im Log.", "danger")
+            return redirect(url_for("backup_mode"))
+
+        try:
+            size = _format_file_size(backup_path.stat().st_size)
+        except OSError:
+            size = "unbekannte Größe"
+
+        flash(f"Backup '{backup_path.name}' wurde erfolgreich erstellt ({size}).", "success")
+        return redirect(url_for("backup_mode"))
+
+    @app.route("/settings/backup-modus/download/<path:filename>")
+    @super_admin_required
+    def download_backup(filename: str):
+        """Bietet eine Sicherungsdatei zum Download an."""
+
+        backup_dir = _get_backup_directory()
+        target_path = (backup_dir / filename).resolve()
+        if not str(target_path).startswith(str(backup_dir.resolve())) or not target_path.exists():
+            flash("Die angeforderte Sicherung konnte nicht gefunden werden.", "danger")
+            return redirect(url_for("backup_mode"))
+
+        return send_from_directory(backup_dir, filename, as_attachment=True)
 
     @app.route("/settings/backup-modus/datenbank-zuruecksetzen", methods=["POST"])
     @super_admin_required
@@ -3743,6 +3854,7 @@ def create_app() -> Flask:
 
         confirmation = (request.form.get("confirmation") or "").strip().lower()
         acknowledge = request.form.get("acknowledge") == "on"
+        delete_backups = request.form.get("delete_backups") == "on"
 
         if confirmation not in {"löschen", "loeschen"} or not acknowledge:
             flash(
@@ -3762,10 +3874,28 @@ def create_app() -> Flask:
             flash("Zurücksetzen fehlgeschlagen. Details finden Sie im Log.", "danger")
             return redirect(url_for("backup_mode"))
 
+        if delete_backups:
+            backup_dir = Path(current_app.instance_path) / "backups"
+            if backup_dir.exists():
+                for backup_file in backup_dir.glob("*"):
+                    try:
+                        if backup_file.is_file():
+                            backup_file.unlink()
+                    except OSError:
+                        current_app.logger.warning("Backup-Datei konnte nicht gelöscht werden: %s", backup_file)
+                try:
+                    backup_dir.rmdir()
+                except OSError:
+                    pass
+
         flash(
             "Datenbank wurde gelöscht und mit Standardwerten initialisiert. Bitte melden Sie sich erneut mit admin/admin an.",
             "success",
         )
+        if delete_backups:
+            flash("Alle gespeicherten Backups wurden gemäß Ihrer Auswahl entfernt.", "info")
+        else:
+            flash("Bereits vorhandene Backups bleiben erhalten und können weiterhin genutzt werden.", "info")
         session.pop("user_id", None)
         session.pop("is_admin", None)
         session.pop("department_id", None)

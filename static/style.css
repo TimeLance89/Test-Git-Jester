@@ -3948,6 +3948,95 @@ body {
   font-size: 0.9rem;
 }
 
+.backup-management {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.75rem;
+  border-radius: var(--radius-lg);
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+}
+
+.backup-management-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.backup-management-header h2 {
+  margin: 0;
+  font-size: 1.45rem;
+}
+
+.backup-management-header p {
+  margin: 0.35rem 0 0;
+  color: var(--text-secondary);
+  max-width: 38ch;
+}
+
+.backup-create-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: flex-end;
+}
+
+.backup-files {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.backup-file {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+  padding: 1rem 1.25rem;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(248, 250, 252, 0.7);
+}
+
+.backup-file-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.backup-file-name {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.backup-file-meta {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.backup-file-actions {
+  display: flex;
+  align-items: center;
+}
+
+.backup-empty {
+  margin: 0;
+  padding: 1rem 1.25rem;
+  border-radius: var(--radius-md);
+  background: rgba(226, 232, 240, 0.45);
+  color: rgba(71, 85, 105, 0.85);
+}
+
+.backup-retention-hint {
+  margin: -0.35rem 0 0.5rem 2.2rem;
+  font-size: 0.85rem;
+  color: rgba(71, 85, 105, 0.75);
+}
+
 .backup-guidelines {
   display: flex;
   flex-direction: column;
@@ -4075,6 +4164,15 @@ body {
   .backup-reset-form .btn {
     width: 100%;
     min-width: 0;
+  }
+
+  .backup-management-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .backup-create-form {
+    align-items: stretch;
   }
 }
 
