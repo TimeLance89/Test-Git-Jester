@@ -1,0 +1,103 @@
+{% extends "layout.html" %}
+{% block title %}Backup-Modus{% endblock %}
+{% block content %}
+<div class="settings-page backup-mode-page">
+  <header class="settings-hero backup-hero">
+    <div class="settings-hero-content">
+      <span class="settings-eyebrow">Notfallbereich</span>
+      <h1>Backup-Modus</h1>
+      <p>
+        Sichern oder bereinigen Sie das System kontrolliert. Dieser Bereich richtet sich ausschließlich an erfahrene
+        Systemadministratoren und ist außerhalb regulärer Betriebszeiten zu verwenden.
+      </p>
+      <div class="settings-meta">
+        <span>Letzte Überprüfung: {{ last_checked.strftime('%d.%m.%Y %H:%M') }} Uhr</span>
+        <span>Aktionen erfordern zweistufige Bestätigung</span>
+      </div>
+    </div>
+    <div class="backup-hero-actions">
+      <a class="btn btn-outline-secondary" href="{{ url_for('system_settings') }}">Zurück zu den Einstellungen</a>
+    </div>
+  </header>
+
+  <section class="backup-stats" aria-label="Datenbankübersicht">
+    <h2>Aktueller Datenstand</h2>
+    <div class="backup-stats-grid">
+      {% for stat in backup_stats %}
+      <div class="backup-stat">
+        <span class="backup-stat-value">{{ stat.value }}</span>
+        <span class="backup-stat-label">{{ stat.label }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="backup-database-meta">
+      <div>
+        <span class="backup-meta-label">Speicherort</span>
+        <span class="backup-meta-value">{{ db_file_path }}</span>
+      </div>
+      <div>
+        <span class="backup-meta-label">Aktuelle Größe</span>
+        <span class="backup-meta-value">{{ db_file_size }}</span>
+      </div>
+      {% if not is_sqlite_database %}
+      <p class="backup-meta-hint">Die Löschfunktion steht nur für lokale SQLite-Installationen bereit.</p>
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="backup-guidelines" aria-label="Hinweise">
+    <h2>Empfohlene Sicherungsschritte</h2>
+    <ol>
+      <li>Prüfen Sie, ob eine aktuelle Sicherung auf externem Speicher vorliegt.</li>
+      <li>Informieren Sie alle betroffenen Nutzer über den Wartungszeitraum.</li>
+      <li>Exportieren Sie optional Dienstpläne und Abwesenheiten als CSV.</li>
+      <li>Verifizieren Sie nach der Wiederherstellung die Anmeldung mit dem Standard-Administrator.</li>
+    </ol>
+  </section>
+
+  <section class="backup-danger-zone" aria-label="Gefahrenzone">
+    <div class="backup-warning" role="alert">
+      <span class="backup-warning-icon" aria-hidden="true">⚠️</span>
+      <div>
+        <h2>Datenbank unwiderruflich leeren</h2>
+        <p>
+          Dieser Vorgang löscht alle Mitarbeiter, Einsätze, Abwesenheiten, Einstellungen und Benutzerkonten. Der Vorgang kann
+          nicht rückgängig gemacht werden. Nach Abschluss steht nur noch der Standard-Administrator <strong>admin / admin</strong>
+          zur Verfügung.
+        </p>
+      </div>
+    </div>
+    <form
+      method="post"
+      action="{{ url_for('reset_database') }}"
+      class="backup-reset-form"
+      onsubmit="return confirm('Sind Sie absolut sicher, dass die Datenbank gelöscht werden soll? Dieser Schritt kann nicht rückgängig gemacht werden.');"
+    >
+      <fieldset {% if not is_sqlite_database %}disabled{% endif %}>
+        <legend>Bestätigung erforderlich</legend>
+        <p>
+          Bitte bestätigen Sie ausdrücklich, dass Sie den vollständigen Datenverlust akzeptieren. Ohne die nachfolgende
+          Sicherheitsfreigabe wird die Aktion verweigert.
+        </p>
+        <label class="backup-checkbox">
+          <input type="checkbox" name="acknowledge" required>
+          <span>Ich habe eine aktuelle Sicherung erstellt oder akzeptiere den vollständigen Datenverlust.</span>
+        </label>
+        <label class="backup-confirmation">
+          <span>Bestätigungswort (in Großbuchstaben)</span>
+          <input type="text" name="confirmation" placeholder="LÖSCHEN" required pattern="[A-Za-zÄÖÜäöüß]+">
+        </label>
+        <button type="submit" class="btn btn-danger btn-lg" {% if not is_sqlite_database %}disabled{% endif %}>
+          Datenbank unwiderruflich löschen
+        </button>
+        {% if not is_sqlite_database %}
+        <p class="backup-meta-hint">
+          Diese Installation verwendet kein SQLite. Bitte nutzen Sie das Datenbank-Management-System Ihres Providers für
+          Lösch- und Wiederherstellungsaufgaben.
+        </p>
+        {% endif %}
+      </fieldset>
+    </form>
+  </section>
+</div>
+{% endblock %}

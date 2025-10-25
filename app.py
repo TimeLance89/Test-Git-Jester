@@ -20,6 +20,7 @@ from collections import Counter, defaultdict
 from datetime import date, datetime, timedelta
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from io import StringIO
+from pathlib import Path
 from typing import Dict, List, Tuple
 import pandas as pd
 from sqlalchemy.exc import IntegrityError
@@ -36,6 +37,7 @@ from flask import (
     session,
     jsonify,
     Response,
+    current_app,
 )
 
 from functools import wraps
@@ -78,6 +80,56 @@ _COLOR_PALETTE = [
     "#facc15",
     "#6366f1",
 ]
+
+
+def _format_file_size(num_bytes: int | None) -> str:
+    """Wandelt eine Dateigröße in ein gut lesbares Format um."""
+
+    if num_bytes is None or num_bytes < 0:
+        return "–"
+
+    thresholds = [
+        (1024 ** 4, "TB"),
+        (1024 ** 3, "GB"),
+        (1024 ** 2, "MB"),
+        (1024, "KB"),
+    ]
+
+    for threshold, suffix in thresholds:
+        if num_bytes >= threshold:
+            value = num_bytes / threshold
+            return f"{value:.1f} {suffix}"
+
+    return f"{num_bytes} B"
+
+
+def _create_default_admin_account() -> None:
+    """Stellt sicher, dass ein Standard-Administrator existiert."""
+
+    existing_admin = Employee.query.filter_by(username="admin").first()
+    if existing_admin:
+        return
+
+    department = Department.query.order_by(Department.id.asc()).first()
+    if not department:
+        department = Department(
+            name="Administration",
+            color="#2563eb",
+            area="Verwaltung",
+        )
+        db.session.add(department)
+        db.session.flush()
+
+    admin_user = Employee(
+        name="Administrator",
+        username="admin",
+        is_admin=True,
+        department_id=department.id,
+        monthly_hours=160,
+    )
+    admin_user.set_password("admin")
+    db.session.add(admin_user)
+    db.session.commit()
 
 
 def _normalize_hex_color(value: str | None) -> str | None:
@@ -3526,6 +3578,14 @@ def create_app() -> Flask:
                 "state": "Verfügbar",
             },
             {
+                "id": "backup-mode",
+                "icon": "🛡️",
+                "title": "Backup-Modus öffnen",
+                "description": "Notfallmaßnahmen & Wartung für System-Administratoren.",
+                "href": url_for("backup_mode"),
+                "state": "Verfügbar",
+            },
+            {
                 "id": "sync-policies",
                 "icon": "🛡️",
                 "title": "Richtlinien synchronisieren",
@@ -3632,6 +3692,84 @@ def create_app() -> Flask:
             inactive_work_classes=inactive_work_classes,
             recommended_work_classes=recommended_work_classes,
         )
+
+    @app.route("/settings/backup-modus")
+    @super_admin_required
+    def backup_mode() -> str:
+        """Spezialbereich für Backups und Notfallmaßnahmen."""
+
+        employee_count = Employee.query.count()
+        department_count = Department.query.count()
+        shift_count = Shift.query.count()
+        leave_count = Leave.query.count()
+
+        backup_stats = [
+            {"label": "Gespeicherte Mitarbeitende", "value": employee_count},
+            {"label": "Aktive Abteilungen", "value": department_count},
+            {"label": "Einsatzdatensätze", "value": shift_count},
+            {"label": "Abwesenheiten", "value": leave_count},
+        ]
+
+        database_uri = current_app.config.get("SQLALCHEMY_DATABASE_URI", "")
+        db_file_path: Path | None = None
+        db_display_path = "Unbekannt"
+        db_file_size = "Nicht verfügbar"
+
+        if database_uri.startswith("sqlite:///"):
+            raw_path = database_uri.replace("sqlite:///", "", 1)
+            db_file_path = Path(raw_path)
+            if not db_file_path.is_absolute():
+                db_file_path = (Path(current_app.instance_path) / raw_path).resolve()
+
+            db_display_path = str(db_file_path)
+            if db_file_path.exists():
+                db_file_size = _format_file_size(db_file_path.stat().st_size)
+            else:
+                db_file_size = "Datei nicht gefunden"
+
+        return render_template(
+            "settings_backup.html",
+            backup_stats=backup_stats,
+            db_file_path=db_display_path,
+            db_file_size=db_file_size,
+            is_sqlite_database=database_uri.startswith("sqlite:///"),
+            last_checked=datetime.now(),
+        )
+
+    @app.route("/settings/backup-modus/datenbank-zuruecksetzen", methods=["POST"])
+    @super_admin_required
+    def reset_database() -> str:
+        """Leert die Datenbank und spielt Standardwerte erneut ein."""
+
+        confirmation = (request.form.get("confirmation") or "").strip().lower()
+        acknowledge = request.form.get("acknowledge") == "on"
+
+        if confirmation not in {"löschen", "loeschen"} or not acknowledge:
+            flash(
+                "Sicherheitsabfrage fehlgeschlagen. Bitte bestätigen Sie mit 'LÖSCHEN' und aktivierter Warnung.",
+                "danger",
+            )
+            return redirect(url_for("backup_mode"))
+
+        try:
+            db.session.remove()
+            db.drop_all()
+            db.create_all()
+            _create_default_admin_account()
+        except Exception as exc:  # pragma: no cover - sicherheitsrelevante Fehlerbehandlung
+            db.session.rollback()
+            current_app.logger.exception("Fehler beim Zurücksetzen der Datenbank", exc_info=exc)
+            flash("Zurücksetzen fehlgeschlagen. Details finden Sie im Log.", "danger")
+            return redirect(url_for("backup_mode"))
+
+        flash(
+            "Datenbank wurde gelöscht und mit Standardwerten initialisiert. Bitte melden Sie sich erneut mit admin/admin an.",
+            "success",
+        )
+        session.pop("user_id", None)
+        session.pop("is_admin", None)
+        session.pop("department_id", None)
+        return redirect(url_for("login"))
 
     def _parse_hours_value(raw_value: str | None) -> float | None:
         if raw_value is None:
