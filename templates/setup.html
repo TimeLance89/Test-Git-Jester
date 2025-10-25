@@ -1,248 +1,413 @@
 {% extends "layout.html" %}
 {% block title %}Ersteinrichtung - Xerxes{% endblock %}
 {% block content %}
-<div class="xerxes-auth" role="main">
-  <div class="xerxes-auth__background" aria-hidden="true">
-    <div class="xerxes-orb xerxes-orb--one"></div>
-    <div class="xerxes-orb xerxes-orb--two"></div>
-    <div class="xerxes-mesh"></div>
-  </div>
+<div class="setup-shell" role="main">
+  <section class="setup-hero">
+    <div class="setup-hero__badge">Ersteinrichtung</div>
+    <h1 class="setup-hero__title">Willkommen zu Ihrem Xerxes-Start</h1>
+    <p class="setup-hero__text">
+      In drei übersichtlichen Schritten richten Sie das Administrationskonto ein und erhalten direkten Zugriff auf das Planungscockpit.
+    </p>
 
-  <div class="xerxes-auth__card" aria-labelledby="xerxes-setup-heading">
-    <aside class="xerxes-auth__brand">
-      <div class="xerxes-logo" aria-hidden="true">
-        <span>X</span>
-      </div>
-      <div class="xerxes-brand__intro">
-        <p class="xerxes-brand__kicker">Ersteinrichtung</p>
-        <h1 id="xerxes-setup-heading">Willkommen bei Ihrem neuen Planungscockpit</h1>
-        <p class="xerxes-brand__text">
-          In wenigen Minuten ist das System einsatzbereit. Folgen Sie den Schritten und legen Sie Ihr persönliches Administrationskonto an.
-        </p>
-      </div>
-      <ol class="xerxes-setup__steps">
-        <li>
-          <span class="step">1</span>
-          <div>
-            <h3>Grunddaten eintragen</h3>
-            <p>Ihr Name und (optional) Ihre geschäftliche E-Mail-Adresse.</p>
-          </div>
-        </li>
-        <li>
-          <span class="step">2</span>
-          <div>
-            <h3>Benutzernamen festlegen</h3>
-            <p>Nutzen Sie ein eindeutiges Kürzel, z.&nbsp;B. vorname.nachname.</p>
-          </div>
-        </li>
-        <li>
-          <span class="step">3</span>
-          <div>
-            <h3>Sicheres Passwort wählen</h3>
-            <p>Mindestens 8 Zeichen – kombinieren Sie Buchstaben, Zahlen und Sonderzeichen.</p>
-          </div>
-        </li>
-      </ol>
-      <p class="xerxes-setup__footnote">Nach Abschluss erhalten Sie direkten Zugriff auf das Dashboard.</p>
-    </aside>
-
-    <section class="xerxes-auth__form" aria-labelledby="xerxes-form-heading">
-      <header class="xerxes-form__header">
-        <p class="xerxes-form__kicker">Los geht's</p>
-        <h2 id="xerxes-form-heading">Richten Sie Xerxes für Ihr Team ein</h2>
-        <p class="xerxes-form__subtext">
-          Wir erstellen gemeinsam Ihr erstes Administrationskonto. Sie können weitere Benutzer später im System ergänzen.
-        </p>
-      </header>
-
-      {% if errors %}
-      <div class="xerxes-alert" role="alert">
-        <h3>Bitte korrigieren Sie die folgenden Angaben:</h3>
-        <ul>
-          {% for error in errors %}
-          <li>{{ error }}</li>
-          {% endfor %}
-        </ul>
-      </div>
-      {% endif %}
-
-      <form method="post" class="xerxes-form" novalidate>
-        <div class="xerxes-input">
-          <label for="name">Vollständiger Name</label>
-          <div class="xerxes-input__field">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12ZM12 14C9.33 14 4 15.34 4 18V20H20V18C20 15.34 14.67 14 12 14Z"/></svg>
-            <input
-              type="text"
-              id="name"
-              name="name"
-              autocomplete="name"
-              placeholder="z.B. Alex Müller"
-              required
-              value="{{ form_data.name }}"
-            />
-          </div>
+    <ol class="setup-steps" aria-label="Setup Schritte">
+      <li>
+        <span class="setup-steps__counter" aria-hidden="true">01</span>
+        <div>
+          <h2>Persönliche Angaben</h2>
+          <p>Vollständiger Name und – wenn vorhanden – Ihre geschäftliche E-Mail-Adresse.</p>
         </div>
-
-        <div class="xerxes-input">
-          <label for="email">E-Mail-Adresse <span>(optional)</span></label>
-          <div class="xerxes-input__field">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4H20C21.1 4 22 4.9 22 6V18C22 19.1 21.1 20 20 20H4C2.9 20 2 19.1 2 18V6C2 4.9 2.9 4 4 4ZM20 8L12 13L4 8V6L12 11L20 6V8Z"/></svg>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              autocomplete="email"
-              placeholder="name@unternehmen.de"
-              value="{{ form_data.email }}"
-            />
-          </div>
+      </li>
+      <li>
+        <span class="setup-steps__counter" aria-hidden="true">02</span>
+        <div>
+          <h2>Anmeldedaten definieren</h2>
+          <p>Benutzername wählen, der im Team eindeutig identifizierbar ist.</p>
         </div>
-
-        <div class="xerxes-input">
-          <label for="username">Benutzername</label>
-          <div class="xerxes-input__field">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12ZM12 14C9.33 14 4 15.34 4 18V20H20V18C20 15.34 14.67 14 12 14Z"/></svg>
-            <input
-              type="text"
-              id="username"
-              name="username"
-              autocomplete="username"
-              placeholder="z.B. a.mueller"
-              required
-              value="{{ form_data.username }}"
-            />
-          </div>
+      </li>
+      <li>
+        <span class="setup-steps__counter" aria-hidden="true">03</span>
+        <div>
+          <h2>Passwort absichern</h2>
+          <p>Mindestens 8 Zeichen, idealerweise mit Buchstaben, Zahlen und Sonderzeichen.</p>
         </div>
+      </li>
+    </ol>
 
-        <div class="xerxes-input">
+    <p class="setup-hero__footnote">Weitere Konten lassen sich nach dem Login jederzeit ergänzen.</p>
+  </section>
+
+  <section class="setup-card" aria-labelledby="setup-form-heading">
+    <header class="setup-card__header">
+      <p class="setup-card__kicker">Los geht's</p>
+      <h2 id="setup-form-heading">Administrationskonto erstellen</h2>
+      <p>Tragen Sie die folgenden Angaben ein. Wir führen Sie Schritt für Schritt durch den Prozess.</p>
+    </header>
+
+    {% if errors %}
+    <div class="setup-alert" role="alert" aria-live="polite">
+      <h3>Bitte überprüfen Sie Ihre Eingaben</h3>
+      <ul>
+        {% for error in errors %}
+        <li>{{ error }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    <form method="post" class="setup-form" novalidate>
+      <div class="setup-field">
+        <label for="name">Vollständiger Name</label>
+        <input
+          type="text"
+          id="name"
+          name="name"
+          autocomplete="name"
+          placeholder="z. B. Alex Müller"
+          required
+          value="{{ form_data.name }}"
+        />
+      </div>
+
+      <div class="setup-field">
+        <label for="email">E-Mail-Adresse <span>(optional)</span></label>
+        <input
+          type="email"
+          id="email"
+          name="email"
+          autocomplete="email"
+          placeholder="name@unternehmen.de"
+          value="{{ form_data.email }}"
+        />
+      </div>
+
+      <div class="setup-field">
+        <label for="username">Benutzername</label>
+        <input
+          type="text"
+          id="username"
+          name="username"
+          autocomplete="username"
+          placeholder="z. B. a.mueller"
+          required
+          value="{{ form_data.username }}"
+        />
+      </div>
+
+      <div class="setup-grid">
+        <div class="setup-field">
           <label for="password">Passwort</label>
-          <div class="xerxes-input__field">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 8H7V6C7 3.79 8.79 2 11 2C13.21 2 15 3.79 15 6V8H17C18.1 8 19 8.9 19 10V20C19 21.1 18.1 22 17 22H7C5.9 22 5 21.1 5 20V10C5 8.9 5.9 8 7 8H17ZM13 16.17V14H11V16.17C10.41 16.58 10 17.26 10 18C10 19.1 10.9 20 12 20C13.1 20 14 19.1 14 18C14 17.26 13.59 16.58 13 16.17Z"/></svg>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              autocomplete="new-password"
-              placeholder="Mindestens 8 Zeichen"
-              required
-            />
-          </div>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            autocomplete="new-password"
+            placeholder="Mindestens 8 Zeichen"
+            required
+          />
         </div>
 
-        <div class="xerxes-input">
+        <div class="setup-field">
           <label for="confirm_password">Passwort bestätigen</label>
-          <div class="xerxes-input__field">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12ZM12 14C9.33 14 4 15.34 4 18V20H20V18C20 15.34 14.67 14 12 14Z"/></svg>
-            <input
-              type="password"
-              id="confirm_password"
-              name="confirm_password"
-              autocomplete="new-password"
-              placeholder="Nochmals eingeben"
-              required
-            />
-          </div>
+          <input
+            type="password"
+            id="confirm_password"
+            name="confirm_password"
+            autocomplete="new-password"
+            placeholder="Nochmals eingeben"
+            required
+          />
         </div>
+      </div>
 
-        <button type="submit" class="xerxes-button">
-          <span>Setup abschließen</span>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12H19M19 12L13 6M19 12L13 18"/></svg>
-        </button>
-
-        <p class="xerxes-form__support">
-          Weitere Benutzerkonten lassen sich nach der Anmeldung bequem über die Benutzerverwaltung anlegen.
-        </p>
-      </form>
-    </section>
-  </div>
+      <button type="submit" class="setup-submit">
+        <span>Setup abschließen</span>
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </button>
+    </form>
+  </section>
 </div>
 
 <style>
-.xerxes-setup__steps {
-  list-style: none;
-  padding: 0;
-  margin: 2rem 0 2.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
+.setup-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 480px);
+  min-height: calc(100vh - 6rem);
+  gap: 3rem;
+  padding: 4rem clamp(2rem, 4vw, 5rem);
+  background: radial-gradient(120% 160% at 0% 0%, #f1f5f9 0%, #e2e8f0 45%, #cbd5f5 100%);
+  position: relative;
 }
 
-.xerxes-setup__steps li {
+.setup-shell::before {
+  content: "";
+  position: absolute;
+  inset: 2rem;
+  border-radius: 32px;
+  background: rgba(255, 255, 255, 0.55);
+  box-shadow: 0 40px 120px rgba(15, 23, 42, 0.18);
+  z-index: 0;
+  backdrop-filter: blur(14px);
+}
+
+.setup-hero,
+.setup-card {
+  position: relative;
+  z-index: 1;
+  border-radius: 28px;
+  padding: clamp(2rem, 3vw, 3rem);
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 30px 80px rgba(15, 23, 42, 0.15);
+  backdrop-filter: blur(12px);
+}
+
+.setup-hero {
+  color: #0f172a;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.setup-hero__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.35rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.15), rgba(14, 165, 233, 0.25));
+  color: #312e81;
+}
+
+.setup-hero__title {
+  font-size: clamp(2rem, 3vw, 2.6rem);
+  margin: 0;
+  font-weight: 700;
+}
+
+.setup-hero__text {
+  margin: 0;
+  max-width: 34ch;
+  font-size: 1rem;
+  color: #334155;
+}
+
+.setup-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.8rem;
+}
+
+.setup-steps li {
   display: grid;
   grid-template-columns: auto 1fr;
-  gap: 1rem;
+  gap: 1.5rem;
   align-items: start;
 }
 
-.xerxes-setup__steps .step {
-  width: 42px;
-  height: 42px;
-  border-radius: 14px;
-  background: rgba(248, 250, 252, 0.15);
-  display: grid;
-  place-items: center;
-  font-weight: 600;
-  font-size: 1.2rem;
-  box-shadow: inset 0 0 0 1px rgba(248, 250, 252, 0.35);
-}
-
-.xerxes-setup__steps h3 {
-  margin: 0 0 0.25rem;
-  font-size: 1.05rem;
-  font-weight: 600;
-}
-
-.xerxes-setup__steps p {
-  margin: 0;
-  font-size: 0.9rem;
-  color: rgba(226, 232, 240, 0.8);
-}
-
-.xerxes-setup__footnote {
-  margin-top: auto;
-  font-size: 0.85rem;
-  color: rgba(226, 232, 240, 0.8);
-}
-
-.xerxes-alert {
+.setup-steps__counter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
   border-radius: 18px;
-  padding: 1.5rem;
-  background: linear-gradient(135deg, rgba(248, 113, 113, 0.15), rgba(248, 113, 113, 0.05));
-  border: 1px solid rgba(248, 113, 113, 0.25);
-  color: #991b1b;
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.18), rgba(14, 165, 233, 0.25));
+  color: #1e1b4b;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.setup-steps h2 {
+  margin: 0 0 0.4rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.setup-steps p {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #475569;
+}
+
+.setup-hero__footnote {
+  margin-top: auto;
+  font-size: 0.9rem;
+  color: #475569;
+}
+
+.setup-card__header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
   margin-bottom: 2rem;
 }
 
-.xerxes-alert h3 {
-  margin: 0 0 0.75rem;
-  font-size: 1.05rem;
-}
-
-.xerxes-alert ul {
+.setup-card__kicker {
   margin: 0;
-  padding-left: 1.2rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.78rem;
+  color: #6366f1;
+  font-weight: 700;
 }
 
-.xerxes-alert li + li {
+.setup-card__header h2 {
+  margin: 0;
+  font-size: clamp(1.6rem, 2.5vw, 2rem);
+  color: #0f172a;
+}
+
+.setup-card__header p {
+  margin: 0;
+  color: #475569;
+  max-width: 38ch;
+}
+
+.setup-alert {
+  border-radius: 18px;
+  padding: 1.4rem 1.6rem;
+  background: linear-gradient(135deg, rgba(248, 113, 113, 0.15), rgba(248, 113, 113, 0.05));
+  border: 1px solid rgba(248, 113, 113, 0.25);
+  color: #9f1239;
+  margin-bottom: 2rem;
+}
+
+.setup-alert h3 {
+  margin: 0 0 0.6rem;
+  font-size: 1rem;
+}
+
+.setup-alert ul {
+  margin: 0;
+  padding-left: 1.3rem;
+}
+
+.setup-alert li + li {
   margin-top: 0.35rem;
 }
 
-.xerxes-input label span {
-  font-size: 0.85rem;
+.setup-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.4rem;
+}
+
+.setup-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.4rem;
+}
+
+.setup-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.setup-field label {
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.setup-field label span {
+  font-weight: 500;
   color: #64748b;
 }
 
-@media (max-width: 900px) {
-  .xerxes-auth__card {
+.setup-field input {
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  border-radius: 14px;
+  padding: 0.85rem 1rem;
+  font-size: 0.98rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.setup-field input:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
+}
+
+.setup-submit {
+  margin-top: 0.6rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  border: none;
+  border-radius: 16px;
+  padding: 0.9rem 1.4rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: white;
+  background: linear-gradient(135deg, #4f46e5, #0ea5e9);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.setup-submit svg {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.8;
+}
+
+.setup-submit:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 18px 35px rgba(14, 165, 233, 0.3);
+}
+
+.setup-submit:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.3);
+}
+
+@media (max-width: 1100px) {
+  .setup-shell {
+    grid-template-columns: 1fr;
+    padding: 3rem clamp(1.5rem, 5vw, 3rem);
+    gap: 2.5rem;
+  }
+
+  .setup-shell::before {
+    inset: 1.5rem;
+  }
+
+  .setup-hero {
+    order: 2;
+  }
+}
+
+@media (max-width: 640px) {
+  .setup-shell {
+    padding: 2.5rem 1.25rem 3.5rem;
+  }
+
+  .setup-shell::before {
+    inset: 1rem;
+  }
+
+  .setup-grid {
     grid-template-columns: 1fr;
   }
 
-  .xerxes-auth__brand {
-    padding: 2.5rem 2rem;
+  .setup-steps {
+    gap: 1.2rem;
   }
 
-  .xerxes-setup__steps {
-    margin-bottom: 1.5rem;
+  .setup-steps__counter {
+    width: 46px;
+    height: 46px;
+    font-size: 0.9rem;
   }
 }
 </style>
