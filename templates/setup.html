@@ -9,6 +9,21 @@
       In drei übersichtlichen Schritten richten Sie das Administrationskonto ein und erhalten direkten Zugriff auf das Planungscockpit.
     </p>
 
+    <ul class="setup-stats" aria-hidden="true">
+      <li>
+        <span>3&nbsp;Min.</span>
+        <p>bis zum ersten Login</p>
+      </li>
+      <li>
+        <span>100%</span>
+        <p>freie Passwortwahl</p>
+      </li>
+      <li>
+        <span>Live</span>
+        <p>Visualisierte Einrichtung</p>
+      </li>
+    </ul>
+
     <ol class="setup-steps" aria-label="Setup Schritte">
       <li>
         <span class="setup-steps__counter" aria-hidden="true">01</span>
@@ -27,13 +42,19 @@
       <li>
         <span class="setup-steps__counter" aria-hidden="true">03</span>
         <div>
-          <h2>Passwort absichern</h2>
-          <p>Mindestens 8 Zeichen, idealerweise mit Buchstaben, Zahlen und Sonderzeichen.</p>
+          <h2>Passwort festlegen</h2>
+          <p>Wählen Sie ein Passwort Ihrer Wahl – ohne Vorgaben oder Mindestlänge.</p>
         </div>
       </li>
     </ol>
 
     <p class="setup-hero__footnote">Weitere Konten lassen sich nach dem Login jederzeit ergänzen.</p>
+    <div class="setup-visual" aria-hidden="true">
+      <div class="setup-visual__orb setup-visual__orb--primary"></div>
+      <div class="setup-visual__orb setup-visual__orb--accent"></div>
+      <div class="setup-visual__ring"></div>
+      <div class="setup-visual__spark"></div>
+    </div>
   </section>
 
   <section class="setup-card" aria-labelledby="setup-form-heading">
@@ -101,7 +122,7 @@
             id="password"
             name="password"
             autocomplete="new-password"
-            placeholder="Mindestens 8 Zeichen"
+            placeholder="Wunschpasswort"
             required
           />
         </div>
@@ -134,8 +155,13 @@
   min-height: calc(100vh - 6rem);
   gap: 3rem;
   padding: 4rem clamp(2rem, 4vw, 5rem);
-  background: radial-gradient(120% 160% at 0% 0%, #f1f5f9 0%, #e2e8f0 45%, #cbd5f5 100%);
+  background: radial-gradient(120% 160% at 0% 0%, rgba(241, 245, 249, 0.95) 0%, rgba(226, 232, 240, 0.92) 45%, rgba(203, 213, 245, 0.9) 100%),
+    linear-gradient(135deg, rgba(99, 102, 241, 0.16), rgba(14, 165, 233, 0.12));
+  background-size: 120% 120%, 200% 200%;
+  background-position: 0% 0%, 0% 0%;
+  animation: setupGradient 24s ease-in-out infinite;
   position: relative;
+  overflow: hidden;
 }
 
 .setup-shell::before {
@@ -147,6 +173,20 @@
   box-shadow: 0 40px 120px rgba(15, 23, 42, 0.18);
   z-index: 0;
   backdrop-filter: blur(14px);
+}
+
+.setup-shell::after {
+  content: "";
+  position: absolute;
+  width: 420px;
+  height: 420px;
+  top: -140px;
+  right: -120px;
+  background: radial-gradient(circle at center, rgba(99, 102, 241, 0.42), rgba(37, 99, 235, 0.1) 55%, transparent 72%);
+  filter: blur(0.5px);
+  z-index: 0;
+  animation: orbDrift 18s ease-in-out infinite;
+  opacity: 0.75;
 }
 
 .setup-hero,
@@ -165,6 +205,7 @@
   display: flex;
   flex-direction: column;
   gap: 2rem;
+  position: relative;
 }
 
 .setup-hero__badge {
@@ -194,6 +235,47 @@
   color: #334155;
 }
 
+.setup-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.2rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.setup-stats li {
+  background: rgba(99, 102, 241, 0.08);
+  border-radius: 18px;
+  padding: 1rem 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  animation: fadeSlide 0.9s ease forwards;
+  opacity: 0;
+  transform: translateY(14px);
+}
+
+.setup-stats li:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.setup-stats li:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+.setup-stats span {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #312e81;
+}
+
+.setup-stats p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #475569;
+}
+
 .setup-steps {
   list-style: none;
   margin: 0;
@@ -208,6 +290,9 @@
   grid-template-columns: auto 1fr;
   gap: 1.5rem;
   align-items: start;
+  animation: fadeSlide 0.8s ease forwards;
+  opacity: 0;
+  transform: translateY(18px);
 }
 
 .setup-steps__counter {
@@ -240,6 +325,55 @@
   margin-top: auto;
   font-size: 0.9rem;
   color: #475569;
+}
+
+.setup-visual {
+  position: absolute;
+  inset: auto 1rem -1rem auto;
+  width: clamp(180px, 28vw, 260px);
+  height: clamp(180px, 28vw, 260px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.setup-visual__orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(0.2px);
+  mix-blend-mode: screen;
+}
+
+.setup-visual__orb--primary {
+  inset: 8% 14% auto auto;
+  background: radial-gradient(circle at 30% 30%, rgba(96, 165, 250, 0.9), rgba(59, 130, 246, 0.2) 60%, transparent 70%);
+  animation: orbPulse 12s ease-in-out infinite;
+}
+
+.setup-visual__orb--accent {
+  inset: auto 6% 8% auto;
+  background: radial-gradient(circle at 70% 70%, rgba(244, 114, 182, 0.9), rgba(147, 51, 234, 0.2) 60%, transparent 72%);
+  animation: orbPulse 15s ease-in-out infinite reverse;
+}
+
+.setup-visual__ring {
+  position: absolute;
+  inset: 18% 8% auto auto;
+  width: 74%;
+  height: 74%;
+  border-radius: 50%;
+  border: 2px solid rgba(99, 102, 241, 0.3);
+  animation: orbit 18s linear infinite;
+}
+
+.setup-visual__spark {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  inset: 45% auto auto 22%;
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(96, 165, 250, 0.7));
+  box-shadow: 0 0 25px rgba(96, 165, 250, 0.8);
+  animation: sparkBlink 4s ease-in-out infinite;
 }
 
 .setup-card__header {
@@ -326,7 +460,7 @@
   border-radius: 14px;
   padding: 0.85rem 1rem;
   font-size: 0.98rem;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
   background: rgba(255, 255, 255, 0.9);
 }
 
@@ -334,6 +468,7 @@
   outline: none;
   border-color: #6366f1;
   box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
+  transform: translateY(-1px);
 }
 
 .setup-submit {
@@ -349,8 +484,12 @@
   font-weight: 600;
   color: white;
   background: linear-gradient(135deg, #4f46e5, #0ea5e9);
+  background-size: 220% 220%;
+  animation: buttonFlow 8s ease infinite;
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  position: relative;
+  overflow: hidden;
 }
 
 .setup-submit svg {
@@ -362,13 +501,132 @@
 }
 
 .setup-submit:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 18px 35px rgba(14, 165, 233, 0.3);
+  transform: translateY(-3px) scale(1.01);
+  box-shadow: 0 20px 40px rgba(14, 165, 233, 0.32);
 }
 
 .setup-submit:focus-visible {
   outline: none;
   box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.3);
+}
+
+.setup-submit::before {
+  content: "";
+  position: absolute;
+  inset: -60% -20% auto;
+  height: 180%;
+  background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.65), transparent 65%);
+  opacity: 0.6;
+  transform: translateX(-120%) rotate(12deg);
+  animation: buttonSheen 4.6s ease-in-out infinite;
+}
+
+.setup-submit:hover::before {
+  opacity: 0.8;
+}
+
+.setup-submit span {
+  position: relative;
+  z-index: 1;
+}
+
+.setup-submit svg {
+  position: relative;
+  z-index: 1;
+}
+
+.setup-steps li:nth-child(1) {
+  animation-delay: 0.15s;
+}
+
+.setup-steps li:nth-child(2) {
+  animation-delay: 0.3s;
+}
+
+.setup-steps li:nth-child(3) {
+  animation-delay: 0.45s;
+}
+
+@keyframes setupGradient {
+  0%,
+  100% {
+    background-position: 0% 0%, 0% 0%;
+  }
+  50% {
+    background-position: 50% 50%, 100% 100%;
+  }
+}
+
+@keyframes fadeSlide {
+  0% {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes orbDrift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(-30px, 20px, 0) scale(1.05);
+  }
+}
+
+@keyframes orbPulse {
+  0%,
+  100% {
+    transform: scale(1) translate3d(0, 0, 0);
+  }
+  50% {
+    transform: scale(1.08) translate3d(6px, -8px, 0);
+  }
+}
+
+@keyframes orbit {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes sparkBlink {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+@keyframes buttonFlow {
+  0%,
+  100% {
+    background-position: 0% 0%;
+  }
+  50% {
+    background-position: 100% 100%;
+  }
+}
+
+@keyframes buttonSheen {
+  0%,
+  100% {
+    transform: translateX(-120%) rotate(12deg);
+  }
+  50% {
+    transform: translateX(120%) rotate(12deg);
+  }
 }
 
 @media (max-width: 1100px) {
@@ -396,6 +654,13 @@
     inset: 1rem;
   }
 
+  .setup-shell::after {
+    width: 280px;
+    height: 280px;
+    top: -110px;
+    right: -120px;
+  }
+
   .setup-grid {
     grid-template-columns: 1fr;
   }
@@ -408,6 +673,10 @@
     width: 46px;
     height: 46px;
     font-size: 0.9rem;
+  }
+
+  .setup-stats {
+    grid-template-columns: 1fr;
   }
 }
 </style>
