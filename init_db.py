@@ -20,13 +20,13 @@ def init_database():
                 dept = Department(name='Administration', color='#2563eb', area='Verwaltung')
                 db.session.add(dept)
                 db.session.commit()
-            
+
             # Create admin user
             admin_user = Employee(
                 name='Administrator',
                 username='admin',
                 password_hash=generate_password_hash('admin'),
-                department_id=dept.id,
+                department_id=None,
                 monthly_hours=160,
                 is_admin=True
             )
@@ -34,7 +34,18 @@ def init_database():
             db.session.commit()
             print("✓ Admin user created successfully (username: admin, password: admin)")
         else:
-            print("✓ Admin user already exists")
+            updated = False
+            if admin_user.department_id is not None:
+                admin_user.department_id = None
+                updated = True
+            if not admin_user.is_admin:
+                admin_user.is_admin = True
+                updated = True
+            if updated:
+                db.session.commit()
+                print("✓ Existing admin user promoted to super admin")
+            else:
+                print("✓ Admin user already exists")
         
         print("✓ Database initialized successfully")
 

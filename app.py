@@ -170,6 +170,15 @@ def _create_default_admin_account() -> None:
 
     existing_admin = Employee.query.filter_by(username="admin").first()
     if existing_admin:
+        updated = False
+        if existing_admin.department_id is not None:
+            existing_admin.department_id = None
+            updated = True
+        if not existing_admin.is_admin:
+            existing_admin.is_admin = True
+            updated = True
+        if updated:
+            db.session.commit()
         return
 
     department = Department.query.order_by(Department.id.asc()).first()
@@ -186,7 +195,7 @@ def _create_default_admin_account() -> None:
         name="Administrator",
         username="admin",
         is_admin=True,
-        department_id=department.id,
+        department_id=None,
         monthly_hours=160,
     )
     admin_user.set_password("admin")
