@@ -317,6 +317,31 @@
           <p>Export-Funktionen und Benachrichtigungen folgen mit dem nächsten Release.</p>
         </div>
       </article>
+
+      <article class="settings-card settings-card--danger">
+        <header class="settings-card-header">
+          <div>
+            <h3>Backup &amp; Wiederherstellung</h3>
+            <p>Notfallmaßnahmen für Systemausfälle oder Testläufe.</p>
+          </div>
+          <span class="settings-chip settings-chip--danger">Nur Super-Admins</span>
+        </header>
+        <div class="settings-danger-content">
+          <p>
+            Nutzen Sie den gesicherten Backup-Modus, um Datenbank-Sicherungen zu erstellen, Wiederherstellungen zu prüfen
+            oder die Plattform für Teststellungen vollständig zurückzusetzen. Alle Aktionen erfordern eine ausdrückliche
+            Bestätigung.
+          </p>
+          <ul>
+            <li>Datenspeicherpfad und aktuelle Größe einsehen</li>
+            <li>Vorbereitete Sicherungsleitfäden abrufen</li>
+            <li>Datenbank nach schriftlicher Bestätigung leeren</li>
+          </ul>
+        </div>
+        <footer class="settings-card-footer">
+          <a class="btn btn-danger" href="{{ url_for('backup_mode') }}">Backup-Modus starten</a>
+        </footer>
+      </article>
     </div>
   </section>
 </div>
