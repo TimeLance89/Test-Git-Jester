@@ -1,0 +1,249 @@
+{% extends "layout.html" %}
+{% block title %}Ersteinrichtung - Xerxes{% endblock %}
+{% block content %}
+<div class="xerxes-auth" role="main">
+  <div class="xerxes-auth__background" aria-hidden="true">
+    <div class="xerxes-orb xerxes-orb--one"></div>
+    <div class="xerxes-orb xerxes-orb--two"></div>
+    <div class="xerxes-mesh"></div>
+  </div>
+
+  <div class="xerxes-auth__card" aria-labelledby="xerxes-setup-heading">
+    <aside class="xerxes-auth__brand">
+      <div class="xerxes-logo" aria-hidden="true">
+        <span>X</span>
+      </div>
+      <div class="xerxes-brand__intro">
+        <p class="xerxes-brand__kicker">Ersteinrichtung</p>
+        <h1 id="xerxes-setup-heading">Willkommen bei Ihrem neuen Planungscockpit</h1>
+        <p class="xerxes-brand__text">
+          In wenigen Minuten ist das System einsatzbereit. Folgen Sie den Schritten und legen Sie Ihr persönliches Administrationskonto an.
+        </p>
+      </div>
+      <ol class="xerxes-setup__steps">
+        <li>
+          <span class="step">1</span>
+          <div>
+            <h3>Grunddaten eintragen</h3>
+            <p>Ihr Name und (optional) Ihre geschäftliche E-Mail-Adresse.</p>
+          </div>
+        </li>
+        <li>
+          <span class="step">2</span>
+          <div>
+            <h3>Benutzernamen festlegen</h3>
+            <p>Nutzen Sie ein eindeutiges Kürzel, z.&nbsp;B. vorname.nachname.</p>
+          </div>
+        </li>
+        <li>
+          <span class="step">3</span>
+          <div>
+            <h3>Sicheres Passwort wählen</h3>
+            <p>Mindestens 8 Zeichen – kombinieren Sie Buchstaben, Zahlen und Sonderzeichen.</p>
+          </div>
+        </li>
+      </ol>
+      <p class="xerxes-setup__footnote">Nach Abschluss erhalten Sie direkten Zugriff auf das Dashboard.</p>
+    </aside>
+
+    <section class="xerxes-auth__form" aria-labelledby="xerxes-form-heading">
+      <header class="xerxes-form__header">
+        <p class="xerxes-form__kicker">Los geht's</p>
+        <h2 id="xerxes-form-heading">Richten Sie Xerxes für Ihr Team ein</h2>
+        <p class="xerxes-form__subtext">
+          Wir erstellen gemeinsam Ihr erstes Administrationskonto. Sie können weitere Benutzer später im System ergänzen.
+        </p>
+      </header>
+
+      {% if errors %}
+      <div class="xerxes-alert" role="alert">
+        <h3>Bitte korrigieren Sie die folgenden Angaben:</h3>
+        <ul>
+          {% for error in errors %}
+          <li>{{ error }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+
+      <form method="post" class="xerxes-form" novalidate>
+        <div class="xerxes-input">
+          <label for="name">Vollständiger Name</label>
+          <div class="xerxes-input__field">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12ZM12 14C9.33 14 4 15.34 4 18V20H20V18C20 15.34 14.67 14 12 14Z"/></svg>
+            <input
+              type="text"
+              id="name"
+              name="name"
+              autocomplete="name"
+              placeholder="z.B. Alex Müller"
+              required
+              value="{{ form_data.name }}"
+            />
+          </div>
+        </div>
+
+        <div class="xerxes-input">
+          <label for="email">E-Mail-Adresse <span>(optional)</span></label>
+          <div class="xerxes-input__field">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4H20C21.1 4 22 4.9 22 6V18C22 19.1 21.1 20 20 20H4C2.9 20 2 19.1 2 18V6C2 4.9 2.9 4 4 4ZM20 8L12 13L4 8V6L12 11L20 6V8Z"/></svg>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              autocomplete="email"
+              placeholder="name@unternehmen.de"
+              value="{{ form_data.email }}"
+            />
+          </div>
+        </div>
+
+        <div class="xerxes-input">
+          <label for="username">Benutzername</label>
+          <div class="xerxes-input__field">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12ZM12 14C9.33 14 4 15.34 4 18V20H20V18C20 15.34 14.67 14 12 14Z"/></svg>
+            <input
+              type="text"
+              id="username"
+              name="username"
+              autocomplete="username"
+              placeholder="z.B. a.mueller"
+              required
+              value="{{ form_data.username }}"
+            />
+          </div>
+        </div>
+
+        <div class="xerxes-input">
+          <label for="password">Passwort</label>
+          <div class="xerxes-input__field">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 8H7V6C7 3.79 8.79 2 11 2C13.21 2 15 3.79 15 6V8H17C18.1 8 19 8.9 19 10V20C19 21.1 18.1 22 17 22H7C5.9 22 5 21.1 5 20V10C5 8.9 5.9 8 7 8H17ZM13 16.17V14H11V16.17C10.41 16.58 10 17.26 10 18C10 19.1 10.9 20 12 20C13.1 20 14 19.1 14 18C14 17.26 13.59 16.58 13 16.17Z"/></svg>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              autocomplete="new-password"
+              placeholder="Mindestens 8 Zeichen"
+              required
+            />
+          </div>
+        </div>
+
+        <div class="xerxes-input">
+          <label for="confirm_password">Passwort bestätigen</label>
+          <div class="xerxes-input__field">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12ZM12 14C9.33 14 4 15.34 4 18V20H20V18C20 15.34 14.67 14 12 14Z"/></svg>
+            <input
+              type="password"
+              id="confirm_password"
+              name="confirm_password"
+              autocomplete="new-password"
+              placeholder="Nochmals eingeben"
+              required
+            />
+          </div>
+        </div>
+
+        <button type="submit" class="xerxes-button">
+          <span>Setup abschließen</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12H19M19 12L13 6M19 12L13 18"/></svg>
+        </button>
+
+        <p class="xerxes-form__support">
+          Weitere Benutzerkonten lassen sich nach der Anmeldung bequem über die Benutzerverwaltung anlegen.
+        </p>
+      </form>
+    </section>
+  </div>
+</div>
+
+<style>
+.xerxes-setup__steps {
+  list-style: none;
+  padding: 0;
+  margin: 2rem 0 2.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.xerxes-setup__steps li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 1rem;
+  align-items: start;
+}
+
+.xerxes-setup__steps .step {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  background: rgba(248, 250, 252, 0.15);
+  display: grid;
+  place-items: center;
+  font-weight: 600;
+  font-size: 1.2rem;
+  box-shadow: inset 0 0 0 1px rgba(248, 250, 252, 0.35);
+}
+
+.xerxes-setup__steps h3 {
+  margin: 0 0 0.25rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.xerxes-setup__steps p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: rgba(226, 232, 240, 0.8);
+}
+
+.xerxes-setup__footnote {
+  margin-top: auto;
+  font-size: 0.85rem;
+  color: rgba(226, 232, 240, 0.8);
+}
+
+.xerxes-alert {
+  border-radius: 18px;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, rgba(248, 113, 113, 0.15), rgba(248, 113, 113, 0.05));
+  border: 1px solid rgba(248, 113, 113, 0.25);
+  color: #991b1b;
+  margin-bottom: 2rem;
+}
+
+.xerxes-alert h3 {
+  margin: 0 0 0.75rem;
+  font-size: 1.05rem;
+}
+
+.xerxes-alert ul {
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+.xerxes-alert li + li {
+  margin-top: 0.35rem;
+}
+
+.xerxes-input label span {
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+@media (max-width: 900px) {
+  .xerxes-auth__card {
+    grid-template-columns: 1fr;
+  }
+
+  .xerxes-auth__brand {
+    padding: 2.5rem 2rem;
+  }
+
+  .xerxes-setup__steps {
+    margin-bottom: 1.5rem;
+  }
+}
+</style>
+{% endblock %}

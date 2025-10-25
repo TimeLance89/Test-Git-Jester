@@ -41,6 +41,7 @@ from flask import (
     Response,
     current_app,
     send_from_directory,
+    has_app_context,
 )
 
 from functools import wraps
@@ -1389,19 +1390,118 @@ def create_app() -> Flask:
 
     with app.app_context():
         _upgrade_db()
-        try:
-            if not Employee.query.filter_by(is_admin=True).first():
-                admin = Employee(
-                    name="Administrator",
-                    short_code="ADM",
-                    username="admin",
-                    is_admin=True,
+
+    def _setup_query_requires_user() -> bool:
+        return (
+            db.session.query(Employee.id)
+            .filter(Employee.username.isnot(None))
+            .filter(func.length(func.trim(Employee.username)) > 0)
+            .first()
+            is None
+        )
+
+    def _is_initial_setup_required() -> bool:
+        """Prüft, ob noch kein anmeldefähiger Benutzer existiert."""
+
+        if has_app_context():
+            return _setup_query_requires_user()
+
+        with app.app_context():
+            return _setup_query_requires_user()
+
+    def _is_setup_request() -> bool:
+        endpoint = request.endpoint or ""
+        if endpoint.startswith("static") or request.path.startswith("/static/"):
+            return True
+        return endpoint in {"setup"}
+
+    @app.before_request
+    def ensure_setup_completed():
+        if _is_initial_setup_required() and not _is_setup_request():
+            return redirect(url_for("setup"))
+
+    @app.route("/setup", methods=["GET", "POST"])
+    def setup() -> str:
+        """Geführtes Setup zur Erstellung des ersten Administrators."""
+
+        if not _is_initial_setup_required():
+            flash("Das System wurde bereits eingerichtet. Bitte melden Sie sich an.", "info")
+            return redirect(url_for("login"))
+
+        errors: list[str] = []
+        form_data = {
+            "name": (request.form.get("name") or "").strip(),
+            "username": (request.form.get("username") or "").strip(),
+            "email": (request.form.get("email") or "").strip(),
+        }
+
+        if request.method == "POST":
+            password = request.form.get("password", "")
+            confirm_password = request.form.get("confirm_password", "")
+
+            if not form_data["name"]:
+                errors.append("Bitte geben Sie einen vollständigen Namen ein.")
+
+            if not form_data["username"]:
+                errors.append("Bitte wählen Sie einen Benutzernamen aus.")
+
+            if password.strip() == "":
+                errors.append("Bitte vergeben Sie ein Passwort.")
+            elif len(password) < 8:
+                errors.append("Das Passwort muss mindestens 8 Zeichen lang sein.")
+
+            if password != confirm_password:
+                errors.append("Die eingegebenen Passwörter stimmen nicht überein.")
+
+            if form_data["username"]:
+                username_lower = form_data["username"].lower()
+                existing_username = (
+                    db.session.query(Employee.id)
+                    .filter(func.lower(Employee.username) == username_lower)
+                    .first()
                 )
-                admin.set_password("admin")
-                db.session.add(admin)
-                db.session.commit()
-        except Exception:
-            pass
+                if existing_username:
+                    errors.append("Der gewählte Benutzername ist bereits vergeben.")
+
+            if not errors:
+                try:
+                    if Department.query.count() == 0:
+                        db.session.add(
+                            Department(
+                                name="Administration",
+                                color="#2563eb",
+                                area="Verwaltung",
+                            )
+                        )
+
+                    new_admin = Employee(
+                        name=form_data["name"],
+                        username=form_data["username"],
+                        email=form_data["email"] or None,
+                        is_admin=True,
+                        monthly_hours=160,
+                    )
+                    new_admin.set_password(password)
+                    db.session.add(new_admin)
+                    db.session.commit()
+
+                    session.clear()
+                    session["user_id"] = new_admin.id
+                    session["is_admin"] = True
+                    session["department_id"] = new_admin.department_id
+
+                    flash(
+                        "🎉 Setup erfolgreich abgeschlossen. Ihr Administrationskonto wurde erstellt.",
+                        "success",
+                    )
+                    return redirect(url_for("index"))
+                except IntegrityError:
+                    db.session.rollback()
+                    errors.append(
+                        "Beim Speichern ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut."
+                    )
+
+        return render_template("setup.html", errors=errors, form_data=form_data)
 
     @app.route("/")
     @login_required

@@ -87,6 +87,9 @@ def main() -> None:
     print("Sie können den Server jetzt direkt mit folgendem Befehl starten:")
     print(f"   {sys.executable} start_server.py")
     print("\nAlternativ können Sie den Server auch direkt mit 'python app.py' starten.")
+    print(
+        "\n➡️  Öffnen Sie danach im Browser http://localhost:5000/setup, um Ihr erstes Administrator-Konto anzulegen."
+    )
 
 
 if __name__ == "__main__":
