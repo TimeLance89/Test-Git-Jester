@@ -1447,8 +1447,6 @@ def create_app() -> Flask:
 
             if password.strip() == "":
                 errors.append("Bitte vergeben Sie ein Passwort.")
-            elif len(password) < 8:
-                errors.append("Das Passwort muss mindestens 8 Zeichen lang sein.")
 
             if password != confirm_password:
                 errors.append("Die eingegebenen Passwörter stimmen nicht überein.")
