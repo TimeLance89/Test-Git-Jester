@@ -45,6 +45,41 @@
     </div>
   </section>
 
+  <section class="backup-management" aria-label="Sicherungen verwalten">
+    <div class="backup-management-header">
+      <div>
+        <h2>Backups verwalten</h2>
+        <p>Erstellen Sie eine Sicherung des aktuellen Datenbestands oder laden Sie vorhandene Backups herunter.</p>
+      </div>
+      <form method="post" action="{{ url_for('create_database_backup') }}" class="backup-create-form">
+        <button type="submit" class="btn btn-primary" {% if not is_sqlite_database %}disabled{% endif %}>
+          Neues Backup erstellen
+        </button>
+        {% if not is_sqlite_database %}
+        <p class="backup-meta-hint">Backups können nur im SQLite-Modus erstellt werden.</p>
+        {% endif %}
+      </form>
+    </div>
+
+    <div class="backup-files" role="list">
+      {% if backups %}
+      {% for backup in backups %}
+      <div class="backup-file" role="listitem">
+        <div class="backup-file-details">
+          <span class="backup-file-name">{{ backup.name }}</span>
+          <span class="backup-file-meta">{{ backup.created_at.strftime('%d.%m.%Y %H:%M') }} Uhr · {{ backup.size }}</span>
+        </div>
+        <div class="backup-file-actions">
+          <a class="btn btn-sm btn-outline-primary" href="{{ url_for('download_backup', filename=backup.name) }}">Download</a>
+        </div>
+      </div>
+      {% endfor %}
+      {% else %}
+      <p class="backup-empty">Es wurden noch keine Backups erstellt.</p>
+      {% endif %}
+    </div>
+  </section>
+
   <section class="backup-guidelines" aria-label="Hinweise">
     <h2>Empfohlene Sicherungsschritte</h2>
     <ol>
@@ -83,6 +118,11 @@
           <input type="checkbox" name="acknowledge" required>
           <span>Ich habe eine aktuelle Sicherung erstellt oder akzeptiere den vollständigen Datenverlust.</span>
         </label>
+        <label class="backup-checkbox">
+          <input type="checkbox" name="delete_backups">
+          <span>Alle vorhandenen Backups ebenfalls löschen.</span>
+        </label>
+        <p class="backup-retention-hint">Ohne Auswahl bleiben bestehende Sicherungen erhalten.</p>
         <label class="backup-confirmation">
           <span>Bestätigungswort (in Großbuchstaben)</span>
           <input type="text" name="confirmation" placeholder="LÖSCHEN" required pattern="[A-Za-zÄÖÜäöüß]+">
