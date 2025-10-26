@@ -1,56 +1,83 @@
 {% extends "layout.html" %}
 {% block title %}Anmelden - Xerxes{% endblock %}
 {% block content %}
-<div class="xerxes-auth" role="main">
-  <div class="xerxes-auth__background" aria-hidden="true">
-    <div class="xerxes-orb xerxes-orb--one"></div>
-    <div class="xerxes-orb xerxes-orb--two"></div>
-    <div class="xerxes-mesh"></div>
+<div class="planner-login" role="main">
+  <div class="planner-login__background" aria-hidden="true">
+    <div class="planner-login__gradient"></div>
+    <div class="planner-login__grid"></div>
+    <div class="planner-login__flare planner-login__flare--one"></div>
+    <div class="planner-login__flare planner-login__flare--two"></div>
   </div>
 
-  <div class="xerxes-auth__card" aria-labelledby="xerxes-auth-heading">
-    <aside class="xerxes-auth__brand">
-      <div class="xerxes-logo" aria-hidden="true">
-        <span>X</span>
-      </div>
-      <div class="xerxes-brand__intro">
-        <p class="xerxes-brand__kicker">Xerxes Control Center</p>
-        <h1 id="xerxes-auth-heading">Willkommen in Ihrem Planungscockpit</h1>
-        <p class="xerxes-brand__text">
-          Koordinieren Sie Teams, Einsätze und Freigaben mit einer Oberfläche,
-          die für moderne Bereichsleitungen entwickelt wurde.
-        </p>
-      </div>
-      <ul class="xerxes-brand__benefits">
-        <li>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12L9 17L20 6"/></svg>
-          Echtzeit-Überblick über offene Vorgänge
-        </li>
-        <li>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12L9 17L20 6"/></svg>
-          Automatisierte Benachrichtigungen für Ihr Team
-        </li>
-        <li>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12L9 17L20 6"/></svg>
-          DSGVO-konforme Benutzerverwaltung
-        </li>
-      </ul>
-    </aside>
-
-    <section class="xerxes-auth__form" aria-labelledby="xerxes-form-heading">
-      <header class="xerxes-form__header">
-        <p class="xerxes-form__kicker">Sicherer Zugang</p>
-        <h2 id="xerxes-form-heading">Melden Sie sich bei Xerxes an</h2>
-        <p class="xerxes-form__subtext">
-          Nutzen Sie Ihre persönlichen Zugangsdaten, um das Xerxes Dashboard zu öffnen.
-        </p>
+  <div class="planner-login__card" aria-labelledby="planner-login-heading">
+    <aside class="planner-login__intro">
+      <header class="planner-login__brand">
+        <div class="planner-login__logo" aria-hidden="true">
+          <span>X</span>
+        </div>
+        <div class="planner-login__brand-text">
+          <p class="planner-login__kicker">Xerxes Dienstplanung</p>
+          <h1 id="planner-login-heading">Ihr Cockpit für Schichtorganisation</h1>
+          <p class="planner-login__description">
+            Behalten Sie Kapazitäten, Dienstpläne und Freigaben im Blick. Mit Xerxes steuern Sie Ihr Team vorausschauend und transparent.
+          </p>
+        </div>
       </header>
 
-      <form method="post" action="{{ url_for('login', next=request.args.get('next')) }}" class="xerxes-form">
-        <div class="xerxes-input">
+      <section class="planner-login__highlights" aria-label="Überblick">
+        <article class="planner-login__highlight">
+          <h2>Live-Status</h2>
+          <p>Identifizieren Sie sofort Engpässe und freie Ressourcen.</p>
+        </article>
+        <article class="planner-login__highlight">
+          <h2>Automatisierte Abläufe</h2>
+          <p>Genehmigungen, Ausfälle und Urlaube laufen über definierte Workflows.</p>
+        </article>
+      </section>
+
+      <section class="planner-login__schedule" aria-label="Beispielhafter Dienstplan">
+        <header>
+          <span>Team Übersicht</span>
+          <strong>Heute</strong>
+        </header>
+        <ul>
+          <li>
+            <span class="planner-login__schedule-time">06:00 – 14:00</span>
+            <div>
+              <strong>Frühschicht</strong>
+              <p>Pflegebereich Nord • 6 Mitarbeitende</p>
+            </div>
+          </li>
+          <li>
+            <span class="planner-login__schedule-time">14:00 – 22:00</span>
+            <div>
+              <strong>Spätschicht</strong>
+              <p>OP-Koordination • Team Delta</p>
+            </div>
+          </li>
+          <li>
+            <span class="planner-login__schedule-time">22:00 – 06:00</span>
+            <div>
+              <strong>Nachtbereitschaft</strong>
+              <p>Notaufnahme • Leitstelle</p>
+            </div>
+          </li>
+        </ul>
+      </section>
+    </aside>
+
+    <section class="planner-login__form" aria-labelledby="planner-form-heading">
+      <header class="planner-form__header">
+        <p class="planner-form__kicker">Sicherer Zugang</p>
+        <h2 id="planner-form-heading">Melden Sie sich an</h2>
+        <p class="planner-form__subtext">Nutzen Sie Ihre persönlichen Zugangsdaten, um Ihr Planungscockpit zu öffnen.</p>
+      </header>
+
+      <form method="post" action="{{ url_for('login', next=request.args.get('next')) }}" class="planner-form">
+        <div class="planner-input">
           <label for="username">Benutzername</label>
-          <div class="xerxes-input__field">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12ZM12 14C9.33 14 4 15.34 4 18V20H20V18C20 15.34 14.67 14 12 14Z"/></svg>
+          <div class="planner-input__field">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
             <input
               type="text"
               id="username"
@@ -58,14 +85,15 @@
               autocomplete="username"
               placeholder="z.B. g.mueller"
               required
+              autofocus
             />
           </div>
         </div>
 
-        <div class="xerxes-input">
+        <div class="planner-input">
           <label for="password">Passwort</label>
-          <div class="xerxes-input__field">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 8H7V6C7 3.79 8.79 2 11 2C13.21 2 15 3.79 15 6V8H17C18.1 8 19 8.9 19 10V20C19 21.1 18.1 22 17 22H7C5.9 22 5 21.1 5 20V10C5 8.9 5.9 8 7 8H17ZM13 16.17V14H11V16.17C10.41 16.58 10 17.26 10 18C10 19.1 10.9 20 12 20C13.1 20 14 19.1 14 18C14 17.26 13.59 16.58 13 16.17Z"/></svg>
+          <div class="planner-input__field">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 8h-1V6c0-2.21-1.79-4-4-4S8 3.79 8 6v2H7c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-5 10c-1.1 0-2-.9-2-2 0-.74.41-1.42 1-1.83V14h2v2.17c.59.41 1 .99 1 1.83 0 1.1-.9 2-2 2zm2-10H10V6c0-1.1.9-2 2-2s2 .9 2 2v2z"/></svg>
             <input
               type="password"
               id="password"
@@ -77,120 +105,135 @@
           </div>
         </div>
 
-        <button type="submit" class="xerxes-button">
+        <button type="submit" class="planner-button">
           <span>Anmelden</span>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12H19M19 12L13 6M19 12L13 18"/></svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h12l-4-4m4 4-4 4"/></svg>
         </button>
       </form>
 
-      <footer class="xerxes-form__footer">
-        <p>Sicherer Zugriff auf das Xerxes Planungssystem.</p>
-        <p class="xerxes-form__support">Benötigen Sie Hilfe? Wenden Sie sich an Ihre Systemadministration.</p>
+      <footer class="planner-form__footer">
+        <p>Sicherer Zugriff auf das Xerxes Dienstplanungssystem.</p>
+        <p class="planner-form__support">Unterstützung benötigt? Kontaktieren Sie Ihre Systemadministration.</p>
       </footer>
     </section>
   </div>
 </div>
 
 <style>
-.xerxes-auth {
+.planner-login {
   position: relative;
   min-height: calc(100vh - 96px);
   display: grid;
   place-items: center;
-  padding: 3rem 1.5rem 4rem;
+  padding: 3.5rem 1.5rem 4.5rem;
   color: #0f172a;
-  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-}
-
-.xerxes-auth__background {
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(circle at top left, rgba(79, 70, 229, 0.35), transparent 55%),
-              radial-gradient(circle at bottom right, rgba(14, 165, 233, 0.3), transparent 45%),
-              linear-gradient(135deg, #050919 0%, #0b1125 100%);
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   overflow: hidden;
 }
 
-.xerxes-orb {
+.planner-login__background {
   position: absolute;
-  width: 420px;
-  height: 420px;
+  inset: 0;
+  overflow: hidden;
+}
+
+.planner-login__gradient {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at top left, rgba(79, 70, 229, 0.35), transparent 55%),
+    radial-gradient(circle at bottom right, rgba(14, 165, 233, 0.3), transparent 45%),
+    linear-gradient(135deg, #050919 0%, #0b132d 100%);
+}
+
+.planner-login__grid {
+  position: absolute;
+  inset: -40% -20%;
+  background-image: linear-gradient(rgba(148, 163, 184, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.07) 1px, transparent 1px);
+  background-size: 70px 70px;
+  mask-image: radial-gradient(circle, rgba(255, 255, 255, 0.65), transparent 70%);
+  opacity: 0.7;
+}
+
+.planner-login__flare {
+  position: absolute;
+  width: 460px;
+  height: 460px;
   border-radius: 999px;
-  filter: blur(100px);
-  opacity: 0.6;
+  filter: blur(120px);
+  opacity: 0.55;
 }
 
-.xerxes-orb--one {
+.planner-login__flare--one {
   top: -140px;
-  left: -80px;
-  background: rgba(167, 139, 250, 0.55);
+  left: -90px;
+  background: rgba(79, 70, 229, 0.65);
 }
 
-.xerxes-orb--two {
+.planner-login__flare--two {
   bottom: -160px;
   right: -120px;
   background: rgba(56, 189, 248, 0.5);
 }
 
-.xerxes-mesh {
-  position: absolute;
-  inset: 0;
-  background-image: linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-                    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
-  background-size: 60px 60px;
-  mask-image: radial-gradient(circle, rgba(255, 255, 255, 0.9), transparent 70%);
-  opacity: 0.5;
-}
-
-.xerxes-auth__card {
+.planner-login__card {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(280px, 1.05fr) minmax(320px, 0.95fr);
-  max-width: 980px;
+  grid-template-columns: minmax(300px, 1.1fr) minmax(320px, 0.9fr);
+  max-width: 1000px;
   width: 100%;
   border-radius: 28px;
   overflow: hidden;
-  box-shadow: 0 35px 80px -40px rgba(15, 23, 42, 0.8), 0 25px 45px -35px rgba(59, 130, 246, 0.5);
-  border: 1px solid rgba(148, 163, 184, 0.18);
   background: rgba(15, 23, 42, 0.1);
-  backdrop-filter: blur(24px);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  backdrop-filter: blur(26px);
+  box-shadow: 0 35px 80px -40px rgba(15, 23, 42, 0.8), 0 25px 45px -35px rgba(59, 130, 246, 0.45);
 }
 
-.xerxes-auth__brand {
-  background: linear-gradient(160deg, rgba(37, 99, 235, 0.9), rgba(124, 58, 237, 0.88));
+.planner-login__intro {
+  position: relative;
+  padding: 3.4rem 3.2rem 3rem;
+  background: linear-gradient(155deg, rgba(37, 99, 235, 0.94), rgba(124, 58, 237, 0.92));
   color: #f8fafc;
-  padding: 3.2rem 3rem;
   display: flex;
   flex-direction: column;
-  gap: 2rem;
-  position: relative;
+  gap: 2.5rem;
+  z-index: 1;
 }
 
-.xerxes-auth__brand::after {
+.planner-login__intro::after {
   content: "";
   position: absolute;
-  inset: 30% -10% -15% 45%;
+  inset: 20% -20% -20% 40%;
   background: radial-gradient(circle at top, rgba(248, 250, 252, 0.55), transparent 60%);
   pointer-events: none;
   opacity: 0.7;
 }
 
-.xerxes-logo {
-  width: 64px;
-  height: 64px;
+.planner-login__brand {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+}
+
+.planner-login__logo {
+  width: 60px;
+  height: 60px;
   border-radius: 18px;
   display: grid;
   place-items: center;
-  background: rgba(15, 23, 42, 0.3);
-  font-size: 1.85rem;
+  background: rgba(15, 23, 42, 0.28);
+  font-size: 1.75rem;
   font-weight: 700;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  box-shadow: inset 0 0 0 1px rgba(248, 250, 252, 0.2), 0 18px 40px -20px rgba(15, 23, 42, 0.85);
+  box-shadow: inset 0 0 0 1px rgba(248, 250, 252, 0.25), 0 18px 40px -20px rgba(15, 23, 42, 0.85);
 }
 
-.xerxes-brand__kicker {
-  margin: 0;
+.planner-login__kicker {
+  margin: 0 0 0.3rem;
   font-size: 0.85rem;
   font-weight: 600;
   letter-spacing: 0.2em;
@@ -198,267 +241,277 @@
   color: rgba(241, 245, 249, 0.75);
 }
 
-.xerxes-auth__brand h1 {
-  margin: 0;
-  font-size: clamp(2rem, 3vw, 2.8rem);
-  font-weight: 700;
-  letter-spacing: -0.03em;
+.planner-login__brand-text h1 {
+  margin: 0 0 0.75rem;
+  font-size: 1.9rem;
+  line-height: 1.2;
 }
 
-.xerxes-brand__text {
+.planner-login__description {
   margin: 0;
-  font-size: 1rem;
-  line-height: 1.75;
-  color: rgba(226, 232, 240, 0.92);
+  color: rgba(226, 232, 240, 0.82);
+  line-height: 1.5;
 }
 
-.xerxes-brand__benefits {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+.planner-login__highlights {
   display: grid;
-  gap: 1.1rem;
+  gap: 1.2rem;
   position: relative;
   z-index: 1;
 }
 
-.xerxes-brand__benefits li {
-  display: flex;
-  align-items: center;
-  gap: 0.85rem;
-  padding: 0.95rem 1.1rem;
-  border-radius: 16px;
-  background: rgba(15, 23, 42, 0.35);
-  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.2);
-  font-weight: 500;
+.planner-login__highlight {
+  padding: 1.1rem 1.2rem;
+  border-radius: 18px;
+  background: rgba(15, 23, 42, 0.22);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  box-shadow: inset 0 0 0 1px rgba(248, 250, 252, 0.04);
 }
 
-.xerxes-brand__benefits svg {
-  width: 22px;
-  height: 22px;
-  stroke: #c7d2fe;
-  stroke-width: 2.2;
-  fill: none;
+.planner-login__highlight h2 {
+  margin: 0 0 0.4rem;
+  font-size: 1.05rem;
 }
 
-.xerxes-auth__form {
-  background: rgba(248, 250, 252, 0.96);
-  padding: 3.25rem 3rem;
+.planner-login__highlight p {
+  margin: 0;
+  color: rgba(226, 232, 240, 0.82);
+}
+
+.planner-login__schedule {
+  position: relative;
+  z-index: 1;
+  padding: 1.4rem 1.2rem;
+  border-radius: 20px;
+  background: rgba(15, 23, 42, 0.18);
+  border: 1px solid rgba(148, 163, 184, 0.22);
   display: flex;
   flex-direction: column;
-  gap: 2.25rem;
+  gap: 1rem;
 }
 
-.xerxes-form__header {
-  display: grid;
-  gap: 0.65rem;
+.planner-login__schedule header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 0.95rem;
+  color: rgba(226, 232, 240, 0.85);
 }
 
-.xerxes-form__kicker {
+.planner-login__schedule ul {
+  list-style: none;
   margin: 0;
-  font-size: 0.9rem;
+  padding: 0;
+  display: grid;
+  gap: 0.9rem;
+}
+
+.planner-login__schedule li {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.planner-login__schedule-time {
+  font-family: "JetBrains Mono", "Fira Code", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.85rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: 12px;
+  background: rgba(14, 116, 144, 0.35);
+  color: #f0f9ff;
+  min-width: 112px;
+  text-align: center;
+}
+
+.planner-login__schedule li strong {
+  display: block;
+  margin-bottom: 0.2rem;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.15em;
-  color: #3b82f6;
 }
 
-.xerxes-form__header h2 {
+.planner-login__schedule li p {
   margin: 0;
-  font-size: 1.9rem;
-  font-weight: 700;
-  color: #0f172a;
+  color: rgba(226, 232, 240, 0.75);
+  font-size: 0.85rem;
 }
 
-.xerxes-form__subtext {
-  margin: 0;
-  color: #475569;
-  line-height: 1.7;
+.planner-login__form {
+  position: relative;
+  padding: 3.4rem 3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  background: rgba(248, 250, 252, 0.92);
+  backdrop-filter: blur(20px);
 }
 
-.xerxes-form {
-  display: grid;
-  gap: 1.5rem;
-}
-
-.xerxes-input {
+.planner-form__header {
   display: grid;
   gap: 0.6rem;
+  text-align: left;
 }
 
-.xerxes-input label {
+.planner-form__kicker {
+  margin: 0;
+  font-size: 0.85rem;
   font-weight: 600;
-  font-size: 0.95rem;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #6366f1;
+}
+
+.planner-form__header h2 {
+  margin: 0;
+  font-size: 1.75rem;
   color: #0f172a;
 }
 
-.xerxes-input__field {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  align-items: center;
-  gap: 0.8rem;
-  padding: 0.95rem 1.1rem;
-  border-radius: 18px;
-  border: 1px solid rgba(148, 163, 184, 0.45);
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: inset 0 1px 2px rgba(148, 163, 184, 0.2);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+.planner-form__subtext {
+  margin: 0;
+  color: #475569;
 }
 
-.xerxes-input__field svg {
+.planner-form {
+  display: grid;
+  gap: 1.6rem;
+}
+
+.planner-input {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.planner-input label {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.planner-input__field {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-radius: 14px;
+  border: 1px solid #cbd5f5;
+  background: #fff;
+  padding: 0.85rem 1rem;
+  box-shadow: 0 12px 30px -24px rgba(59, 130, 246, 0.6);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.planner-input__field:focus-within {
+  border-color: #6366f1;
+  box-shadow: 0 16px 35px -24px rgba(99, 102, 241, 0.75);
+}
+
+.planner-input__field svg {
   width: 22px;
   height: 22px;
   fill: none;
-  stroke: #64748b;
-  stroke-width: 1.8;
+  stroke: #6366f1;
+  stroke-width: 1.6;
 }
 
-.xerxes-input__field input {
+.planner-input__field input {
+  flex: 1;
   border: none;
-  background: transparent;
-  font: inherit;
-  padding: 0;
+  outline: none;
+  font-size: 1rem;
+  font-weight: 500;
   color: #0f172a;
+  background: transparent;
 }
 
-.xerxes-input__field input::placeholder {
+.planner-input__field input::placeholder {
   color: #94a3b8;
 }
 
-.xerxes-input__field input:focus-visible {
-  outline: none;
-}
-
-.xerxes-input:focus-within .xerxes-input__field {
-  border-color: rgba(37, 99, 235, 0.8);
-  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14);
-  transform: translateY(-1px);
-}
-
-.xerxes-button {
+.planner-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.75rem;
-  padding: 1rem 1.2rem;
-  border-radius: 18px;
   border: none;
-  font-size: 1.05rem;
+  border-radius: 14px;
+  padding: 0.95rem 1.5rem;
   font-weight: 600;
-  letter-spacing: 0.01em;
-  color: #f8fafc;
-  background: linear-gradient(135deg, #2563eb, #7c3aed);
-  box-shadow: 0 22px 45px -25px rgba(79, 70, 229, 0.85);
+  font-size: 1rem;
+  color: #fff;
+  background: linear-gradient(135deg, #6366f1, #0ea5e9);
+  box-shadow: 0 18px 40px -22px rgba(14, 165, 233, 0.8);
   cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.xerxes-button svg {
-  width: 22px;
-  height: 22px;
-  stroke: currentColor;
-  stroke-width: 2.1;
+.planner-button svg {
+  width: 20px;
+  height: 20px;
   fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
 }
 
-.xerxes-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 26px 48px -24px rgba(79, 70, 229, 0.9);
+.planner-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 20px 44px -24px rgba(14, 165, 233, 0.85);
 }
 
-.xerxes-button:active {
+.planner-button:active {
   transform: translateY(0);
 }
 
-.xerxes-form__footer {
-  border-top: 1px solid rgba(226, 232, 240, 0.85);
-  padding-top: 1.5rem;
+.planner-form__footer {
   font-size: 0.9rem;
   color: #64748b;
   display: grid;
-  gap: 0.35rem;
+  gap: 0.4rem;
 }
 
-.xerxes-form__support {
+.planner-form__support {
   margin: 0;
-  color: #94a3b8;
+  color: #475569;
 }
 
-@media (max-width: 1024px) {
-  .xerxes-auth__card {
+@media (max-width: 960px) {
+  .planner-login__card {
     grid-template-columns: 1fr;
-    max-width: 560px;
+    max-width: 620px;
   }
 
-  .xerxes-auth__brand {
-    padding: 2.75rem 2.5rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.25);
-    gap: 1.75rem;
+  .planner-login__intro {
+    padding: 2.8rem 2.4rem 2.6rem;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
   }
 
-  .xerxes-auth__form {
-    padding: 2.75rem 2.5rem 3rem;
+  .planner-login__form {
+    padding: 2.4rem 2.2rem 2.8rem;
   }
 }
 
 @media (max-width: 640px) {
-  .xerxes-auth {
-    padding: 2.5rem 1rem 3.5rem;
+  .planner-login {
+    padding: 2.8rem 1.2rem 3.2rem;
   }
 
-  .xerxes-auth__card {
+  .planner-login__card {
     border-radius: 22px;
   }
 
-  .xerxes-auth__brand {
-    padding: 2.5rem 1.8rem;
+  .planner-login__intro {
+    gap: 2rem;
   }
 
-  .xerxes-auth__form {
-    padding: 2.5rem 1.8rem 2.75rem;
-  }
-}
-
-@media (prefers-color-scheme: dark) {
-  .xerxes-auth__form {
-    background: rgba(15, 23, 42, 0.88);
-    color: #e2e8f0;
+  .planner-login__brand {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
-  .xerxes-form__header h2 {
-    color: #e2e8f0;
+  .planner-login__schedule li {
+    flex-direction: column;
   }
 
-  .xerxes-form__subtext {
-    color: #cbd5f5;
-  }
-
-  .xerxes-input label {
-    color: #e2e8f0;
-  }
-
-  .xerxes-input__field {
-    background: rgba(30, 41, 59, 0.85);
-    border-color: rgba(71, 85, 105, 0.65);
-    box-shadow: inset 0 1px 1px rgba(15, 23, 42, 0.65);
-  }
-
-  .xerxes-input__field input {
-    color: #f1f5f9;
-  }
-
-  .xerxes-input__field input::placeholder {
-    color: #94a3b8;
-  }
-
-  .xerxes-form__footer {
-    border-color: rgba(71, 85, 105, 0.6);
-    color: #94a3b8;
-  }
-
-  .xerxes-form__support {
-    color: #7c8aa6;
+  .planner-login__schedule-time {
+    align-self: flex-start;
   }
 }
 </style>
