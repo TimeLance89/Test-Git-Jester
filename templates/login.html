@@ -1,409 +1,518 @@
 {% extends "layout.html" %}
-{% block title %}Anmelden - Xerxes{% endblock %}
+{% block title %}Anmelden - Xerxes Dienstplanung{% endblock %}
 {% block content %}
-<div class="planner-login" role="main">
-  <div class="planner-login__background" aria-hidden="true">
-    <div class="planner-login__gradient"></div>
-    <div class="planner-login__grid"></div>
-    <div class="planner-login__flare planner-login__flare--one"></div>
-    <div class="planner-login__flare planner-login__flare--two"></div>
+<div class="duty-login" role="main">
+  <div class="duty-login__background" aria-hidden="true">
+    <div class="duty-login__gradient"></div>
+    <div class="duty-login__pattern duty-login__pattern--vertical"></div>
+    <div class="duty-login__pattern duty-login__pattern--horizontal"></div>
+    <div class="duty-login__orb duty-login__orb--one"></div>
+    <div class="duty-login__orb duty-login__orb--two"></div>
   </div>
 
-  <div class="planner-login__card" aria-labelledby="planner-login-heading">
-    <aside class="planner-login__intro">
-      <header class="planner-login__brand">
-        <div class="planner-login__logo" aria-hidden="true">
-          <span>X</span>
+  <div class="duty-login__shell">
+    <section class="duty-login__visual" aria-labelledby="duty-intro-title">
+      <header class="duty-hero">
+        <div class="duty-hero__logo" aria-hidden="true">
+          <span>XP</span>
         </div>
-        <div class="planner-login__brand-text">
-          <p class="planner-login__kicker">Xerxes Dienstplanung</p>
-          <h1 id="planner-login-heading">Ihr Cockpit für Schichtorganisation</h1>
-          <p class="planner-login__description">
-            Behalten Sie Kapazitäten, Dienstpläne und Freigaben im Blick. Mit Xerxes steuern Sie Ihr Team vorausschauend und transparent.
+        <div class="duty-hero__copy">
+          <p class="duty-hero__kicker">Xerxes Planung</p>
+          <h1 id="duty-intro-title">Dienstplanung neu gedacht</h1>
+          <p>
+            Koordinieren Sie Teams, Schichten und Ressourcen zentral in Ihrem Kontrollzentrum. Xerxes visualisiert den Tag, die
+            Woche und Ihre Prioritäten auf einen Blick.
           </p>
         </div>
       </header>
 
-      <section class="planner-login__highlights" aria-label="Überblick">
-        <article class="planner-login__highlight">
-          <h2>Live-Status</h2>
-          <p>Identifizieren Sie sofort Engpässe und freie Ressourcen.</p>
-        </article>
-        <article class="planner-login__highlight">
-          <h2>Automatisierte Abläufe</h2>
-          <p>Genehmigungen, Ausfälle und Urlaube laufen über definierte Workflows.</p>
-        </article>
-      </section>
+      <div class="duty-snapshot" role="presentation" aria-hidden="true">
+        <div class="duty-snapshot__header">
+          <div class="duty-snapshot__title">
+            <span class="duty-dot duty-dot--active"></span>
+            <span>Live-Board</span>
+          </div>
+          <div class="duty-snapshot__dateband">
+            <span class="duty-chip duty-chip--primary">Heute</span>
+            <span class="duty-chip">Teamstatus</span>
+            <span class="duty-chip">Auslastung</span>
+          </div>
+        </div>
+        <div class="duty-snapshot__grid">
+          <div class="duty-grid__column">
+            <span class="duty-grid__heading">Früh</span>
+            <div class="duty-grid__slot duty-grid__slot--filled"></div>
+            <div class="duty-grid__slot duty-grid__slot--filled"></div>
+            <div class="duty-grid__slot duty-grid__slot--pending"></div>
+          </div>
+          <div class="duty-grid__column">
+            <span class="duty-grid__heading">Tag</span>
+            <div class="duty-grid__slot duty-grid__slot--filled"></div>
+            <div class="duty-grid__slot duty-grid__slot--highlight"></div>
+            <div class="duty-grid__slot"></div>
+          </div>
+          <div class="duty-grid__column">
+            <span class="duty-grid__heading">Spät</span>
+            <div class="duty-grid__slot duty-grid__slot--filled"></div>
+            <div class="duty-grid__slot duty-grid__slot--pending"></div>
+            <div class="duty-grid__slot duty-grid__slot--alert"></div>
+          </div>
+          <div class="duty-grid__column">
+            <span class="duty-grid__heading">Nacht</span>
+            <div class="duty-grid__slot"></div>
+            <div class="duty-grid__slot duty-grid__slot--filled"></div>
+            <div class="duty-grid__slot"></div>
+          </div>
+        </div>
+        <footer class="duty-snapshot__footer">
+          <div class="duty-legend">
+            <span class="duty-legend__item"><span class="duty-dot duty-dot--filled"></span>besetzt</span>
+            <span class="duty-legend__item"><span class="duty-dot duty-dot--pending"></span>angefragt</span>
+            <span class="duty-legend__item"><span class="duty-dot duty-dot--alert"></span>Aufmerksamkeit</span>
+          </div>
+        </footer>
+      </div>
 
-      <section class="planner-login__schedule" aria-label="Beispielhafter Dienstplan">
-        <header>
-          <span>Team Übersicht</span>
-          <strong>Heute</strong>
-        </header>
-        <ul>
-          <li>
-            <span class="planner-login__schedule-time">06:00 – 14:00</span>
-            <div>
-              <strong>Frühschicht</strong>
-              <p>Pflegebereich Nord • 6 Mitarbeitende</p>
-            </div>
-          </li>
-          <li>
-            <span class="planner-login__schedule-time">14:00 – 22:00</span>
-            <div>
-              <strong>Spätschicht</strong>
-              <p>OP-Koordination • Team Delta</p>
-            </div>
-          </li>
-          <li>
-            <span class="planner-login__schedule-time">22:00 – 06:00</span>
-            <div>
-              <strong>Nachtbereitschaft</strong>
-              <p>Notaufnahme • Leitstelle</p>
-            </div>
-          </li>
-        </ul>
-      </section>
-    </aside>
+      <dl class="duty-insights">
+        <div>
+          <dt>Planungszyklen</dt>
+          <dd>Synchronisieren Sie Wochenblöcke und Tagesraster in Echtzeit.</dd>
+        </div>
+        <div>
+          <dt>Schichtlogik</dt>
+          <dd>Regeln und Qualifikationen werden automatisch berücksichtigt.</dd>
+        </div>
+        <div>
+          <dt>Team-Prioritäten</dt>
+          <dd>Fokussieren Sie kritische Bereiche und halten Sie Kapazitäten stabil.</dd>
+        </div>
+      </dl>
+    </section>
 
-    <section class="planner-login__form" aria-labelledby="planner-form-heading">
-      <header class="planner-form__header">
-        <p class="planner-form__kicker">Sicherer Zugang</p>
-        <h2 id="planner-form-heading">Melden Sie sich an</h2>
-        <p class="planner-form__subtext">Nutzen Sie Ihre persönlichen Zugangsdaten, um Ihr Planungscockpit zu öffnen.</p>
+    <section class="duty-login__panel" aria-labelledby="duty-form-title">
+      <header class="duty-panel__header">
+        <p class="duty-panel__kicker">Kontrollzentrum</p>
+        <h2 id="duty-form-title">Anmeldung</h2>
+        <p class="duty-panel__lead">Melden Sie sich an, um auf Ihre Steuerungsoberfläche zuzugreifen.</p>
       </header>
 
-      <form method="post" action="{{ url_for('login', next=request.args.get('next')) }}" class="planner-form">
-        <div class="planner-input">
+      <form method="post" action="{{ url_for('login', next=request.args.get('next')) }}" class="duty-form">
+        <div class="duty-field">
           <label for="username">Benutzername</label>
-          <div class="planner-input__field">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+          <div class="duty-field__control">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Zm0 2c-3.09 0-7 1.56-7 4v2h14v-2c0-2.44-3.91-4-7-4Z"/></svg>
             <input
               type="text"
               id="username"
               name="username"
               autocomplete="username"
-              placeholder="z.B. g.mueller"
+              placeholder="Ihre Kennung"
               required
               autofocus
             />
           </div>
         </div>
-
-        <div class="planner-input">
+        <div class="duty-field">
           <label for="password">Passwort</label>
-          <div class="planner-input__field">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 8h-1V6c0-2.21-1.79-4-4-4S8 3.79 8 6v2H7c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-5 10c-1.1 0-2-.9-2-2 0-.74.41-1.42 1-1.83V14h2v2.17c.59.41 1 .99 1 1.83 0 1.1-.9 2-2 2zm2-10H10V6c0-1.1.9-2 2-2s2 .9 2 2v2z"/></svg>
+          <div class="duty-field__control">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 8h-1V6a4 4 0 0 0-8 0v2H7a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2Zm-5 10a2 2 0 0 1-2-2 2.36 2.36 0 0 1 1-1.92V14h2v2.08A2.36 2.36 0 0 1 12 18Zm2-10h-4V6a2 2 0 0 1 4 0Z"/></svg>
             <input
               type="password"
               id="password"
               name="password"
               autocomplete="current-password"
-              placeholder="Ihr Passwort"
+              placeholder="Passwort"
               required
             />
           </div>
         </div>
-
-        <button type="submit" class="planner-button">
+        <button type="submit" class="duty-button">
           <span>Anmelden</span>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h12l-4-4m4 4-4 4"/></svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h12m0 0-4-4m4 4-4 4"/></svg>
         </button>
       </form>
 
-      <footer class="planner-form__footer">
-        <p>Sicherer Zugriff auf das Xerxes Dienstplanungssystem.</p>
-        <p class="planner-form__support">Unterstützung benötigt? Kontaktieren Sie Ihre Systemadministration.</p>
+      <footer class="duty-panel__footer">
+        <p>Ihre Daten bleiben geschützt. Zugriff nur für autorisierte Planungsverantwortliche.</p>
+        <p class="duty-panel__support">Probleme bei der Anmeldung? Bitte wenden Sie sich an Ihre Administration.</p>
       </footer>
     </section>
   </div>
 </div>
 
 <style>
-.planner-login {
+.duty-login {
   position: relative;
   min-height: calc(100vh - 96px);
   display: grid;
   place-items: center;
-  padding: 3.5rem 1.5rem 4.5rem;
+  padding: 4rem 1.5rem 4.5rem;
   color: #0f172a;
   font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   overflow: hidden;
 }
 
-.planner-login__background {
+.duty-login__background {
   position: absolute;
   inset: 0;
   overflow: hidden;
 }
 
-.planner-login__gradient {
+.duty-login__gradient {
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at top left, rgba(79, 70, 229, 0.35), transparent 55%),
-    radial-gradient(circle at bottom right, rgba(14, 165, 233, 0.3), transparent 45%),
-    linear-gradient(135deg, #050919 0%, #0b132d 100%);
+  background: linear-gradient(135deg, #050919 0%, #111a32 45%, #0b1120 100%);
 }
 
-.planner-login__grid {
+.duty-login__pattern {
   position: absolute;
-  inset: -40% -20%;
-  background-image: linear-gradient(rgba(148, 163, 184, 0.07) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(148, 163, 184, 0.07) 1px, transparent 1px);
-  background-size: 70px 70px;
-  mask-image: radial-gradient(circle, rgba(255, 255, 255, 0.65), transparent 70%);
-  opacity: 0.7;
+  inset: -10%;
+  opacity: 0.35;
+  background-size: 120px 120px;
+  background-repeat: repeat;
+  mix-blend-mode: screen;
 }
 
-.planner-login__flare {
+.duty-login__pattern--vertical {
+  background-image: linear-gradient(rgba(30, 64, 175, 0.3) 1px, transparent 1px);
+}
+
+.duty-login__pattern--horizontal {
+  background-image: linear-gradient(90deg, rgba(14, 165, 233, 0.25) 1px, transparent 1px);
+}
+
+.duty-login__orb {
   position: absolute;
-  width: 460px;
-  height: 460px;
-  border-radius: 999px;
+  width: 520px;
+  height: 520px;
+  border-radius: 50%;
   filter: blur(120px);
   opacity: 0.55;
 }
 
-.planner-login__flare--one {
-  top: -140px;
-  left: -90px;
-  background: rgba(79, 70, 229, 0.65);
+.duty-login__orb--one {
+  top: -160px;
+  left: -120px;
+  background: rgba(79, 70, 229, 0.7);
 }
 
-.planner-login__flare--two {
-  bottom: -160px;
-  right: -120px;
-  background: rgba(56, 189, 248, 0.5);
+.duty-login__orb--two {
+  bottom: -180px;
+  right: -140px;
+  background: rgba(56, 189, 248, 0.6);
 }
 
-.planner-login__card {
+.duty-login__shell {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(300px, 1.1fr) minmax(320px, 0.9fr);
-  max-width: 1000px;
-  width: 100%;
-  border-radius: 28px;
+  grid-template-columns: minmax(320px, 1.05fr) minmax(320px, 0.95fr);
+  width: min(1100px, 100%);
+  border-radius: 30px;
   overflow: hidden;
-  background: rgba(15, 23, 42, 0.1);
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  backdrop-filter: blur(26px);
-  box-shadow: 0 35px 80px -40px rgba(15, 23, 42, 0.8), 0 25px 45px -35px rgba(59, 130, 246, 0.45);
+  background: rgba(15, 23, 42, 0.2);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  backdrop-filter: blur(28px);
+  box-shadow: 0 40px 90px -45px rgba(15, 23, 42, 0.85), 0 30px 60px -50px rgba(14, 165, 233, 0.55);
 }
 
-.planner-login__intro {
+.duty-login__visual {
   position: relative;
-  padding: 3.4rem 3.2rem 3rem;
-  background: linear-gradient(155deg, rgba(37, 99, 235, 0.94), rgba(124, 58, 237, 0.92));
+  padding: 3.5rem 3.2rem 3rem;
+  background: linear-gradient(160deg, rgba(37, 99, 235, 0.92), rgba(56, 189, 248, 0.95));
   color: #f8fafc;
   display: flex;
   flex-direction: column;
-  gap: 2.5rem;
-  z-index: 1;
+  gap: 2.6rem;
 }
 
-.planner-login__intro::after {
+.duty-login__visual::after {
   content: "";
   position: absolute;
-  inset: 20% -20% -20% 40%;
-  background: radial-gradient(circle at top, rgba(248, 250, 252, 0.55), transparent 60%);
+  inset: 0;
+  background: radial-gradient(circle at top right, rgba(248, 250, 252, 0.35), transparent 50%);
   pointer-events: none;
-  opacity: 0.7;
 }
 
-.planner-login__brand {
-  display: flex;
-  gap: 1.5rem;
-  align-items: center;
+.duty-hero {
   position: relative;
   z-index: 1;
+  display: flex;
+  gap: 1.8rem;
+  align-items: flex-start;
 }
 
-.planner-login__logo {
-  width: 60px;
-  height: 60px;
-  border-radius: 18px;
+.duty-hero__logo {
+  width: 68px;
+  height: 68px;
+  border-radius: 20px;
+  background: rgba(15, 23, 42, 0.3);
   display: grid;
   place-items: center;
-  background: rgba(15, 23, 42, 0.28);
-  font-size: 1.75rem;
+  font-size: 1.6rem;
   font-weight: 700;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  box-shadow: inset 0 0 0 1px rgba(248, 250, 252, 0.25), 0 18px 40px -20px rgba(15, 23, 42, 0.85);
+  box-shadow: inset 0 0 0 1px rgba(248, 250, 252, 0.3), 0 16px 40px -25px rgba(15, 23, 42, 0.85);
 }
 
-.planner-login__kicker {
-  margin: 0 0 0.3rem;
+.duty-hero__kicker {
+  margin: 0 0 0.4rem;
   font-size: 0.85rem;
   font-weight: 600;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: rgba(241, 245, 249, 0.75);
+  color: rgba(241, 245, 249, 0.7);
 }
 
-.planner-login__brand-text h1 {
-  margin: 0 0 0.75rem;
-  font-size: 1.9rem;
+.duty-hero__copy h1 {
+  margin: 0 0 0.8rem;
+  font-size: 2rem;
   line-height: 1.2;
 }
 
-.planner-login__description {
+.duty-hero__copy p {
   margin: 0;
-  color: rgba(226, 232, 240, 0.82);
-  line-height: 1.5;
+  color: rgba(226, 232, 240, 0.9);
+  line-height: 1.6;
 }
 
-.planner-login__highlights {
-  display: grid;
-  gap: 1.2rem;
+.duty-snapshot {
   position: relative;
   z-index: 1;
-}
-
-.planner-login__highlight {
-  padding: 1.1rem 1.2rem;
-  border-radius: 18px;
+  border-radius: 26px;
+  padding: 1.8rem 1.6rem 1.4rem;
   background: rgba(15, 23, 42, 0.22);
   border: 1px solid rgba(148, 163, 184, 0.25);
-  box-shadow: inset 0 0 0 1px rgba(248, 250, 252, 0.04);
+  box-shadow: inset 0 0 0 1px rgba(248, 250, 252, 0.08);
+  display: grid;
+  gap: 1.4rem;
 }
 
-.planner-login__highlight h2 {
-  margin: 0 0 0.4rem;
-  font-size: 1.05rem;
-}
-
-.planner-login__highlight p {
-  margin: 0;
-  color: rgba(226, 232, 240, 0.82);
-}
-
-.planner-login__schedule {
-  position: relative;
-  z-index: 1;
-  padding: 1.4rem 1.2rem;
-  border-radius: 20px;
-  background: rgba(15, 23, 42, 0.18);
-  border: 1px solid rgba(148, 163, 184, 0.22);
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.planner-login__schedule header {
+.duty-snapshot__header {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
+  align-items: center;
   font-size: 0.95rem;
   color: rgba(226, 232, 240, 0.85);
 }
 
-.planner-login__schedule ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+.duty-snapshot__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.duty-dot {
+  display: inline-flex;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(226, 232, 240, 0.8);
+}
+
+.duty-dot--active {
+  box-shadow: 0 0 0 6px rgba(226, 232, 240, 0.18);
+}
+
+.duty-dot--filled {
+  background: #22d3ee;
+}
+
+.duty-dot--pending {
+  background: #facc15;
+}
+
+.duty-dot--alert {
+  background: #f87171;
+}
+
+.duty-snapshot__dateband {
+  display: inline-flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.duty-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: rgba(15, 23, 42, 0.35);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  color: rgba(248, 250, 252, 0.85);
+}
+
+.duty-chip--primary {
+  background: rgba(125, 211, 252, 0.35);
+  border-color: rgba(125, 211, 252, 0.6);
+}
+
+.duty-snapshot__grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.2rem;
+}
+
+.duty-grid__column {
   display: grid;
   gap: 0.9rem;
 }
 
-.planner-login__schedule li {
-  display: flex;
-  gap: 1rem;
-  align-items: flex-start;
-}
-
-.planner-login__schedule-time {
-  font-family: "JetBrains Mono", "Fira Code", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+.duty-grid__heading {
   font-size: 0.85rem;
-  padding: 0.4rem 0.6rem;
-  border-radius: 12px;
-  background: rgba(14, 116, 144, 0.35);
-  color: #f0f9ff;
-  min-width: 112px;
-  text-align: center;
-}
-
-.planner-login__schedule li strong {
-  display: block;
-  margin-bottom: 0.2rem;
   font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(226, 232, 240, 0.8);
 }
 
-.planner-login__schedule li p {
-  margin: 0;
+.duty-grid__slot {
+  height: 38px;
+  border-radius: 12px;
+  border: 1px dashed rgba(148, 163, 184, 0.3);
+  background: rgba(15, 23, 42, 0.25);
+  box-shadow: inset 0 0 0 1px rgba(248, 250, 252, 0.05);
+}
+
+.duty-grid__slot--filled {
+  background: linear-gradient(135deg, rgba(125, 211, 252, 0.4), rgba(59, 130, 246, 0.65));
+  border: 1px solid rgba(59, 130, 246, 0.55);
+}
+
+.duty-grid__slot--highlight {
+  background: linear-gradient(135deg, rgba(224, 231, 255, 0.4), rgba(129, 140, 248, 0.6));
+  border: 1px solid rgba(129, 140, 248, 0.6);
+}
+
+.duty-grid__slot--pending {
+  background: linear-gradient(135deg, rgba(254, 240, 138, 0.35), rgba(250, 204, 21, 0.6));
+  border: 1px solid rgba(250, 204, 21, 0.6);
+}
+
+.duty-grid__slot--alert {
+  background: linear-gradient(135deg, rgba(248, 113, 113, 0.35), rgba(239, 68, 68, 0.6));
+  border: 1px solid rgba(239, 68, 68, 0.6);
+}
+
+.duty-snapshot__footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.78rem;
   color: rgba(226, 232, 240, 0.75);
-  font-size: 0.85rem;
 }
 
-.planner-login__form {
+.duty-legend {
+  display: inline-flex;
+  gap: 1rem;
+}
+
+.duty-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.duty-insights {
   position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(3, 1fr);
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.duty-insights div {
+  padding: 1rem 1.1rem;
+  border-radius: 18px;
+  background: rgba(15, 23, 42, 0.2);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  box-shadow: inset 0 0 0 1px rgba(248, 250, 252, 0.05);
+}
+
+.duty-insights dt {
+  margin: 0 0 0.45rem;
+  font-weight: 600;
+  color: rgba(248, 250, 252, 0.95);
+}
+
+.duty-insights dd {
+  margin: 0;
+  color: rgba(226, 232, 240, 0.8);
+  line-height: 1.4;
+}
+
+.duty-login__panel {
+  position: relative;
+  background: rgba(248, 250, 252, 0.94);
+  backdrop-filter: blur(22px);
   padding: 3.4rem 3rem;
   display: flex;
   flex-direction: column;
-  gap: 2rem;
-  background: rgba(248, 250, 252, 0.92);
-  backdrop-filter: blur(20px);
+  gap: 2.2rem;
 }
 
-.planner-form__header {
+.duty-panel__header {
   display: grid;
-  gap: 0.6rem;
-  text-align: left;
+  gap: 0.65rem;
 }
 
-.planner-form__kicker {
+.duty-panel__kicker {
   margin: 0;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 600;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
   color: #6366f1;
 }
 
-.planner-form__header h2 {
+.duty-panel__header h2 {
   margin: 0;
-  font-size: 1.75rem;
+  font-size: 1.9rem;
   color: #0f172a;
 }
 
-.planner-form__subtext {
+.duty-panel__lead {
   margin: 0;
   color: #475569;
 }
 
-.planner-form {
+.duty-form {
   display: grid;
-  gap: 1.6rem;
+  gap: 1.7rem;
 }
 
-.planner-input {
+.duty-field {
   display: grid;
-  gap: 0.5rem;
+  gap: 0.55rem;
 }
 
-.planner-input label {
+.duty-field label {
   font-weight: 600;
   color: #0f172a;
 }
 
-.planner-input__field {
+.duty-field__control {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  border-radius: 14px;
+  gap: 0.85rem;
+  border-radius: 16px;
   border: 1px solid #cbd5f5;
   background: #fff;
-  padding: 0.85rem 1rem;
-  box-shadow: 0 12px 30px -24px rgba(59, 130, 246, 0.6);
+  padding: 0.9rem 1.1rem;
+  box-shadow: 0 16px 36px -26px rgba(99, 102, 241, 0.65);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.planner-input__field:focus-within {
+.duty-field__control:focus-within {
   border-color: #6366f1;
-  box-shadow: 0 16px 35px -24px rgba(99, 102, 241, 0.75);
+  box-shadow: 0 20px 42px -28px rgba(99, 102, 241, 0.75);
 }
 
-.planner-input__field svg {
+.duty-field__control svg {
   width: 22px;
   height: 22px;
   fill: none;
@@ -411,7 +520,7 @@
   stroke-width: 1.6;
 }
 
-.planner-input__field input {
+.duty-field__control input {
   flex: 1;
   border: none;
   outline: none;
@@ -421,28 +530,28 @@
   background: transparent;
 }
 
-.planner-input__field input::placeholder {
+.duty-field__control input::placeholder {
   color: #94a3b8;
 }
 
-.planner-button {
+.duty-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.75rem;
+  gap: 0.8rem;
   border: none;
-  border-radius: 14px;
-  padding: 0.95rem 1.5rem;
+  border-radius: 16px;
+  padding: 1rem 1.6rem;
   font-weight: 600;
   font-size: 1rem;
   color: #fff;
   background: linear-gradient(135deg, #6366f1, #0ea5e9);
-  box-shadow: 0 18px 40px -22px rgba(14, 165, 233, 0.8);
+  box-shadow: 0 22px 48px -28px rgba(14, 165, 233, 0.85);
   cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.planner-button svg {
+.duty-button svg {
   width: 20px;
   height: 20px;
   fill: none;
@@ -450,68 +559,71 @@
   stroke-width: 1.8;
 }
 
-.planner-button:hover {
+.duty-button:hover {
   transform: translateY(-1px);
-  box-shadow: 0 20px 44px -24px rgba(14, 165, 233, 0.85);
+  box-shadow: 0 24px 52px -28px rgba(14, 165, 233, 0.9);
 }
 
-.planner-button:active {
+.duty-button:active {
   transform: translateY(0);
 }
 
-.planner-form__footer {
+.duty-panel__footer {
   font-size: 0.9rem;
   color: #64748b;
   display: grid;
-  gap: 0.4rem;
+  gap: 0.45rem;
 }
 
-.planner-form__support {
+.duty-panel__support {
   margin: 0;
   color: #475569;
 }
 
-@media (max-width: 960px) {
-  .planner-login__card {
+@media (max-width: 1024px) {
+  .duty-login__shell {
     grid-template-columns: 1fr;
-    max-width: 620px;
+    max-width: 680px;
   }
 
-  .planner-login__intro {
-    padding: 2.8rem 2.4rem 2.6rem;
-    border-bottom-left-radius: 0;
-    border-bottom-right-radius: 0;
+  .duty-login__visual {
+    padding: 3rem 2.6rem 2.8rem;
   }
 
-  .planner-login__form {
-    padding: 2.4rem 2.2rem 2.8rem;
+  .duty-login__panel {
+    padding: 2.8rem 2.4rem 3.1rem;
+  }
+
+  .duty-insights {
+    grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 640px) {
-  .planner-login {
-    padding: 2.8rem 1.2rem 3.2rem;
+  .duty-login {
+    padding: 3.2rem 1.2rem 3.4rem;
   }
 
-  .planner-login__card {
-    border-radius: 22px;
+  .duty-login__shell {
+    border-radius: 24px;
   }
 
-  .planner-login__intro {
-    gap: 2rem;
+  .duty-login__visual {
+    gap: 2.2rem;
   }
 
-  .planner-login__brand {
+  .duty-hero {
     flex-direction: column;
+  }
+
+  .duty-snapshot__grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .duty-snapshot__footer {
+    flex-direction: column;
+    gap: 0.8rem;
     align-items: flex-start;
-  }
-
-  .planner-login__schedule li {
-    flex-direction: column;
-  }
-
-  .planner-login__schedule-time {
-    align-self: flex-start;
   }
 }
 </style>
